@@ -16,6 +16,52 @@
         android:textSize="18sp"
         android:layout_marginBottom="24dp" />
 
+    <TextView
+        android:id="@+id/thresholdLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Sensitivity Threshold: 0.05"
+        android:textSize="16sp"
+        android:layout_marginBottom="8dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginHorizontal="32dp"
+        android:layout_marginBottom="16dp"
+        android:gravity="center">
+
+        <EditText
+            android:id="@+id/thresholdInput"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:inputType="numberDecimal"
+            android:text="0.05" />
+
+        <Button
+            android:id="@+id/applyThresholdButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Apply Threshold" />
+    </LinearLayout>
+
+    <Switch
+        android:id="@+id/modelSwitch"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Model: Jarvis (Off) / Alexa (On)"
+        android:layout_marginBottom="24dp" />
+
+    <Button
+        android:id="@+id/manualWakeButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Simulate Wake Word"
+        android:layout_marginBottom="16dp" />
+
     <Button
         android:id="@+id/initButton"
         android:layout_width="wrap_content"

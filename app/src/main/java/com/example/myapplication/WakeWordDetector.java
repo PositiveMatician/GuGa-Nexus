@@ -47,6 +47,8 @@ public class WakeWordDetector {
     private final float[] newMelData = new float[160]; // 5 * 32
     private final long[] embInputShape = {1, MEL_FRAMES, MEL_BINS, 1};
     
+    private float detectionThreshold = 0.05f;
+
     public interface WakeWordListener {
         void onWakeWordDetected();
     }
@@ -91,6 +93,10 @@ public class WakeWordDetector {
             }
         }
         return outFile.getAbsolutePath();
+    }
+
+    public void setThreshold(float newThreshold) {
+        this.detectionThreshold = newThreshold;
     }
 
     public void processAudioChunk(short[] pcmChunk) {
@@ -156,7 +162,7 @@ public class WakeWordDetector {
             float score = tfliteOutputArray[0][0];
             Log.v(TAG, "Stage 5: TFLite Score = " + score);
 
-            if (score >= 0.5f) {
+            if (score >= detectionThreshold) {
                 // Clear embedding buffer
                 for (int i = 0; i < EMBEDDING_BUFFER_SIZE; i++) {
                     Arrays.fill(tfliteInputArray[0][i], 0f);
@@ -176,6 +182,25 @@ public class WakeWordDetector {
             if (embInputTensor != null) embInputTensor.close();
             if (melspecResult != null) melspecResult.close();
             if (embeddingResult != null) embeddingResult.close();
+        }
+    }
+
+    public void switchWakeWordModel(Context context, String modelFileName) {
+        try {
+            if (tfliteInterpreter != null) {
+                tfliteInterpreter.close();
+            }
+            String newPath = copyAsset(context, "openwakeword/" + modelFileName);
+            Interpreter.Options tfliteOptions = new Interpreter.Options();
+            tfliteInterpreter = new Interpreter(new File(newPath), tfliteOptions);
+
+            // clear embedding buffer
+            for (int i = 0; i < EMBEDDING_BUFFER_SIZE; i++) {
+                Arrays.fill(tfliteInputArray[0][i], 0f);
+            }
+            Log.d(TAG, "Switched model to: " + modelFileName);
+        } catch (Exception e) {
+            Log.e(TAG, "Error switching wake word model", e);
         }
     }
 

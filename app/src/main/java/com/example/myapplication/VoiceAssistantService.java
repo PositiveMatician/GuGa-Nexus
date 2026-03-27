@@ -29,6 +29,23 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
     private static final int SAMPLE_RATE = 16000;
     private static final int CHUNK_SIZE = 1280; // 80ms
 
+    private final android.content.BroadcastReceiver actionReceiver = new android.content.BroadcastReceiver() {
+        @Override
+        public void onReceive(android.content.Context context, Intent intent) {
+            if ("com.example.myapplication.UPDATE_THRESHOLD".equals(intent.getAction())) {
+                float threshold = intent.getFloatExtra("threshold", 0.05f);
+                if (wakeWordDetector != null) {
+                    wakeWordDetector.setThreshold(threshold);
+                }
+            } else if ("com.example.myapplication.SWITCH_MODEL".equals(intent.getAction())) {
+                String modelFileName = intent.getStringExtra("model_file");
+                if (wakeWordDetector != null && modelFileName != null) {
+                    wakeWordDetector.switchWakeWordModel(context, modelFileName);
+                }
+            }
+        }
+    };
+
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
@@ -64,6 +81,13 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
 
         startForeground(NOTIFICATION_ID, notification);
         startListening();
+
+        android.content.IntentFilter filter = new android.content.IntentFilter();
+        filter.addAction("com.example.myapplication.UPDATE_THRESHOLD");
+        filter.addAction("com.example.myapplication.SWITCH_MODEL");
+        androidx.core.content.ContextCompat.registerReceiver(this, actionReceiver,
+                filter,
+                androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED);
 
         return START_STICKY;
     }
@@ -141,6 +165,8 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
         if (wakeWordDetector != null) {
             wakeWordDetector.close();
         }
+        
+        unregisterReceiver(actionReceiver);
         
         super.onDestroy();
     }
