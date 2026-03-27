@@ -53,6 +53,9 @@ public class MainActivity extends AppCompatActivity {
                     mainLayout.setBackgroundColor(Color.WHITE);
                     statusText.setText(ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED ? "Status: Listening for Wake Word: " + currentWakeWord : "Status: Listening...");
                 }, 2000);
+            } else if ("com.example.myapplication.COMMAND_TRANSCRIBED".equals(intent.getAction())) {
+                String command = intent.getStringExtra("command");
+                statusText.setText("You said: " + command);
             }
         }
     };
@@ -104,7 +107,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         manualWakeButton.setOnClickListener(v -> {
-            Intent intent = new Intent("com.example.myapplication.WAKE_WORD_DETECTED");
+            Intent intent = new Intent("com.example.myapplication.SIMULATE_WAKE_WORD");
             sendBroadcast(intent);
         });
 
@@ -150,8 +153,11 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        IntentFilter filter = new IntentFilter();
+        filter.addAction("com.example.myapplication.WAKE_WORD_DETECTED");
+        filter.addAction("com.example.myapplication.COMMAND_TRANSCRIBED");
         ContextCompat.registerReceiver(this, wakeWordReceiver, 
-                new IntentFilter("com.example.myapplication.WAKE_WORD_DETECTED"), 
+                filter, 
                 ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 

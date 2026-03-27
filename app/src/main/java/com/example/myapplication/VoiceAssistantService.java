@@ -10,7 +10,13 @@ import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Build;
+import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
@@ -25,6 +31,8 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
     private AudioRecord audioRecord;
     private Thread audioThread;
     private boolean isListening = false;
+    private SpeechRecognizer speechRecognizer;
+    private Intent recognizerIntent;
     
     private static final int SAMPLE_RATE = 16000;
     private static final int CHUNK_SIZE = 1280; // 80ms
@@ -42,6 +50,8 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
                 if (wakeWordDetector != null && modelFileName != null) {
                     wakeWordDetector.switchWakeWordModel(context, modelFileName);
                 }
+            } else if ("com.example.myapplication.SIMULATE_WAKE_WORD".equals(intent.getAction())) {
+                new Handler(Looper.getMainLooper()).post(() -> onWakeWordDetected());
             }
         }
     };
@@ -57,6 +67,62 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
         super.onCreate();
         createNotificationChannel();
         wakeWordDetector = new WakeWordDetector(this, this);
+        initSpeechRecognizer();
+    }
+
+    private void initSpeechRecognizer() {
+        new Handler(Looper.getMainLooper()).post(() -> {
+            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
+            recognizerIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            recognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+
+            speechRecognizer.setRecognitionListener(new RecognitionListener() {
+                @Override
+                public void onReadyForSpeech(Bundle params) {
+                    Log.d("Assistant", "SpeechRecognizer is ready and listening...");
+                }
+
+                @Override
+                public void onBeginningOfSpeech() {}
+
+                @Override
+                public void onRmsChanged(float rmsdB) {}
+
+                @Override
+                public void onBufferReceived(byte[] buffer) {}
+
+                @Override
+                public void onEndOfSpeech() {}
+
+                @Override
+                public void onError(int error) {
+                    Log.e("Assistant", "SpeechRecognizer error: " + error);
+                    Intent intent = new Intent("com.example.myapplication.COMMAND_TRANSCRIBED");
+                    intent.putExtra("command", "Error: " + error);
+                    sendBroadcast(intent);
+                    startWakeWordListening();
+                }
+
+                @Override
+                public void onResults(Bundle results) {
+                    java.util.ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                    if (matches != null && !matches.isEmpty()) {
+                        String recognizedText = matches.get(0);
+                        Log.d("Assistant", "COMMAND TRANSCRIBED: " + recognizedText);
+                        Intent intent = new Intent("com.example.myapplication.COMMAND_TRANSCRIBED");
+                        intent.putExtra("command", recognizedText);
+                        sendBroadcast(intent);
+                    }
+                    startWakeWordListening();
+                }
+
+                @Override
+                public void onPartialResults(Bundle partialResults) {}
+
+                @Override
+                public void onEvent(int eventType, Bundle params) {}
+            });
+        });
     }
 
     private void createNotificationChannel() {
@@ -80,11 +146,12 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
                 .build();
 
         startForeground(NOTIFICATION_ID, notification);
-        startListening();
+        startWakeWordListening();
 
         android.content.IntentFilter filter = new android.content.IntentFilter();
         filter.addAction("com.example.myapplication.UPDATE_THRESHOLD");
         filter.addAction("com.example.myapplication.SWITCH_MODEL");
+        filter.addAction("com.example.myapplication.SIMULATE_WAKE_WORD");
         androidx.core.content.ContextCompat.registerReceiver(this, actionReceiver,
                 filter,
                 androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED);
@@ -93,7 +160,7 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
     }
 
     @SuppressLint("MissingPermission")
-    private void startListening() {
+    private void startWakeWordListening() {
         if (isListening) return;
 
         int bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE, 
@@ -139,6 +206,23 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
         Log.d("Assistant", "WAKE WORD DETECTED: JARVIS!");
         Intent intent = new Intent("com.example.myapplication.WAKE_WORD_DETECTED");
         sendBroadcast(intent);
+
+        isListening = false;
+        
+        new Handler(Looper.getMainLooper()).post(() -> {
+            if (audioRecord != null) {
+                try {
+                    audioRecord.stop();
+                    audioRecord.release();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                audioRecord = null;
+            }
+            if (speechRecognizer != null) {
+                speechRecognizer.startListening(recognizerIntent);
+            }
+        });
     }
 
     @Override
@@ -164,6 +248,12 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
         
         if (wakeWordDetector != null) {
             wakeWordDetector.close();
+        }
+        
+        if (speechRecognizer != null) {
+            new Handler(Looper.getMainLooper()).post(() -> {
+                speechRecognizer.destroy();
+            });
         }
         
         unregisterReceiver(actionReceiver);
