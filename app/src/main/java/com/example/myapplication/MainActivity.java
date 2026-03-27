@@ -9,6 +9,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.content.Intent;
 import android.os.Build;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.IntentFilter;
+import android.graphics.Color;
+import android.os.Handler;
+import android.os.Looper;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -23,6 +29,25 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
     private TextView statusText;
     private Button initButton;
+    private View mainLayout;
+    
+    private final BroadcastReceiver wakeWordReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if ("com.example.myapplication.WAKE_WORD_DETECTED".equals(intent.getAction())) {
+                statusText.setText("WAKE WORD DETECTED: JARVIS!");
+                if (mainLayout == null) {
+                    mainLayout = findViewById(R.id.main);
+                }
+                mainLayout.setBackgroundColor(Color.GREEN);
+                
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    mainLayout.setBackgroundColor(Color.WHITE);
+                    statusText.setText("Status: Listening...");
+                }, 2000);
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,5 +100,19 @@ public class MainActivity extends AppCompatActivity {
                 statusText.setText("Status: Permission Denied. Cannot proceed.");
             }
         }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        ContextCompat.registerReceiver(this, wakeWordReceiver, 
+                new IntentFilter("com.example.myapplication.WAKE_WORD_DETECTED"), 
+                ContextCompat.RECEIVER_NOT_EXPORTED);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unregisterReceiver(wakeWordReceiver);
     }
 }

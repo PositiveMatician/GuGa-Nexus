@@ -1,0 +1,1291 @@
+--------- beginning of main
+03-27 20:28:15.993  4013  5146 I ADB_SERVICES: post waitpid (pid=5145) status=0000
+03-27 20:28:15.995  4013  4013 I ADB_SERVICES: for fd 25, revents = 2011
+03-27 20:28:15.996  4013  4013 I ADB_SERVICES: for fd 25, revents = 2011
+03-27 20:28:15.996   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61694378415339, frames = 1000322
+03-27 20:28:15.996  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:15.999  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:16.016  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:16.016  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:16.019  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 4.88579E-6
+03-27 20:28:16.036   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61694418505262, frames = 1000962
+03-27 20:28:16.075   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61694458390416, frames = 1001602
+03-27 20:28:16.075  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:16.078  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:16.098  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:16.098  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:16.100  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 8.444837E-6
+03-27 20:28:16.116   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61694498402416, frames = 1002242
+03-27 20:28:16.160   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61694538629570, frames = 1002882
+03-27 20:28:16.161  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:16.166  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:16.186  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:16.186  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:16.188  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.0163162E-5
+03-27 20:28:16.197 30720 30720 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.auth.aang.events.services.START dat=chimera-action: cmp=com.google.android.gms/.chimera.PersistentApiService }
+03-27 20:28:16.200   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61694578411801, frames = 1003522
+03-27 20:28:16.204   553   553 W IMGMemtrackHAL: hal_get_memory: memtrack cache rebuild was required
+03-27 20:28:16.220   553   553 W IMGMemtrackHAL: hal_get_memory: memtrack cache rebuild was required
+03-27 20:28:16.236   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61694618393955, frames = 1004162
+03-27 20:28:16.236  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:16.240  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:16.257  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:16.257  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:16.258  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.1501346E-5
+03-27 20:28:16.276   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61694658380647, frames = 1004802
+03-27 20:28:16.316   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61694698391955, frames = 1005442
+03-27 20:28:16.316  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:16.319  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:16.336  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:16.336  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:16.337  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 4.592374E-5
+03-27 20:28:16.356   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61694738407570, frames = 1006082
+03-27 20:28:16.396   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61694778395647, frames = 1006722
+03-27 20:28:16.396  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:16.400  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:16.418  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:16.418  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:16.419  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 8.595745E-5
+03-27 20:28:16.435   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61694818420186, frames = 1007362
+03-27 20:28:16.475   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61694858385416, frames = 1008002
+03-27 20:28:16.475  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:16.479  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:16.495  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:16.496  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:16.497  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 8.924664E-5
+03-27 20:28:16.515   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61694898388493, frames = 1008642
+03-27 20:28:16.555   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61694938403955, frames = 1009282
+03-27 20:28:16.556  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:16.560  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:16.576  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:16.576  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:16.578  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 6.764299E-5
+03-27 20:28:16.596   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61694978404186, frames = 1009922
+03-27 20:28:16.635   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695018398109, frames = 1010562
+03-27 20:28:16.636  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:16.639  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:16.656  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:16.657  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:16.658  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.6261946E-4
+03-27 20:28:16.676   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695058399186, frames = 1011202
+03-27 20:28:16.715   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695098399801, frames = 1011842
+03-27 20:28:16.715  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:16.720  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:16.737  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:16.737  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:16.738  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.1015772E-4
+03-27 20:28:16.756   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695138387955, frames = 1012482
+03-27 20:28:16.795   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695178409801, frames = 1013122
+03-27 20:28:16.796  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:16.799  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:16.819  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:16.819  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:16.821  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 8.2082675E-5
+03-27 20:28:16.835   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695218398955, frames = 1013762
+03-27 20:28:16.876   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695258496263, frames = 1014402
+03-27 20:28:16.876  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:16.879  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:16.915   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695298379801, frames = 1015042
+03-27 20:28:16.947  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:16.947  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:16.948  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 4.2383606E-5
+03-27 20:28:16.956   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695338387263, frames = 1015682
+03-27 20:28:16.956  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:16.961  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:16.978  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:16.979  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:16.980  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.2963217E-5
+03-27 20:28:16.996   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695378425416, frames = 1016322
+03-27 20:28:17.035   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695418390263, frames = 1016962
+03-27 20:28:17.036  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:17.039  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:17.056  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:17.056  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:17.060  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 9.013531E-6
+03-27 20:28:17.075   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695458406878, frames = 1017602
+03-27 20:28:17.115   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695498409339, frames = 1018242
+03-27 20:28:17.116  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:17.119  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:17.135  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:17.135  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:17.136  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 5.7974125E-6
+03-27 20:28:17.156   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695538402339, frames = 1018882
+03-27 20:28:17.195   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695578388493, frames = 1019522
+03-27 20:28:17.195  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:17.198  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:17.215  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:17.216  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:17.217  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 7.3675665E-6
+03-27 20:28:17.236   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695618478801, frames = 1020162
+03-27 20:28:17.275   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695658400724, frames = 1020802
+03-27 20:28:17.276  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:17.279  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:17.296  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:17.296  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:17.297  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 8.235774E-6
+03-27 20:28:17.316   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695698478339, frames = 1021442
+03-27 20:28:17.355   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695738388724, frames = 1022082
+03-27 20:28:17.356  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:17.359  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:17.377  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:17.378  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:17.379  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.1540214E-5
+03-27 20:28:17.396   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695778397186, frames = 1022722
+03-27 20:28:17.439   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695818490186, frames = 1023362
+03-27 20:28:17.439  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:17.444  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:17.461  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:17.461  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:17.464  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 4.912469E-5
+03-27 20:28:17.476   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695858411032, frames = 1024002
+03-27 20:28:17.515   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695898407109, frames = 1024642
+03-27 20:28:17.515  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:17.518  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:17.534  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:17.534  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:17.535  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.2819911E-4
+03-27 20:28:17.556   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695938391801, frames = 1025282
+03-27 20:28:17.595   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61695978386032, frames = 1025922
+03-27 20:28:17.595  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:17.599  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:17.617  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:17.617  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:17.618  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.621311E-4
+03-27 20:28:17.636   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696018398416, frames = 1026562
+03-27 20:28:17.675   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696058399339, frames = 1027202
+03-27 20:28:17.675  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:17.678  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:17.695  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:17.696  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:17.697  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.0753097E-4
+03-27 20:28:17.716   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696098404339, frames = 1027842
+03-27 20:28:17.755   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696138410416, frames = 1028482
+03-27 20:28:17.756  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:17.759  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:17.776  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:17.777  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:17.778  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.4363669E-4
+03-27 20:28:17.796   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696178409493, frames = 1029122
+03-27 20:28:17.836   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696218397570, frames = 1029762
+03-27 20:28:17.836  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:17.839  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:17.853  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:17.853  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:17.855  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.4507256E-4
+03-27 20:28:17.876   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696258394340, frames = 1030402
+03-27 20:28:17.916   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696298407724, frames = 1031042
+03-27 20:28:17.917  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:17.921  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:17.938  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:17.939  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:17.940  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.4264563E-4
+03-27 20:28:17.956   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696338404570, frames = 1031682
+03-27 20:28:17.996   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696378506493, frames = 1032322
+03-27 20:28:17.996  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:17.999  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:18.017  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:18.018  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:18.019  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 4.7915073E-5
+03-27 20:28:18.035   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696418407955, frames = 1032962
+03-27 20:28:18.075   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696458410416, frames = 1033602
+03-27 20:28:18.075  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:18.078  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:18.097  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:18.097  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:18.101  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.3710732E-5
+03-27 20:28:18.116   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696498401955, frames = 1034242
+03-27 20:28:18.134  1421  1824 D MobileSignalController: updateDataType mSelectedDataTypeIcon[0]=2131232931, mSelectedDataActivityIndex=6
+03-27 20:28:18.134  1421  1824 D TelephonyIcons: getSignalStrengthIcon: slot=0, inetCondition=1, level=3, roaming=false, signalstrength=SignalStrength:{mCdma=CellSignalStrengthCdma: cdmaDbm=2147483647 cdmaEcio=2147483647 evdoDbm=2147483647 evdoEcio=2147483647 evdoSnr=2147483647 miuiLevel=0 level=0,mGsm=CellSignalStrengthGsm: rssi=2147483647 ber=2147483647 mTa=2147483647 miuiLevel=0 mLevel=0,mWcdma=CellSignalStrengthWcdma: ss=2147483647 ber=2147483647 rscp=2147483647 ecno=2147483647 miuiLevel=0 level=0,mTdscdma=CellSignalStrengthTdscdma: rssi=2147483647 ber=2147483647 rscp=2147483647 miuiLevel=0 level=0,mLte=CellSignalStrengthLte: rssi=2147483647 rsrp=-107 rsrq=-10 rssnr=67 cqi=0 ta=0 miuiLevel=3 level=3,mNr=CellSignalStrengthNr:{ csiRsrp = 2147483647 csiRsrq = 2147483647 csiSinr = 2147483647 ssRsrp = 2147483647 ssRsrq = 2147483647 ssSinr = 2147483647 miuiLevel = 0 level = 0 },primary=CellSignalStrengthLte}, phoneId=0, mMtkLevel=0, mMtkRsrpOnly=false, mMtkLteRsrpThreshold=null, mMtkLteRssnrThreshold=null
+03-27 20:28:18.134  1421  1824 D TelephonyIcons: getDataActivity, slot=0, activity=3
+03-27 20:28:18.138  1421  1824 D TelephonyIcons: null signal icon name: drawable/stat_sys_signal_null
+03-27 20:28:18.139  1421  1824 D TelephonyIcons: getDataTypeIcon sub=0
+03-27 20:28:18.140  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:18.142  1421  1421 I chatty  : uid=1000(system) com.android.systemui identical 2 lines
+03-27 20:28:18.142  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:18.157   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696538577109, frames = 1034882
+03-27 20:28:18.157  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:18.159  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:18.160  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:18.161  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:18.162  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:18.174   583  2594 I BufferQueueProducer: [StatusBar#0](this:0xe6d65000,id:3,api:1,p:1421,c:583) queueBuffer: fps=0.43 dur=2345.88 max=2345.88 min=2345.88
+03-27 20:28:18.184   550 27489 I hwcomposer: [HWCDisplay] [Display_0 (type:1)] fps:0.426378,dur:2345.34,max:2345.34,min:2345.34  
+03-27 20:28:18.186   583   583 I SurfaceFlinger: screenshot (com.example.myapplication/com.example.myapplication.MainActivity#0)
+03-27 20:28:18.186   583   583 I SurfaceFlinger: isIncludeStatusBarAndNavBar (1)
+03-27 20:28:18.194  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:18.195   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696578461878, frames = 1035522
+03-27 20:28:18.195  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:18.199  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.2618386E-5
+03-27 20:28:18.236   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696618383493, frames = 1036162
+03-27 20:28:18.237  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:18.241  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:18.255  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:18.256  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:18.257  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.9897021E-5
+03-27 20:28:18.275   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696658382263, frames = 1036802
+03-27 20:28:18.302   583   583 I SurfaceFlinger: screenshot (com.example.myapplication/com.example.myapplication.MainActivity#0)
+03-27 20:28:18.302   583   583 I SurfaceFlinger: isIncludeStatusBarAndNavBar (1)
+03-27 20:28:18.315   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696698488340, frames = 1037442
+03-27 20:28:18.316  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:18.319  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:18.342  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:18.342  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:18.344  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.9432222E-5
+03-27 20:28:18.355   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696738402570, frames = 1038082
+03-27 20:28:18.395   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696778425416, frames = 1038722
+03-27 20:28:18.396  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:18.399  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:18.418  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:18.418  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:18.419  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.2772594E-5
+03-27 20:28:18.435   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696818396493, frames = 1039362
+03-27 20:28:18.475   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696858380109, frames = 1040002
+03-27 20:28:18.476  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:18.479  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:18.515   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696898548340, frames = 1040642
+03-27 20:28:18.544  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:18.544  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:18.545  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.7087945E-5
+03-27 20:28:18.555   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696938402263, frames = 1041282
+03-27 20:28:18.556  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:18.559  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:18.578  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:18.578  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:18.579  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.9455201E-5
+03-27 20:28:18.596   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61696978477801, frames = 1041922
+03-27 20:28:18.636   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697018470109, frames = 1042562
+03-27 20:28:18.636  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:18.639  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:18.657  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:18.657  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:18.658  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.2274819E-5
+03-27 20:28:18.675   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697058418647, frames = 1043202
+03-27 20:28:18.715   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697098469263, frames = 1043842
+03-27 20:28:18.716  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:18.719  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:18.734  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:18.735  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:18.736  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.7673821E-5
+03-27 20:28:18.756   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697138408032, frames = 1044482
+03-27 20:28:18.796   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697178318570, frames = 1045122
+03-27 20:28:18.796  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:18.799  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:18.817  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:18.817  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:18.819  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 5.0434923E-5
+03-27 20:28:18.836   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697218386724, frames = 1045762
+03-27 20:28:18.878   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697258407724, frames = 1046402
+03-27 20:28:18.878  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:18.883  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:18.901  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:18.901  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:18.902  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 4.3327425E-5
+03-27 20:28:18.916   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697298420570, frames = 1047042
+03-27 20:28:18.955   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697338385416, frames = 1047682
+03-27 20:28:18.956  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:18.961  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:18.966 30720 30929 W Settings: Setting airplane_mode_on has moved from android.provider.Settings.System to android.provider.Settings.Global, returning read-only value.
+03-27 20:28:18.979  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:18.979  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:18.980  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 3.9351708E-5
+03-27 20:28:18.981 30720 30929 W Settings: Setting airplane_mode_on has moved from android.provider.Settings.System to android.provider.Settings.Global, returning read-only value.
+03-27 20:28:18.982  1232  1360 W WifiPermissionsUtil: Request from com.google.android.gms violated location settings
+03-27 20:28:18.996   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697378415878, frames = 1048322
+03-27 20:28:19.037   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697419398109, frames = 1048962
+03-27 20:28:19.037  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:19.040  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:19.065  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:19.065  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:19.066  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.6934424E-5
+03-27 20:28:19.070 30720 30929 I ActivityScheduler: nextTriggerTime: 111666519, in 165647ms, detectorType: 39, FULL_TYPE alarmWindowMillis: 30000
+03-27 20:28:19.075   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697458395570, frames = 1049602
+03-27 20:28:19.116   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697498402340, frames = 1050242
+03-27 20:28:19.116  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:19.120  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:19.124 12089 12101 I com.miui.home: Background young concurrent copying GC freed 109284(5968KB) AllocSpace objects, 0(0B) LOS objects, 24% free, 14MB/19MB, paused 336us total 137.641ms
+03-27 20:28:19.141  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:19.142  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:19.147  1421  1824 D MobileSignalController: updateDataType mSelectedDataTypeIcon[0]=2131232931, mSelectedDataActivityIndex=6
+03-27 20:28:19.147  1421  1824 D TelephonyIcons: getSignalStrengthIcon: slot=0, inetCondition=1, level=3, roaming=false, signalstrength=SignalStrength:{mCdma=CellSignalStrengthCdma: cdmaDbm=2147483647 cdmaEcio=2147483647 evdoDbm=2147483647 evdoEcio=2147483647 evdoSnr=2147483647 miuiLevel=0 level=0,mGsm=CellSignalStrengthGsm: rssi=2147483647 ber=2147483647 mTa=2147483647 miuiLevel=0 mLevel=0,mWcdma=CellSignalStrengthWcdma: ss=2147483647 ber=2147483647 rscp=2147483647 ecno=2147483647 miuiLevel=0 level=0,mTdscdma=CellSignalStrengthTdscdma: rssi=2147483647 ber=2147483647 rscp=2147483647 miuiLevel=0 level=0,mLte=CellSignalStrengthLte: rssi=2147483647 rsrp=-107 rsrq=-10 rssnr=67 cqi=0 ta=0 miuiLevel=3 level=3,mNr=CellSignalStrengthNr:{ csiRsrp = 2147483647 csiRsrq = 2147483647 csiSinr = 2147483647 ssRsrp = 2147483647 ssRsrq = 2147483647 ssSinr = 2147483647 miuiLevel = 0 level = 0 },primary=CellSignalStrengthLte}, phoneId=0, mMtkLevel=0, mMtkRsrpOnly=false, mMtkLteRsrpThreshold=null, mMtkLteRssnrThreshold=null
+03-27 20:28:19.147  1421  1824 D TelephonyIcons: getDataActivity, slot=0, activity=0
+03-27 20:28:19.151  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.0107129E-5
+03-27 20:28:19.154  1421  1824 D TelephonyIcons: null signal icon name: drawable/stat_sys_signal_null
+03-27 20:28:19.155   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697538424417, frames = 1050882
+03-27 20:28:19.156  1421  1824 D TelephonyIcons: getDataTypeIcon sub=0
+03-27 20:28:19.163  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:19.165  1421  1421 I chatty  : uid=1000(system) com.android.systemui identical 2 lines
+03-27 20:28:19.165  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:19.194   716 32010 D AALLightSensor: newLux = 33, [31, 31] -> 33
+03-27 20:28:19.196   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697578407109, frames = 1051522
+03-27 20:28:19.196  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:19.201  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:19.201  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:19.206  1421  1421 I chatty  : uid=1000(system) com.android.systemui identical 1 line
+03-27 20:28:19.209  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:19.226   583  2594 I BufferQueueProducer: [StatusBar#0](this:0xe6d65000,id:3,api:1,p:1421,c:583) queueBuffer: fps=1.90 dur=1052.40 max=1013.11 min=39.29
+03-27 20:28:19.235   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697618402186, frames = 1052162
+03-27 20:28:19.241   550 27489 I hwcomposer: [HWCDisplay] [Display_0 (type:1)] fps:1.892345,dur:1056.89,max:1025.55,min:31.34  
+03-27 20:28:19.243   583   583 I SurfaceFlinger: screenshot (com.example.myapplication/com.example.myapplication.MainActivity#0)
+03-27 20:28:19.243   583   583 I SurfaceFlinger: isIncludeStatusBarAndNavBar (1)
+03-27 20:28:19.266  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:19.266  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:19.267  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.4996146E-5
+03-27 20:28:19.275   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697658392955, frames = 1052802
+03-27 20:28:19.276  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:19.279  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:19.293  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:19.293  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:19.294  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.1533333E-5
+03-27 20:28:19.315   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697698392647, frames = 1053442
+03-27 20:28:19.354   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697738327570, frames = 1054082
+03-27 20:28:19.355  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:19.357  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:19.359   583   583 I SurfaceFlinger: screenshot (com.example.myapplication/com.example.myapplication.MainActivity#0)
+03-27 20:28:19.359   583   583 I SurfaceFlinger: isIncludeStatusBarAndNavBar (1)
+03-27 20:28:19.375  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:19.375  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:19.376  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.0448342E-5
+03-27 20:28:19.396   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697778387647, frames = 1054722
+03-27 20:28:19.435   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697818302186, frames = 1055362
+03-27 20:28:19.435  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:19.438  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:19.453  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:19.453  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:19.455  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.7084096E-5
+03-27 20:28:19.475   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697858382570, frames = 1056002
+03-27 20:28:19.515   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697898302186, frames = 1056642
+03-27 20:28:19.515  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:19.518  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:19.533  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:19.533  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:19.534  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.778018E-5
+03-27 20:28:19.555   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697938493801, frames = 1057282
+03-27 20:28:19.595   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61697978294186, frames = 1057922
+03-27 20:28:19.595  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:19.598  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:19.613  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:19.613  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:19.614  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.5048854E-5
+03-27 20:28:19.635   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698018325493, frames = 1058562
+03-27 20:28:19.674   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698058299878, frames = 1059202
+03-27 20:28:19.675  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:19.677  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:19.693  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:19.693  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:19.694  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.7515515E-5
+03-27 20:28:19.716   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698098391724, frames = 1059842
+03-27 20:28:19.727  1421  1824 D MobileSignalController: onSignalStrengthsChanged: SignalStrength:{mCdma=CellSignalStrengthCdma: cdmaDbm=2147483647 cdmaEcio=2147483647 evdoDbm=2147483647 evdoEcio=2147483647 evdoSnr=2147483647 miuiLevel=0 level=0,mGsm=CellSignalStrengthGsm: rssi=2147483647 ber=2147483647 mTa=2147483647 miuiLevel=0 mLevel=0,mWcdma=CellSignalStrengthWcdma: ss=2147483647 ber=2147483647 rscp=2147483647 ecno=2147483647 miuiLevel=0 level=0,mTdscdma=CellSignalStrengthTdscdma: rssi=2147483647 ber=2147483647 rscp=2147483647 miuiLevel=0 level=0,mLte=CellSignalStrengthLte: rssi=2147483647 rsrp=-107 rsrq=-12 rssnr=45 cqi=0 ta=0 miuiLevel=3 level=3,mNr=CellSignalStrengthNr:{ csiRsrp = 2147483647 csiRsrq = 2147483647 csiSinr = 2147483647 ssRsrp = 2147483647 ssRsrq = 2147483647 ssSinr = 2147483647 miuiLevel = 0 level = 0 },primary=CellSignalStrengthLte}, phoneId=0, mMtkLevel=0, mMtkRsrpOnly=false, mMtkLteRsrpThreshold=null, mMtkLteRssnrThreshold=null
+03-27 20:28:19.727  1421  1824 D NetworkController.MobileSignalController(1): 4G level = 3
+03-27 20:28:19.738  1421  1824 D MobileSignalController: updateDataType mSelectedDataTypeIcon[0]=2131232931, mSelectedDataActivityIndex=6
+03-27 20:28:19.738  1421  1824 D TelephonyIcons: getSignalStrengthIcon: slot=0, inetCondition=1, level=3, roaming=false, signalstrength=SignalStrength:{mCdma=CellSignalStrengthCdma: cdmaDbm=2147483647 cdmaEcio=2147483647 evdoDbm=2147483647 evdoEcio=2147483647 evdoSnr=2147483647 miuiLevel=0 level=0,mGsm=CellSignalStrengthGsm: rssi=2147483647 ber=2147483647 mTa=2147483647 miuiLevel=0 mLevel=0,mWcdma=CellSignalStrengthWcdma: ss=2147483647 ber=2147483647 rscp=2147483647 ecno=2147483647 miuiLevel=0 level=0,mTdscdma=CellSignalStrengthTdscdma: rssi=2147483647 ber=2147483647 rscp=2147483647 miuiLevel=0 level=0,mLte=CellSignalStrengthLte: rssi=2147483647 rsrp=-107 rsrq=-12 rssnr=45 cqi=0 ta=0 miuiLevel=3 level=3,mNr=CellSignalStrengthNr:{ csiRsrp = 2147483647 csiRsrq = 2147483647 csiSinr = 2147483647 ssRsrp = 2147483647 ssRsrq = 2147483647 ssSinr = 2147483647 miuiLevel = 0 level = 0 },primary=CellSignalStrengthLte}, phoneId=0, mMtkLevel=0, mMtkRsrpOnly=false, mMtkLteRsrpThreshold=null, mMtkLteRssnrThreshold=null
+03-27 20:28:19.738  1421  1824 D TelephonyIcons: getDataActivity, slot=0, activity=0
+03-27 20:28:19.741  1421  1824 D TelephonyIcons: null signal icon name: drawable/stat_sys_signal_null
+03-27 20:28:19.741  1421  1824 D TelephonyIcons: getDataTypeIcon sub=0
+03-27 20:28:19.743  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:19.755  1421  1421 I chatty  : uid=1000(system) com.android.systemui identical 4 lines
+03-27 20:28:19.756  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:19.756   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698138312032, frames = 1060482
+03-27 20:28:19.756  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:19.757  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:19.760  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:19.775  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:19.775  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:19.776  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.7385726E-5
+03-27 20:28:19.787   583   583 I SurfaceFlinger: screenshot (com.example.myapplication/com.example.myapplication.MainActivity#0)
+03-27 20:28:19.787   583   583 I SurfaceFlinger: isIncludeStatusBarAndNavBar (1)
+03-27 20:28:19.795   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698178323647, frames = 1061122
+03-27 20:28:19.834   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698218312955, frames = 1061762
+03-27 20:28:19.835  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:19.837  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:19.853  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:19.853  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:19.855  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.3390087E-5
+03-27 20:28:19.876   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698258334109, frames = 1062402
+03-27 20:28:19.904   583   583 I SurfaceFlinger: screenshot (com.example.myapplication/com.example.myapplication.MainActivity#0)
+03-27 20:28:19.904   583   583 I SurfaceFlinger: isIncludeStatusBarAndNavBar (1)
+03-27 20:28:19.914   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698298301186, frames = 1063042
+03-27 20:28:19.915  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:19.918  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:19.934  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:19.935  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:19.936  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.8027597E-5
+03-27 20:28:19.956   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698338407263, frames = 1063682
+03-27 20:28:19.995   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698378332032, frames = 1064322
+03-27 20:28:19.995  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:19.997  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:20.011  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:20.011  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:20.012  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.9338387E-5
+03-27 20:28:20.036   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698418407878, frames = 1064962
+03-27 20:28:20.074   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698458318263, frames = 1065602
+03-27 20:28:20.075  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:20.078  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:20.090  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:20.091  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:20.091  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.5529142E-5
+03-27 20:28:20.115   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698498306570, frames = 1066242
+03-27 20:28:20.155   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698538326724, frames = 1066882
+03-27 20:28:20.155  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:20.158  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:20.172  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:20.172  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:20.173  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.461136E-5
+03-27 20:28:20.196   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698578306801, frames = 1067522
+03-27 20:28:20.235   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698618379955, frames = 1068162
+03-27 20:28:20.235  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:20.238  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:20.253  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:20.253  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:20.254  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.6477615E-5
+03-27 20:28:20.275   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698658399263, frames = 1068802
+03-27 20:28:20.314   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698698326186, frames = 1069442
+03-27 20:28:20.315  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:20.318  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:20.332  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:20.332  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:20.333  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.8733846E-5
+03-27 20:28:20.355   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698738313263, frames = 1070082
+03-27 20:28:20.395   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698778322340, frames = 1070722
+03-27 20:28:20.395  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:20.400  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:20.418  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:20.418  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:20.419  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.1452028E-5
+03-27 20:28:20.435   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698818318417, frames = 1071362
+03-27 20:28:20.476   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698858412647, frames = 1072002
+03-27 20:28:20.476  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:20.480  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:20.493  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:20.493  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:20.495  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.622696E-5
+03-27 20:28:20.515   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698898377724, frames = 1072642
+03-27 20:28:20.554   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698938295724, frames = 1073282
+03-27 20:28:20.555  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:20.558  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:20.573  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:20.573  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:20.574  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 3.759537E-5
+03-27 20:28:20.595   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61698978396417, frames = 1073922
+03-27 20:28:20.635   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699018407570, frames = 1074562
+03-27 20:28:20.635  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:20.638  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:20.654  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:20.654  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:20.655  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.123332E-5
+03-27 20:28:20.675   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699058382955, frames = 1075202
+03-27 20:28:20.715   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699098406955, frames = 1075842
+03-27 20:28:20.715  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:20.719  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:20.733  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:20.733  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:20.734  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 7.3343585E-6
+03-27 20:28:20.755   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699138493570, frames = 1076482
+03-27 20:28:20.795   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699178395955, frames = 1077122
+03-27 20:28:20.795  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:20.798  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:20.813  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:20.814  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:20.815  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 5.0219905E-6
+03-27 20:28:20.835   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699218392340, frames = 1077762
+03-27 20:28:20.874   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699258379570, frames = 1078402
+03-27 20:28:20.875  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:20.878  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:20.896  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:20.896  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:20.897  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 3.6472723E-6
+03-27 20:28:20.915   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699298494955, frames = 1079042
+03-27 20:28:20.956   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699338335955, frames = 1079682
+03-27 20:28:20.956  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:20.960  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:20.974  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:20.974  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:20.976  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 3.0978056E-6
+03-27 20:28:20.995   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699378383955, frames = 1080322
+03-27 20:28:21.035   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699418302186, frames = 1080962
+03-27 20:28:21.035  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:21.039  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:21.053  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:21.054  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:21.056  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 4.309502E-6
+03-27 20:28:21.076   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699458651647, frames = 1081602
+03-27 20:28:21.115   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699498307032, frames = 1082242
+03-27 20:28:21.115  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:21.118  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:21.134  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:21.134  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:21.135  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 5.6909766E-6
+03-27 20:28:21.155   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699538386647, frames = 1082882
+03-27 20:28:21.195   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699578301724, frames = 1083522
+03-27 20:28:21.195  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:21.200  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:21.216  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:21.217  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:21.218  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 7.986339E-6
+03-27 20:28:21.235   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699618412032, frames = 1084162
+03-27 20:28:21.275   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699658406263, frames = 1084802
+03-27 20:28:21.275  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:21.279  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:21.298  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:21.299  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:21.301  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.8239261E-5
+03-27 20:28:21.316   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699698409417, frames = 1085442
+03-27 20:28:21.353   711   711 I thermal_repeater: [recvMdThermalInfo] ret=25, strLen=127,  3, 38, -6, 196, 32767, 0
+03-27 20:28:21.355   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699738385494, frames = 1086082
+03-27 20:28:21.355  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:21.359  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:21.379  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:21.380  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:21.383  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 9.9119825E-5
+03-27 20:28:21.396   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699778418647, frames = 1086722
+03-27 20:28:21.435   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699818298878, frames = 1087362
+03-27 20:28:21.435  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:21.439  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:21.454  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:21.455  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:21.456  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 6.39783E-4
+03-27 20:28:21.476   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699858409340, frames = 1088002
+03-27 20:28:21.515   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699898313186, frames = 1088642
+03-27 20:28:21.515  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:21.519  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:21.539  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:21.540  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:21.542  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 0.0031221048
+03-27 20:28:21.555   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699938397878, frames = 1089282
+03-27 20:28:21.595   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61699978392724, frames = 1089922
+03-27 20:28:21.596  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:21.599  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:21.616  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:21.617  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:21.619  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 0.009882254
+03-27 20:28:21.635   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700018388263, frames = 1090562
+03-27 20:28:21.675   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700058400263, frames = 1091202
+03-27 20:28:21.675  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:21.678  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:21.696  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:21.697  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:21.701  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 0.022026436
+03-27 20:28:21.715   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700098393878, frames = 1091842
+03-27 20:28:21.755   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700138297263, frames = 1092482
+03-27 20:28:21.755  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:21.762  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:21.776  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:21.776  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:21.777  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 0.026372889
+03-27 20:28:21.795   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700178396801, frames = 1093122
+03-27 20:28:21.835   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700218318878, frames = 1093762
+03-27 20:28:21.836  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:21.838  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:21.854  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:21.854  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:21.855  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 0.064609975
+03-27 20:28:21.875   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700258389109, frames = 1094402
+03-27 20:28:21.915   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700298301955, frames = 1095042
+03-27 20:28:21.915  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:21.920  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:21.934  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:21.935  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:21.936  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 0.04972792
+03-27 20:28:21.956   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700338396878, frames = 1095682
+03-27 20:28:21.995   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700378307109, frames = 1096322
+03-27 20:28:21.995  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:21.999  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:22.016  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:22.016  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:22.017  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 0.004484374
+03-27 20:28:22.035   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700418397801, frames = 1096962
+03-27 20:28:22.076   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700458300340, frames = 1097602
+03-27 20:28:22.076  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:22.080  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:22.099  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:22.099  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:22.100  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.22070254E-4
+03-27 20:28:22.115   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700498379801, frames = 1098242
+03-27 20:28:22.157   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700538324417, frames = 1098882
+03-27 20:28:22.158  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:22.164  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:22.167  1421  1824 D MobileSignalController: updateDataType mSelectedDataTypeIcon[0]=2131232931, mSelectedDataActivityIndex=6
+03-27 20:28:22.169  1421  1824 D TelephonyIcons: getSignalStrengthIcon: slot=0, inetCondition=1, level=3, roaming=false, signalstrength=SignalStrength:{mCdma=CellSignalStrengthCdma: cdmaDbm=2147483647 cdmaEcio=2147483647 evdoDbm=2147483647 evdoEcio=2147483647 evdoSnr=2147483647 miuiLevel=0 level=0,mGsm=CellSignalStrengthGsm: rssi=2147483647 ber=2147483647 mTa=2147483647 miuiLevel=0 mLevel=0,mWcdma=CellSignalStrengthWcdma: ss=2147483647 ber=2147483647 rscp=2147483647 ecno=2147483647 miuiLevel=0 level=0,mTdscdma=CellSignalStrengthTdscdma: rssi=2147483647 ber=2147483647 rscp=2147483647 miuiLevel=0 level=0,mLte=CellSignalStrengthLte: rssi=2147483647 rsrp=-107 rsrq=-12 rssnr=45 cqi=0 ta=0 miuiLevel=3 level=3,mNr=CellSignalStrengthNr:{ csiRsrp = 2147483647 csiRsrq = 2147483647 csiSinr = 2147483647 ssRsrp = 2147483647 ssRsrq = 2147483647 ssSinr = 2147483647 miuiLevel = 0 level = 0 },primary=CellSignalStrengthLte}, phoneId=0, mMtkLevel=0, mMtkRsrpOnly=false, mMtkLteRsrpThreshold=null, mMtkLteRssnrThreshold=null
+03-27 20:28:22.171  1421  1824 D TelephonyIcons: getDataActivity, slot=0, activity=3
+03-27 20:28:22.178  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:22.178  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:22.180  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 9.303438E-6
+03-27 20:28:22.180  1421  1824 D TelephonyIcons: null signal icon name: drawable/stat_sys_signal_null
+03-27 20:28:22.180  1421  1824 D TelephonyIcons: getDataTypeIcon sub=0
+03-27 20:28:22.182  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:22.184  1421  1421 I chatty  : uid=1000(system) com.android.systemui identical 2 lines
+03-27 20:28:22.184  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:22.195   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700578389647, frames = 1099522
+03-27 20:28:22.204  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:22.205  1421  1421 I chatty  : uid=1000(system) com.android.systemui identical 1 line
+03-27 20:28:22.207  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:22.215   583  2594 I BufferQueueProducer: [StatusBar#0](this:0xe6d65000,id:3,api:1,p:1421,c:583) queueBuffer: fps=1.67 dur=2988.68 max=2393.56 min=20.97
+03-27 20:28:22.230   550 27489 I hwcomposer: [HWCDisplay] [Display_0 (type:1)] fps:1.672401,dur:2989.71,max:2396.84,min:15.08  
+03-27 20:28:22.233   583   583 I SurfaceFlinger: screenshot (com.example.myapplication/com.example.myapplication.MainActivity#0)
+03-27 20:28:22.233   583   583 I SurfaceFlinger: isIncludeStatusBarAndNavBar (1)
+03-27 20:28:22.236   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700618310801, frames = 1100162
+03-27 20:28:22.237  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:22.240  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:22.262  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:22.262  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:22.264  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 4.4941653E-6
+03-27 20:28:22.275   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700658390801, frames = 1100802
+03-27 20:28:22.320   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700698379878, frames = 1101442
+03-27 20:28:22.320  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:22.323  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:22.337  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:22.338  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:22.339  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.84796E-6
+03-27 20:28:22.348   583   583 I SurfaceFlinger: screenshot (com.example.myapplication/com.example.myapplication.MainActivity#0)
+03-27 20:28:22.348   583   583 I SurfaceFlinger: isIncludeStatusBarAndNavBar (1)
+03-27 20:28:22.375   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700758384340, frames = 1102402
+03-27 20:28:22.414  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:22.415   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700798301801, frames = 1103042
+03-27 20:28:22.417  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:22.431  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:22.432  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:22.433  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 3.1087854E-6
+03-27 20:28:22.454   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700838383571, frames = 1103682
+03-27 20:28:22.494  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:22.495   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700878323186, frames = 1104322
+03-27 20:28:22.497  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:22.510  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:22.510  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:22.511  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 4.9386845E-6
+03-27 20:28:22.536   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700918322647, frames = 1104962
+03-27 20:28:22.574  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:22.575   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700958308032, frames = 1105602
+03-27 20:28:22.577  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:22.594  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:22.594  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:22.595  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.2593786E-5
+03-27 20:28:22.615   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61700998392955, frames = 1106242
+03-27 20:28:22.654  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:22.655   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701038301186, frames = 1106882
+03-27 20:28:22.658  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:22.675  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:22.675  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:22.677  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.1677449E-4
+03-27 20:28:22.695   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701078389494, frames = 1107522
+03-27 20:28:22.734  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:22.735   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701118462109, frames = 1108162
+03-27 20:28:22.739  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:22.755  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:22.755  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:22.756  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 3.216364E-4
+03-27 20:28:22.775   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701158402494, frames = 1108802
+03-27 20:28:22.814  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:22.815   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701198471263, frames = 1109442
+03-27 20:28:22.817  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:22.836  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:22.836  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:22.841  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 6.686291E-4
+03-27 20:28:22.856   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701238386494, frames = 1110082
+03-27 20:28:22.894  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:22.895   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701278462032, frames = 1110722
+03-27 20:28:22.898  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:22.913  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:22.914  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:22.916  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 8.0170576E-4
+03-27 20:28:22.936   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701318406263, frames = 1111362
+03-27 20:28:22.974  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:22.975   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701358310186, frames = 1112002
+03-27 20:28:22.977  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:22.993  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:22.993  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:22.994  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 9.502849E-4
+03-27 20:28:23.015   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701398378571, frames = 1112642
+03-27 20:28:23.055  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:23.055   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701438409109, frames = 1113282
+03-27 20:28:23.058  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:23.073  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:23.073  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:23.074  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 9.2767214E-4
+03-27 20:28:23.095   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701478382648, frames = 1113922
+03-27 20:28:23.134  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:23.135   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701518395724, frames = 1114562
+03-27 20:28:23.137  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:23.161  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:23.161  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:23.162  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 3.7834255E-4
+03-27 20:28:23.173  1421  1824 D MobileSignalController: updateDataType mSelectedDataTypeIcon[0]=2131232931, mSelectedDataActivityIndex=6
+03-27 20:28:23.174  1421  1824 D TelephonyIcons: getSignalStrengthIcon: slot=0, inetCondition=1, level=3, roaming=false, signalstrength=SignalStrength:{mCdma=CellSignalStrengthCdma: cdmaDbm=2147483647 cdmaEcio=2147483647 evdoDbm=2147483647 evdoEcio=2147483647 evdoSnr=2147483647 miuiLevel=0 level=0,mGsm=CellSignalStrengthGsm: rssi=2147483647 ber=2147483647 mTa=2147483647 miuiLevel=0 mLevel=0,mWcdma=CellSignalStrengthWcdma: ss=2147483647 ber=2147483647 rscp=2147483647 ecno=2147483647 miuiLevel=0 level=0,mTdscdma=CellSignalStrengthTdscdma: rssi=2147483647 ber=2147483647 rscp=2147483647 miuiLevel=0 level=0,mLte=CellSignalStrengthLte: rssi=2147483647 rsrp=-107 rsrq=-12 rssnr=45 cqi=0 ta=0 miuiLevel=3 level=3,mNr=CellSignalStrengthNr:{ csiRsrp = 2147483647 csiRsrq = 2147483647 csiSinr = 2147483647 ssRsrp = 2147483647 ssRsrq = 2147483647 ssSinr = 2147483647 miuiLevel = 0 level = 0 },primary=CellSignalStrengthLte}, phoneId=0, mMtkLevel=0, mMtkRsrpOnly=false, mMtkLteRsrpThreshold=null, mMtkLteRssnrThreshold=null
+03-27 20:28:23.174  1421  1824 D TelephonyIcons: getDataActivity, slot=0, activity=0
+03-27 20:28:23.176   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701558390340, frames = 1115202
+03-27 20:28:23.179  1421  1824 D TelephonyIcons: null signal icon name: drawable/stat_sys_signal_null
+03-27 20:28:23.180  1421  1824 D TelephonyIcons: getDataTypeIcon sub=0
+03-27 20:28:23.181  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:23.197  1421  1421 I chatty  : uid=1000(system) com.android.systemui identical 5 lines
+03-27 20:28:23.199  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:23.215  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:23.216   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701598309032, frames = 1115842
+03-27 20:28:23.219  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:23.224   583   583 I SurfaceFlinger: screenshot (com.example.myapplication/com.example.myapplication.MainActivity#0)
+03-27 20:28:23.224   583   583 I SurfaceFlinger: isIncludeStatusBarAndNavBar (1)
+03-27 20:28:23.236   583  2594 I BufferQueueProducer: [StatusBar#0](this:0xe6d65000,id:3,api:1,p:1421,c:583) queueBuffer: fps=2.94 dur=1021.85 max=972.83 min=20.72
+03-27 20:28:23.242  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:23.242  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:23.244  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 3.392597E-4
+03-27 20:28:23.252   550 27489 I hwcomposer: [HWCDisplay] [Display_0 (type:1)] fps:2.935569,dur:1021.95,max:976.07,min:14.94  
+03-27 20:28:23.256   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701638401032, frames = 1116482
+03-27 20:28:23.295  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:23.296   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701678298571, frames = 1117122
+03-27 20:28:23.299  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:23.313  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:23.313  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:23.315  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 3.057967E-4
+03-27 20:28:23.335   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701718317494, frames = 1117762
+03-27 20:28:23.339   583   583 I SurfaceFlinger: screenshot (com.example.myapplication/com.example.myapplication.MainActivity#0)
+03-27 20:28:23.339   583   583 I SurfaceFlinger: isIncludeStatusBarAndNavBar (1)
+03-27 20:28:23.374  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:23.375   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701758404417, frames = 1118402
+03-27 20:28:23.377  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:23.395  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:23.395  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:23.397  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 7.860413E-5
+03-27 20:28:23.415   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701798397032, frames = 1119042
+03-27 20:28:23.456  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:23.456   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701838295571, frames = 1119682
+03-27 20:28:23.460  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:23.476  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:23.476  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:23.477  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.9416384E-5
+03-27 20:28:23.495   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701878390417, frames = 1120322
+03-27 20:28:23.535  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:23.536   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701918509801, frames = 1120962
+03-27 20:28:23.539  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:23.554  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:23.555  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:23.556  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 6.22892E-6
+03-27 20:28:23.575   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701958396263, frames = 1121602
+03-27 20:28:23.614  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:23.615   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61701998309263, frames = 1122242
+03-27 20:28:23.618  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:23.632  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:23.632  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:23.633  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 7.885525E-6
+03-27 20:28:23.655   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702038383340, frames = 1122882
+03-27 20:28:23.694  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:23.695   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702078482648, frames = 1123522
+03-27 20:28:23.697  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:23.711  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:23.711  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:23.712  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.4739416E-5
+03-27 20:28:23.735   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702118327340, frames = 1124162
+03-27 20:28:23.774  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:23.775   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702158415494, frames = 1124802
+03-27 20:28:23.777  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:23.789  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:23.790  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:23.790  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 7.703142E-5
+03-27 20:28:23.815   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702198317724, frames = 1125442
+03-27 20:28:23.853   583   583 I SurfaceFlinger: screenshot (com.example.myapplication/com.example.myapplication.MainActivity#0)
+03-27 20:28:23.853   583   583 I SurfaceFlinger: isIncludeStatusBarAndNavBar (1)
+03-27 20:28:23.854  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:23.855   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702238326109, frames = 1126082
+03-27 20:28:23.858  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:23.875  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:23.875  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:23.876  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 3.2291858E-4
+03-27 20:28:23.895   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702278328878, frames = 1126722
+03-27 20:28:23.934  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:23.935   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702318334186, frames = 1127362
+03-27 20:28:23.936  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:23.951  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:23.951  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:23.952  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 4.013016E-4
+03-27 20:28:23.975   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702358324494, frames = 1128002
+03-27 20:28:23.990 30720 30929 W Settings: Setting airplane_mode_on has moved from android.provider.Settings.System to android.provider.Settings.Global, returning read-only value.
+03-27 20:28:23.991 30720 30929 W Settings: Setting airplane_mode_on has moved from android.provider.Settings.System to android.provider.Settings.Global, returning read-only value.
+03-27 20:28:23.992  1232  1360 W WifiPermissionsUtil: Request from com.google.android.gms violated location settings
+03-27 20:28:24.017  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:24.020   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702398296878, frames = 1128642
+03-27 20:28:24.020  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:24.030 30720 30929 I ActivityScheduler: nextTriggerTime: 111666519, in 160687ms, detectorType: 39, FULL_TYPE alarmWindowMillis: 30000
+03-27 20:28:24.034  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:24.035  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:24.036  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.8597206E-4
+03-27 20:28:24.056   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702438481571, frames = 1129282
+03-27 20:28:24.094  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:24.095   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702478299648, frames = 1129922
+03-27 20:28:24.098  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:24.112  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:24.113  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:24.114  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 3.519504E-4
+03-27 20:28:24.135   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702518397109, frames = 1130562
+03-27 20:28:24.174  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:24.175   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702558317417, frames = 1131202
+03-27 20:28:24.180  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:24.194   716 32010 D AALLightSensor: newLux = 33, [33, 32] -> 33
+03-27 20:28:24.205  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:24.206  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:24.208  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 4.0910454E-4
+03-27 20:28:24.216   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702598403109, frames = 1131842
+03-27 20:28:24.255  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:24.256   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702638469417, frames = 1132482
+03-27 20:28:24.261  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:24.281  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:24.282  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:24.284  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 4.0933312E-4
+03-27 20:28:24.296   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702678425878, frames = 1133122
+03-27 20:28:24.334  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:24.335   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702718302878, frames = 1133762
+03-27 20:28:24.338  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:24.354  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:24.355  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:24.357  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 5.184975E-4
+03-27 20:28:24.378   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702758416417, frames = 1134402
+03-27 20:28:24.414  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:24.415   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702798381648, frames = 1135042
+03-27 20:28:24.417  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:24.438  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:24.438  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:24.440  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 4.3440555E-4
+03-27 20:28:24.456   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702838380263, frames = 1135682
+03-27 20:28:24.495  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:24.495   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702878462801, frames = 1136322
+03-27 20:28:24.498  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:24.518  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:24.518  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:24.520  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 3.970704E-4
+03-27 20:28:24.537   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702918424340, frames = 1136962
+03-27 20:28:24.575  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:24.575   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702958468725, frames = 1137602
+03-27 20:28:24.578  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:24.598  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:24.599  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:24.601  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.9911022E-4
+03-27 20:28:24.616   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61702998411878, frames = 1138242
+03-27 20:28:24.654  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:24.655   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703038468801, frames = 1138882
+03-27 20:28:24.658  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:24.675  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:24.675  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:24.676  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 3.649925E-5
+03-27 20:28:24.695   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703078380263, frames = 1139522
+03-27 20:28:24.734  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:24.735   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703118294878, frames = 1140162
+03-27 20:28:24.738  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:24.753  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:24.753  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:24.755  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 9.692704E-6
+03-27 20:28:24.775   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703158380340, frames = 1140802
+03-27 20:28:24.814  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:24.815   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703198314186, frames = 1141442
+03-27 20:28:24.817  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:24.832  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:24.832  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:24.834  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.6460805E-5
+03-27 20:28:24.856   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703238394263, frames = 1142082
+03-27 20:28:24.894  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:24.895   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703278308263, frames = 1142722
+03-27 20:28:24.897  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:24.912  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:24.912  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:24.913  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.2991433E-4
+03-27 20:28:24.935   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703318383878, frames = 1143362
+03-27 20:28:24.974  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:24.975   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703358311955, frames = 1144002
+03-27 20:28:24.977  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:24.993  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:24.994  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:24.995  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 0.0010284598
+03-27 20:28:25.015   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703398466340, frames = 1144642
+03-27 20:28:25.054  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:25.055   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703438482494, frames = 1145282
+03-27 20:28:25.057  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:25.071  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:25.071  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:25.072  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 0.0016833922
+03-27 20:28:25.096   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703478904801, frames = 1145922
+03-27 20:28:25.134  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:25.135   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703518309648, frames = 1146562
+03-27 20:28:25.137  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:25.151  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:25.152  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:25.153  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 0.0020501846
+03-27 20:28:25.175   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703558485878, frames = 1147202
+03-27 20:28:25.214  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:25.215   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703598324032, frames = 1147842
+03-27 20:28:25.217  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:25.243  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:25.243  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:25.244  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 0.001440602
+03-27 20:28:25.255   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703638395878, frames = 1148482
+03-27 20:28:25.296  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:25.296   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703678397032, frames = 1149122
+03-27 20:28:25.301  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:25.317  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:25.317  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:25.318  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 0.0011005851
+03-27 20:28:25.335   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703718388725, frames = 1149762
+03-27 20:28:25.375  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:25.376   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703758294032, frames = 1150402
+03-27 20:28:25.379  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:25.398  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:25.398  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:25.399  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 4.5357118E-4
+03-27 20:28:25.415   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703798397417, frames = 1151042
+03-27 20:28:25.455  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:25.456   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703838298494, frames = 1151682
+03-27 20:28:25.460  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:25.474  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:25.474  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:25.475  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 4.8525824E-4
+03-27 20:28:25.496   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703878501417, frames = 1152322
+03-27 20:28:25.534  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:25.535   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703918461417, frames = 1152962
+03-27 20:28:25.537  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:25.553  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:25.553  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:25.555  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 7.495774E-4
+03-27 20:28:25.575   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703958327571, frames = 1153602
+03-27 20:28:25.614  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:25.615   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61703998394802, frames = 1154242
+03-27 20:28:25.619  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:25.633  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:25.633  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:25.634  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 3.1435076E-4
+03-27 20:28:25.655   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704038325955, frames = 1154882
+03-27 20:28:25.694  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:25.695   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704078297186, frames = 1155522
+03-27 20:28:25.697  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:25.716  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:25.716  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:25.717  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 5.7230696E-5
+03-27 20:28:25.735   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704118384725, frames = 1156162
+03-27 20:28:25.775  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:25.776   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704158405878, frames = 1156802
+03-27 20:28:25.780  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:25.798  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:25.798  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:25.799  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.549856E-5
+03-27 20:28:25.815   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704198387263, frames = 1157442
+03-27 20:28:25.854  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:25.855   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704238469878, frames = 1158082
+03-27 20:28:25.858  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:25.874  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:25.875  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:25.877  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.0191804E-5
+03-27 20:28:25.896   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704278390494, frames = 1158722
+03-27 20:28:25.934  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:25.935   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704318295494, frames = 1159362
+03-27 20:28:25.938  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:25.951  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:25.951  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:25.952  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.9766432E-5
+03-27 20:28:25.975   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704358326109, frames = 1160002
+03-27 20:28:26.014  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:26.015   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704398338109, frames = 1160642
+03-27 20:28:26.017  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:26.037  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:26.037  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:26.038  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 3.971843E-5
+03-27 20:28:26.055   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704438394494, frames = 1161282
+03-27 20:28:26.095  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:26.096   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704478478340, frames = 1161922
+03-27 20:28:26.100  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:26.118  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:26.119  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:26.120  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.15583905E-4
+03-27 20:28:26.135   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704518489802, frames = 1162562
+03-27 20:28:26.176  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:26.176   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704558336109, frames = 1163202
+03-27 20:28:26.180  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:26.198  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:26.199  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:26.200  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.7532118E-5
+03-27 20:28:26.215   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704598392955, frames = 1163842
+03-27 20:28:26.256  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:26.256   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704638472186, frames = 1164482
+03-27 20:28:26.260  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:26.280  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:26.280  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:26.281  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.7015707E-5
+03-27 20:28:26.295   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704678399263, frames = 1165122
+03-27 20:28:26.336  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:26.336   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704718478186, frames = 1165762
+03-27 20:28:26.342  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:26.360  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:26.360  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:26.361  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 9.634837E-6
+03-27 20:28:26.376   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704758387186, frames = 1166402
+03-27 20:28:26.415  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:26.416   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704798471648, frames = 1167042
+03-27 20:28:26.421  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:26.439  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:26.439  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:26.441  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.0701682E-5
+03-27 20:28:26.455   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704838391571, frames = 1167682
+03-27 20:28:26.496  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:26.496   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704878339802, frames = 1168322
+03-27 20:28:26.500  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:26.515  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:26.515  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:26.516  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.6825477E-5
+03-27 20:28:26.535   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704918383571, frames = 1168962
+03-27 20:28:26.574  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:26.575   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704958388340, frames = 1169602
+03-27 20:28:26.578  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:26.596  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:26.596  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:26.597  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 4.4666074E-5
+03-27 20:28:26.615   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61704998391417, frames = 1170242
+03-27 20:28:26.655  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:26.655   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705038396032, frames = 1170882
+03-27 20:28:26.658  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:26.676  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:26.676  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:26.677  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.5269266E-5
+03-27 20:28:26.695   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705078388109, frames = 1171522
+03-27 20:28:26.735  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:26.736   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705118300494, frames = 1172162
+03-27 20:28:26.740  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:26.758  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:26.758  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:26.759  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.6028273E-5
+03-27 20:28:26.775   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705158395417, frames = 1172802
+03-27 20:28:26.815  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:26.816   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705198308878, frames = 1173442
+03-27 20:28:26.819  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:26.834  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:26.834  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:26.835  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.9080891E-5
+03-27 20:28:26.855   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705238407263, frames = 1174082
+03-27 20:28:26.894  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:26.895   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705278302417, frames = 1174722
+03-27 20:28:26.897  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:26.911  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:26.912  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:26.913  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.3877673E-4
+03-27 20:28:26.936   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705318487263, frames = 1175362
+03-27 20:28:26.974  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:26.975   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705358301032, frames = 1176002
+03-27 20:28:26.981  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:26.998  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:26.998  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:26.999  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.1724456E-4
+03-27 20:28:27.015   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705398383648, frames = 1176642
+03-27 20:28:27.055  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:27.056   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705438406725, frames = 1177282
+03-27 20:28:27.059  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:27.074  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:27.075  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:27.076  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.4980968E-4
+03-27 20:28:27.115   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705498386571, frames = 1178242
+03-27 20:28:27.116  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:27.119  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:27.132  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:27.133  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:27.134  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 6.170424E-5
+03-27 20:28:27.155   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705538326109, frames = 1178882
+03-27 20:28:27.195   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705578321109, frames = 1179522
+03-27 20:28:27.195  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:27.198  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:27.214  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:27.215  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:27.217  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.0802065E-5
+03-27 20:28:27.235   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705618388725, frames = 1180162
+03-27 20:28:27.274   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705658312186, frames = 1180802
+03-27 20:28:27.275  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:27.278  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:27.294  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:27.295  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:27.297  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.4467316E-5
+03-27 20:28:27.315   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705698411725, frames = 1181442
+03-27 20:28:27.354   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705738312571, frames = 1182082
+03-27 20:28:27.355  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:27.358  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:27.376  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:27.377  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:27.379  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.6699885E-5
+03-27 20:28:27.397   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705778418571, frames = 1182722
+03-27 20:28:27.435   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705818377879, frames = 1183362
+03-27 20:28:27.436  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:27.439  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:27.458  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:27.462  1232  1361 D BatteryService: shouldShutdownLocked batteryLevel:64,batteryPresent:true,batteryStatus:2
+03-27 20:28:27.462  1232  1361 D BatteryService: shutdownIfOverTempLocked batteryTemperature:346
+03-27 20:28:27.467  1421  1421 D KeyguardUpdateMonitor: received broadcast android.intent.action.BATTERY_CHANGED
+03-27 20:28:27.469  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:27.469  2838  2838 I BatteryInfoReceiver: ACTION_BATTERY_CHANGED
+03-27 20:28:27.471  4426  4895 D PowerCheckerService: onBatteryChanged, mBatteryLevel = 64, status = 2, level = 64, plug = 2, scale = 100
+03-27 20:28:27.472  2838  2838 I PowerNoticeUI: handleBatteryChanged oldPlugType 2 mPlugType 2 oldBatteryLevel 64 mBatteryLevel 64 temperature 346
+03-27 20:28:27.475   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705858645648, frames = 1184002
+03-27 20:28:27.484  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.7995611E-5
+03-27 20:28:27.515   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705898387494, frames = 1184642
+03-27 20:28:27.516  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:27.519  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:27.540  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:27.540  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:27.541  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 8.332329E-6
+03-27 20:28:27.555   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705938419032, frames = 1185282
+03-27 20:28:27.595   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61705978384417, frames = 1185922
+03-27 20:28:27.596  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:27.599  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:27.616  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:27.617  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:27.618  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 4.067991E-6
+03-27 20:28:27.636   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706018409725, frames = 1186562
+03-27 20:28:27.660  1421  1824 D MobileSignalController: onSignalStrengthsChanged: SignalStrength:{mCdma=CellSignalStrengthCdma: cdmaDbm=2147483647 cdmaEcio=2147483647 evdoDbm=2147483647 evdoEcio=2147483647 evdoSnr=2147483647 miuiLevel=0 level=0,mGsm=CellSignalStrengthGsm: rssi=2147483647 ber=2147483647 mTa=2147483647 miuiLevel=0 mLevel=0,mWcdma=CellSignalStrengthWcdma: ss=2147483647 ber=2147483647 rscp=2147483647 ecno=2147483647 miuiLevel=0 level=0,mTdscdma=CellSignalStrengthTdscdma: rssi=2147483647 ber=2147483647 rscp=2147483647 miuiLevel=0 level=0,mLte=CellSignalStrengthLte: rssi=2147483647 rsrp=-106 rsrq=-12 rssnr=45 cqi=0 ta=0 miuiLevel=3 level=3,mNr=CellSignalStrengthNr:{ csiRsrp = 2147483647 csiRsrq = 2147483647 csiSinr = 2147483647 ssRsrp = 2147483647 ssRsrq = 2147483647 ssSinr = 2147483647 miuiLevel = 0 level = 0 },primary=CellSignalStrengthLte}, phoneId=0, mMtkLevel=0, mMtkRsrpOnly=false, mMtkLteRsrpThreshold=null, mMtkLteRssnrThreshold=null
+03-27 20:28:27.660  1421  1824 D NetworkController.MobileSignalController(1): 4G level = 3
+03-27 20:28:27.671  1421  1824 D MobileSignalController: updateDataType mSelectedDataTypeIcon[0]=2131232931, mSelectedDataActivityIndex=6
+03-27 20:28:27.671  1421  1824 D TelephonyIcons: getSignalStrengthIcon: slot=0, inetCondition=1, level=3, roaming=false, signalstrength=SignalStrength:{mCdma=CellSignalStrengthCdma: cdmaDbm=2147483647 cdmaEcio=2147483647 evdoDbm=2147483647 evdoEcio=2147483647 evdoSnr=2147483647 miuiLevel=0 level=0,mGsm=CellSignalStrengthGsm: rssi=2147483647 ber=2147483647 mTa=2147483647 miuiLevel=0 mLevel=0,mWcdma=CellSignalStrengthWcdma: ss=2147483647 ber=2147483647 rscp=2147483647 ecno=2147483647 miuiLevel=0 level=0,mTdscdma=CellSignalStrengthTdscdma: rssi=2147483647 ber=2147483647 rscp=2147483647 miuiLevel=0 level=0,mLte=CellSignalStrengthLte: rssi=2147483647 rsrp=-106 rsrq=-12 rssnr=45 cqi=0 ta=0 miuiLevel=3 level=3,mNr=CellSignalStrengthNr:{ csiRsrp = 2147483647 csiRsrq = 2147483647 csiSinr = 2147483647 ssRsrp = 2147483647 ssRsrq = 2147483647 ssSinr = 2147483647 miuiLevel = 0 level = 0 },primary=CellSignalStrengthLte}, phoneId=0, mMtkLevel=0, mMtkRsrpOnly=false, mMtkLteRsrpThreshold=null, mMtkLteRssnrThreshold=null
+03-27 20:28:27.672  1421  1824 D TelephonyIcons: getDataActivity, slot=0, activity=0
+03-27 20:28:27.675  1421  1824 D TelephonyIcons: null signal icon name: drawable/stat_sys_signal_null
+03-27 20:28:27.675   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706058379725, frames = 1187202
+03-27 20:28:27.675  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:27.676  1421  1824 D TelephonyIcons: getDataTypeIcon sub=0
+03-27 20:28:27.679  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:27.679  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:27.680  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:27.681  1421  1421 I chatty  : uid=1000(system) com.android.systemui identical 1 line
+03-27 20:28:27.684  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:27.702  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:27.702  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:27.702  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:27.704  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 4.266389E-6
+03-27 20:28:27.705  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:27.707  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:27.716   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706098418032, frames = 1187842
+03-27 20:28:27.717   583  1059 I BufferQueueProducer: [StatusBar#0](this:0xe6d65000,id:3,api:1,p:1421,c:583) queueBuffer: fps=0.45 dur=4480.55 max=3882.33 min=598.22
+03-27 20:28:27.730   550 27489 I hwcomposer: [HWCDisplay] [Display_0 (type:1)] fps:0.446678,dur:4477.50,max:3879.65,min:597.84  
+03-27 20:28:27.733   583   583 I SurfaceFlinger: screenshot (com.example.myapplication/com.example.myapplication.MainActivity#0)
+03-27 20:28:27.733   583   583 I SurfaceFlinger: isIncludeStatusBarAndNavBar (1)
+03-27 20:28:27.756   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706138378340, frames = 1188482
+03-27 20:28:27.757  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:27.760  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:27.774  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:27.775  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:27.776  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 4.889123E-6
+03-27 20:28:27.795   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706178379571, frames = 1189122
+03-27 20:28:27.835   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706218303725, frames = 1189762
+03-27 20:28:27.835  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:27.838  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:27.848   583   583 I SurfaceFlinger: screenshot (com.example.myapplication/com.example.myapplication.MainActivity#0)
+03-27 20:28:27.849   583   583 I SurfaceFlinger: isIncludeStatusBarAndNavBar (1)
+03-27 20:28:27.863  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:27.863  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:27.865  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 6.036229E-6
+03-27 20:28:27.875   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706258325340, frames = 1190402
+03-27 20:28:27.916   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706298401725, frames = 1191042
+03-27 20:28:27.916  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:27.920  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:27.933  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:27.933  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:27.934  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 8.80828E-6
+03-27 20:28:27.955   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706338393725, frames = 1191682
+03-27 20:28:27.964   583   583 I SurfaceFlinger: screenshot (com.example.myapplication/com.example.myapplication.MainActivity#0)
+03-27 20:28:27.964   583   583 I SurfaceFlinger: isIncludeStatusBarAndNavBar (1)
+03-27 20:28:27.994   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706378382879, frames = 1192322
+03-27 20:28:27.995  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:27.998  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:28.012  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:28.012  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:28.014  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.6641421E-5
+03-27 20:28:28.035   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706418392417, frames = 1192962
+03-27 20:28:28.074   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706458308879, frames = 1193602
+03-27 20:28:28.075  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:28.078  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:28.098  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:28.098  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:28.099  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.6988433E-5
+03-27 20:28:28.116   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706498499494, frames = 1194242
+03-27 20:28:28.156   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706538297109, frames = 1194882
+03-27 20:28:28.156  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:28.160  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:28.173  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:28.174  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:28.175  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.38239575E-5
+03-27 20:28:28.195   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706578382725, frames = 1195522
+03-27 20:28:28.209  1421  1824 D MobileSignalController: updateDataType mSelectedDataTypeIcon[0]=2131232931, mSelectedDataActivityIndex=6
+03-27 20:28:28.209  1421  1824 D TelephonyIcons: getSignalStrengthIcon: slot=0, inetCondition=1, level=3, roaming=false, signalstrength=SignalStrength:{mCdma=CellSignalStrengthCdma: cdmaDbm=2147483647 cdmaEcio=2147483647 evdoDbm=2147483647 evdoEcio=2147483647 evdoSnr=2147483647 miuiLevel=0 level=0,mGsm=CellSignalStrengthGsm: rssi=2147483647 ber=2147483647 mTa=2147483647 miuiLevel=0 mLevel=0,mWcdma=CellSignalStrengthWcdma: ss=2147483647 ber=2147483647 rscp=2147483647 ecno=2147483647 miuiLevel=0 level=0,mTdscdma=CellSignalStrengthTdscdma: rssi=2147483647 ber=2147483647 rscp=2147483647 miuiLevel=0 level=0,mLte=CellSignalStrengthLte: rssi=2147483647 rsrp=-106 rsrq=-12 rssnr=45 cqi=0 ta=0 miuiLevel=3 level=3,mNr=CellSignalStrengthNr:{ csiRsrp = 2147483647 csiRsrq = 2147483647 csiSinr = 2147483647 ssRsrp = 2147483647 ssRsrq = 2147483647 ssSinr = 2147483647 miuiLevel = 0 level = 0 },primary=CellSignalStrengthLte}, phoneId=0, mMtkLevel=0, mMtkRsrpOnly=false, mMtkLteRsrpThreshold=null, mMtkLteRssnrThreshold=null
+03-27 20:28:28.209  1421  1824 D TelephonyIcons: getDataActivity, slot=0, activity=3
+03-27 20:28:28.216  1421  1824 D TelephonyIcons: null signal icon name: drawable/stat_sys_signal_null
+03-27 20:28:28.217  1421  1824 D TelephonyIcons: getDataTypeIcon sub=0
+03-27 20:28:28.218  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:28.231  1421  1421 I chatty  : uid=1000(system) com.android.systemui identical 5 lines
+03-27 20:28:28.232  1421  1421 D SignalClusterView: updateMobileTypeImage  0
+03-27 20:28:28.235   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706618382725, frames = 1196162
+03-27 20:28:28.235  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:28.238  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:28.254  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:28.254  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:28.260  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.1677626E-5
+03-27 20:28:28.261   583   583 I SurfaceFlinger: screenshot (com.example.myapplication/com.example.myapplication.MainActivity#0)
+03-27 20:28:28.261   583   583 I SurfaceFlinger: isIncludeStatusBarAndNavBar (1)
+03-27 20:28:28.276   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706658813648, frames = 1196802
+03-27 20:28:28.315   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706698403725, frames = 1197442
+03-27 20:28:28.315  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:28.318  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:28.332  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:28.332  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:28.333  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 1.438297E-5
+03-27 20:28:28.375   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706758397263, frames = 1198402
+03-27 20:28:28.377   583   583 I SurfaceFlinger: screenshot (com.example.myapplication/com.example.myapplication.MainActivity#0)
+03-27 20:28:28.378   583   583 I SurfaceFlinger: isIncludeStatusBarAndNavBar (1)
+03-27 20:28:28.414  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:28.415   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706798475494, frames = 1199042
+03-27 20:28:28.419  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:28.436  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:28.436  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:28.437  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 7.624016E-6
+03-27 20:28:28.455   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706838418648, frames = 1199682
+03-27 20:28:28.496  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:28.497   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706878297109, frames = 1200322
+03-27 20:28:28.499  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:28.513  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:28.513  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:28.514  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 3.1536847E-6
+03-27 20:28:28.535   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706918388571, frames = 1200962
+03-27 20:28:28.574  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:28.575   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706958303494, frames = 1201602
+03-27 20:28:28.577  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:28.590  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:28.590  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:28.591  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.6768637E-6
+03-27 20:28:28.616   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61706998480725, frames = 1202242
+03-27 20:28:28.654  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:28.655   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61707038478879, frames = 1202882
+03-27 20:28:28.658  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:28.672  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:28.672  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:28.673  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.2173351E-6
+03-27 20:28:28.695   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61707078462263, frames = 1203522
+03-27 20:28:28.734  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:28.735   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61707118296648, frames = 1204162
+03-27 20:28:28.738  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:28.752  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:28.752  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:28.754  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.2371098E-6
+03-27 20:28:28.775   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61707158378571, frames = 1204802
+03-27 20:28:28.814  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:28.815   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61707198315571, frames = 1205442
+03-27 20:28:28.819  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:28.834  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:28.835  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:28.837  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.55293E-6
+03-27 20:28:28.855   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61707238389879, frames = 1206082
+03-27 20:28:28.894  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:28.895   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61707278304802, frames = 1206722
+03-27 20:28:28.897  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:28.915  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:28.916  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:28.918  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 2.9466082E-6
+03-27 20:28:28.935   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61707318419725, frames = 1207362
+03-27 20:28:28.974  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:28.975   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61707358301571, frames = 1208002
+03-27 20:28:28.978  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:28.995  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:28.996  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:28.997  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 4.0245945E-6
+03-27 20:28:29.004 30720 30929 W Settings: Setting airplane_mode_on has moved from android.provider.Settings.System to android.provider.Settings.Global, returning read-only value.
+03-27 20:28:29.005 30720 30929 W Settings: Setting airplane_mode_on has moved from android.provider.Settings.System to android.provider.Settings.Global, returning read-only value.
+03-27 20:28:29.007  1232  1360 W WifiPermissionsUtil: Request from com.google.android.gms violated location settings
+03-27 20:28:29.018   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61707398387494, frames = 1208642
+03-27 20:28:29.030 30720 30929 I ActivityScheduler: nextTriggerTime: 111666519, in 155687ms, detectorType: 39, FULL_TYPE alarmWindowMillis: 30000
+03-27 20:28:29.055  4642  5112 V WakeWordDetector: Stage 1: Audio Normalized
+03-27 20:28:29.056   540  5111 D AudioALSAStreamIn: getCapturePosition(), timestamp not change, update time 61707438395802, frames = 1209282
+03-27 20:28:29.058  4642  5112 V WakeWordDetector: Stage 2: Mel ONNX Complete
+03-27 20:28:29.073  4642  5112 V WakeWordDetector: Stage 3: Embedding ONNX Complete
+03-27 20:28:29.074  4642  5112 V WakeWordDetector: Stage 4: Buffer updated
+03-27 20:28:29.075  4642  5112 V WakeWordDetector: Stage 5: TFLite Score = 4.2230104E-6
