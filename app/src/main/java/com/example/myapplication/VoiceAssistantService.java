@@ -288,7 +288,7 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
         }
 
         String cleanIp = sanitizeIp(backendIp);
-        String url = "http://" + cleanIp + ":5000/ping";
+        String url = "http://" + cleanIp + ":6769/ping";
         Log.d("Assistant", "Attempting to ping URL: " + url);
         Request request = new Request.Builder().url(url).build();
         httpClient.newCall(request).enqueue(new Callback() {
@@ -319,7 +319,7 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
         }
         
         String cleanIp = sanitizeIp(backendIp);
-        String url = "http://" + cleanIp + ":5000/api/command";
+        String url = "http://" + cleanIp + ":6769/api/command";
         Log.d("Assistant", "Sending command to URL: " + url + " | Command: " + command);
         
         try {

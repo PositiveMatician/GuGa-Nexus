@@ -7,6 +7,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.EditText;
 import android.content.Intent;
 import android.os.Build;
 import android.content.BroadcastReceiver;
@@ -15,11 +16,13 @@ import android.content.IntentFilter;
 import android.graphics.Color;
 import android.os.Handler;
 import android.os.Looper;
-import android.widget.EditText;
 import android.widget.Switch;
 import android.content.SharedPreferences;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
+import com.journeyapps.barcodescanner.ScanContract;
+import com.journeyapps.barcodescanner.ScanOptions;
+import androidx.activity.result.ActivityResultLauncher;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -42,11 +45,22 @@ public class MainActivity extends AppCompatActivity {
     private Button manualWakeButton;
     private EditText ipInput;
     private Button saveIpButton;
+    private Button scanQrButton;
     private Button pingButton;
     private EditText manualCommandInput;
     private Button sendManualCommandButton;
     private SharedPreferences prefs;
     private String currentWakeWord = "JARVIS";
+
+    private final ActivityResultLauncher<ScanOptions> qrCodeLauncher = registerForActivityResult(
+            new ScanContract(),
+            result -> {
+                if (result.getContents() != null) {
+                    String scannedIp = result.getContents();
+                    handleNewIp(scannedIp);
+                }
+            }
+    );
     
     private final BroadcastReceiver wakeWordReceiver = new BroadcastReceiver() {
         @Override
@@ -95,6 +109,7 @@ public class MainActivity extends AppCompatActivity {
         manualWakeButton = findViewById(R.id.manualWakeButton);
         ipInput = findViewById(R.id.ipInput);
         saveIpButton = findViewById(R.id.saveIpButton);
+        scanQrButton = findViewById(R.id.scanQrButton);
         pingButton = findViewById(R.id.pingButton);
         listeningToggle = findViewById(R.id.listeningToggle);
         manualCommandInput = findViewById(R.id.manualCommandInput);
@@ -111,11 +126,16 @@ public class MainActivity extends AppCompatActivity {
 
         saveIpButton.setOnClickListener(v -> {
             String ip = ipInput.getText().toString();
-            prefs.edit().putString("backend_ip", ip).apply();
-            Intent intent = new Intent("com.example.myapplication.UPDATE_IP");
-            intent.putExtra("ip", ip);
-            sendBroadcast(intent);
-            statusText.setText("IP Saved");
+            handleNewIp(ip);
+        });
+
+        scanQrButton.setOnClickListener(v -> {
+            ScanOptions options = new ScanOptions();
+            options.setDesiredBarcodeFormats(ScanOptions.QR_CODE);
+            options.setPrompt("Scan Jarvis Backend QR Code");
+            options.setBeepEnabled(true);
+            options.setOrientationLocked(false);
+            qrCodeLauncher.launch(options);
         });
 
         pingButton.setOnClickListener(v -> {
@@ -257,5 +277,23 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         unregisterReceiver(wakeWordReceiver);
+    }
+
+    private void handleNewIp(String ip) {
+        ipInput.setText(ip);
+        prefs.edit().putString("backend_ip", ip).apply();
+        
+        Intent intent = new Intent("com.example.myapplication.UPDATE_IP");
+        intent.putExtra("ip", ip);
+        sendBroadcast(intent);
+        
+        statusText.setText("IP Saved: " + ip);
+        
+        // Auto-ping after 0.5s
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            Intent pingIntent = new Intent("com.example.myapplication.PING_BACKEND");
+            sendBroadcast(pingIntent);
+            statusText.setText("Auto-pinging server...");
+        }, 500);
     }
 }

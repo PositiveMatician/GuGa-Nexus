@@ -29,7 +29,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
-            android:text="Save IP &amp; Connect" />
+            android:text="Save IP" />
+
+        <Button
+            android:id="@+id/scanQrButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Scan QR" />
     </LinearLayout>
 
     <Button
