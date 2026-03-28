@@ -86,6 +86,14 @@
         android:text="Model: Jarvis (Off) / Alexa (On)"
         android:layout_marginBottom="24dp" />
 
+    <androidx.appcompat.widget.SwitchCompat
+        android:id="@+id/listeningToggle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Wake Word Listening"
+        android:checked="false"
+        android:layout_marginBottom="24dp" />
+
     <Button
         android:id="@+id/manualWakeButton"
         android:layout_width="wrap_content"
@@ -117,11 +125,5 @@
             android:layout_marginStart="8dp"
             android:text="Send" />
     </LinearLayout>
-
-    <Button
-        android:id="@+id/initButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Initialize Assistant" />
 
 </LinearLayout>

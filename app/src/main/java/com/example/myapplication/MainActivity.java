@@ -33,11 +33,11 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
     private TextView statusText;
-    private Button initButton;
     private View mainLayout;
     private EditText thresholdInput;
     private Button applyThresholdButton;
     private Switch modelSwitch;
+    private androidx.appcompat.widget.SwitchCompat listeningToggle;
     private TextView thresholdLabel;
     private Button manualWakeButton;
     private EditText ipInput;
@@ -88,7 +88,6 @@ public class MainActivity extends AppCompatActivity {
         });
 
         statusText = findViewById(R.id.statusText);
-        initButton = findViewById(R.id.initButton);
         thresholdInput = findViewById(R.id.thresholdInput);
         applyThresholdButton = findViewById(R.id.applyThresholdButton);
         modelSwitch = findViewById(R.id.modelSwitch);
@@ -97,6 +96,7 @@ public class MainActivity extends AppCompatActivity {
         ipInput = findViewById(R.id.ipInput);
         saveIpButton = findViewById(R.id.saveIpButton);
         pingButton = findViewById(R.id.pingButton);
+        listeningToggle = findViewById(R.id.listeningToggle);
         manualCommandInput = findViewById(R.id.manualCommandInput);
         sendManualCommandButton = findViewById(R.id.sendManualCommandButton);
 
@@ -166,19 +166,43 @@ public class MainActivity extends AppCompatActivity {
             return false;
         });
 
-        initButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO) 
+        listeningToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) 
                         != PackageManager.PERMISSION_GRANTED) {
-                    ActivityCompat.requestPermissions(MainActivity.this, 
+                    ActivityCompat.requestPermissions(this, 
                             new String[]{Manifest.permission.RECORD_AUDIO}, 
                             REQUEST_RECORD_AUDIO_PERMISSION);
+                    // Revert toggle until permission is granted
+                    listeningToggle.setChecked(false);
                 } else {
-                    onPermissionsApproved();
+                    startListeningAgent(true);
                 }
+            } else {
+                startListeningAgent(false);
             }
         });
+    }
+
+    private void startListeningAgent(boolean start) {
+        // Ensure service is running
+        Intent serviceIntent = new Intent(this, VoiceAssistantService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
+
+        // Send toggle broadcast
+        Intent intent = new Intent("com.example.myapplication.TOGGLE_LISTENING");
+        intent.putExtra("state", start);
+        sendBroadcast(intent);
+
+        if (start) {
+            statusText.setText("Status: Listening for Wake Word: " + currentWakeWord);
+        } else {
+            statusText.setText("Status: Sleeping (Mic Off)");
+        }
     }
 
     private void sendManualCommand() {
@@ -200,15 +224,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void onPermissionsApproved() {
-        statusText.setText("Status: Ready (Mic Approved).\nListening for Wake Word: " + currentWakeWord);
+        listeningToggle.setChecked(true);
+        startListeningAgent(true);
         Toast.makeText(this, "Microphone Access Granted", Toast.LENGTH_SHORT).show();
-
-        Intent intent = new Intent(this, VoiceAssistantService.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent);
-        } else {
-            startService(intent);
-        }
     }
 
     @Override

@@ -73,9 +73,43 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
                 if (command != null && !command.trim().isEmpty()) {
                     sendCommandToBackend(command);
                 }
+            } else if ("com.example.myapplication.TOGGLE_LISTENING".equals(intent.getAction())) {
+                boolean state = intent.getBooleanExtra("state", false);
+                if (state) {
+                    startForeground(NOTIFICATION_ID, createNotification());
+                    startWakeWordListening();
+                } else {
+                    stopWakeWordListening();
+                    stopForeground(true);
+                }
             }
         }
     };
+
+    private Notification createNotification() {
+        return new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle("Assistant Active")
+                .setContentText("Listening for commands...")
+                .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .build();
+    }
+
+    private void stopWakeWordListening() {
+        isListening = false;
+        if (audioRecord != null) {
+            try {
+                if (audioRecord.getState() == AudioRecord.STATE_INITIALIZED) {
+                    audioRecord.stop();
+                }
+                audioRecord.release();
+            } catch (Exception e) {
+                Log.e("Assistant", "Error stopping AudioRecord", e);
+            }
+            audioRecord = null;
+        }
+        Log.d("Assistant", "Microphone released. Wake word engine sleeping.");
+    }
 
     @Nullable
     @Override
@@ -161,13 +195,7 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("Assistant Active")
-                .setContentText("Listening for commands...")
-                .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-                .build();
-
-        startForeground(NOTIFICATION_ID, notification);
+        startForeground(NOTIFICATION_ID, createNotification());
         startWakeWordListening();
 
         android.content.IntentFilter filter = new android.content.IntentFilter();
@@ -177,6 +205,7 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
         filter.addAction("com.example.myapplication.UPDATE_IP");
         filter.addAction("com.example.myapplication.PING_BACKEND");
         filter.addAction("com.example.myapplication.SEND_MANUAL_COMMAND");
+        filter.addAction("com.example.myapplication.TOGGLE_LISTENING");
         androidx.core.content.ContextCompat.registerReceiver(this, actionReceiver,
                 filter,
                 androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED);
