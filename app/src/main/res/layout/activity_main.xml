@@ -8,6 +8,37 @@
     android:gravity="center"
     tools:context=".MainActivity">
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginHorizontal="32dp"
+        android:layout_marginTop="24dp"
+        android:layout_marginBottom="8dp">
+
+        <EditText
+            android:id="@+id/ipInput"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Enter Backend IP (e.g., 192.168.1.5)"
+            android:inputType="textUri" />
+
+        <Button
+            android:id="@+id/saveIpButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Save IP &amp; Connect" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/pingButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Ping Server"
+        android:layout_marginBottom="24dp" />
+
     <TextView
         android:id="@+id/statusText"
         android:layout_width="wrap_content"

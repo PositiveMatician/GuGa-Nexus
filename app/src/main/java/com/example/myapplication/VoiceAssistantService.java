@@ -22,6 +22,14 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
+import java.io.IOException;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+
 public class VoiceAssistantService extends Service implements WakeWordDetector.WakeWordListener {
 
     private static final String CHANNEL_ID = "VoiceAssistantChannel";
@@ -33,6 +41,8 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
     private boolean isListening = false;
     private SpeechRecognizer speechRecognizer;
     private Intent recognizerIntent;
+    private String backendIp = "";
+    private OkHttpClient httpClient = new OkHttpClient();
     
     private static final int SAMPLE_RATE = 16000;
     private static final int CHUNK_SIZE = 1280; // 80ms
@@ -52,6 +62,12 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
                 }
             } else if ("com.example.myapplication.SIMULATE_WAKE_WORD".equals(intent.getAction())) {
                 new Handler(Looper.getMainLooper()).post(() -> onWakeWordDetected());
+            } else if ("com.example.myapplication.UPDATE_IP".equals(intent.getAction())) {
+                backendIp = intent.getStringExtra("ip");
+                if (backendIp == null) backendIp = "";
+                Log.d("Assistant", "Backend IP updated to: " + backendIp);
+            } else if ("com.example.myapplication.PING_BACKEND".equals(intent.getAction())) {
+                pingBackend();
             }
         }
     };
@@ -112,6 +128,7 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
                         Intent intent = new Intent("com.example.myapplication.COMMAND_TRANSCRIBED");
                         intent.putExtra("command", recognizedText);
                         sendBroadcast(intent);
+                        sendCommandToBackend(recognizedText);
                     }
                     startWakeWordListening();
                 }
@@ -152,6 +169,8 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
         filter.addAction("com.example.myapplication.UPDATE_THRESHOLD");
         filter.addAction("com.example.myapplication.SWITCH_MODEL");
         filter.addAction("com.example.myapplication.SIMULATE_WAKE_WORD");
+        filter.addAction("com.example.myapplication.UPDATE_IP");
+        filter.addAction("com.example.myapplication.PING_BACKEND");
         androidx.core.content.ContextCompat.registerReceiver(this, actionReceiver,
                 filter,
                 androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED);
@@ -223,6 +242,93 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
                 speechRecognizer.startListening(recognizerIntent);
             }
         });
+    }
+
+    private void pingBackend() {
+        if (backendIp == null || backendIp.trim().isEmpty()) {
+            Intent intent = new Intent("com.example.myapplication.PING_RESULT");
+            intent.putExtra("success", false);
+            sendBroadcast(intent);
+            return;
+        }
+
+        String cleanIp = sanitizeIp(backendIp);
+        String url = "http://" + cleanIp + ":5000/ping";
+        Log.d("Assistant", "Attempting to ping URL: " + url);
+        Request request = new Request.Builder().url(url).build();
+        httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                Log.e("Assistant", "Ping failed", e);
+                Intent intent = new Intent("com.example.myapplication.PING_RESULT");
+                intent.putExtra("success", false);
+                sendBroadcast(intent);
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                boolean success = response.isSuccessful();
+                Log.d("Assistant", "Ping success: " + success);
+                Intent intent = new Intent("com.example.myapplication.PING_RESULT");
+                intent.putExtra("success", success);
+                sendBroadcast(intent);
+                response.close();
+            }
+        });
+    }
+
+    private void sendCommandToBackend(String command) {
+        if (backendIp == null || backendIp.trim().isEmpty()) {
+            Log.e("Assistant", "Cannot send command: backendIp is empty");
+            return;
+        }
+        
+        String cleanIp = sanitizeIp(backendIp);
+        String url = "http://" + cleanIp + ":5000/api/command";
+        Log.d("Assistant", "Sending command to URL: " + url + " | Command: " + command);
+        
+        try {
+            org.json.JSONObject jsonBody = new org.json.JSONObject();
+            jsonBody.put("command", command);
+            
+            okhttp3.MediaType JSON = okhttp3.MediaType.parse("application/json; charset=utf-8");
+            okhttp3.RequestBody body = okhttp3.RequestBody.create(JSON, jsonBody.toString());
+
+            Request request = new Request.Builder()
+                    .url(url)
+                    .post(body)
+                    .build();
+            
+            httpClient.newCall(request).enqueue(new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+                    Log.e("Assistant", "sendCommand failed", e);
+                }
+                @Override
+                public void onResponse(Call call, Response response) {
+                    Log.d("Assistant", "sendCommand result: " + response.isSuccessful());
+                    response.close();
+                }
+            });
+        } catch (Exception e) {
+            Log.e("Assistant", "Error creating JSON body for command", e);
+        }
+    }
+
+    private String sanitizeIp(String ip) {
+        String cleanIp = ip.trim();
+        if (cleanIp.startsWith("http://")) {
+            cleanIp = cleanIp.substring(7);
+        } else if (cleanIp.startsWith("https://")) {
+            cleanIp = cleanIp.substring(8);
+        }
+        if (cleanIp.contains(":")) {
+            cleanIp = cleanIp.split(":")[0];
+        }
+        if (cleanIp.endsWith("/")) {
+            cleanIp = cleanIp.substring(0, cleanIp.length() - 1);
+        }
+        return cleanIp;
     }
 
     @Override

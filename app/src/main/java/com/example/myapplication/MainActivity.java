@@ -17,6 +17,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.widget.EditText;
 import android.widget.Switch;
+import android.content.SharedPreferences;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -37,6 +38,10 @@ public class MainActivity extends AppCompatActivity {
     private Switch modelSwitch;
     private TextView thresholdLabel;
     private Button manualWakeButton;
+    private EditText ipInput;
+    private Button saveIpButton;
+    private Button pingButton;
+    private SharedPreferences prefs;
     private String currentWakeWord = "JARVIS";
     
     private final BroadcastReceiver wakeWordReceiver = new BroadcastReceiver() {
@@ -56,6 +61,13 @@ public class MainActivity extends AppCompatActivity {
             } else if ("com.example.myapplication.COMMAND_TRANSCRIBED".equals(intent.getAction())) {
                 String command = intent.getStringExtra("command");
                 statusText.setText("You said: " + command);
+            } else if ("com.example.myapplication.PING_RESULT".equals(intent.getAction())) {
+                boolean success = intent.getBooleanExtra("success", false);
+                if (success) {
+                    statusText.setText("Ping Successful! Backend is connected.");
+                } else {
+                    statusText.setText("Ping Failed. Check IP and Wi-Fi.");
+                }
             }
         }
     };
@@ -78,6 +90,33 @@ public class MainActivity extends AppCompatActivity {
         modelSwitch = findViewById(R.id.modelSwitch);
         thresholdLabel = findViewById(R.id.thresholdLabel);
         manualWakeButton = findViewById(R.id.manualWakeButton);
+        ipInput = findViewById(R.id.ipInput);
+        saveIpButton = findViewById(R.id.saveIpButton);
+        pingButton = findViewById(R.id.pingButton);
+
+        prefs = getSharedPreferences("AssistantPrefs", MODE_PRIVATE);
+        String savedIp = prefs.getString("backend_ip", "");
+        if (!savedIp.isEmpty()) {
+            ipInput.setText(savedIp);
+            Intent intent = new Intent("com.example.myapplication.UPDATE_IP");
+            intent.putExtra("ip", savedIp);
+            sendBroadcast(intent);
+        }
+
+        saveIpButton.setOnClickListener(v -> {
+            String ip = ipInput.getText().toString();
+            prefs.edit().putString("backend_ip", ip).apply();
+            Intent intent = new Intent("com.example.myapplication.UPDATE_IP");
+            intent.putExtra("ip", ip);
+            sendBroadcast(intent);
+            statusText.setText("IP Saved");
+        });
+
+        pingButton.setOnClickListener(v -> {
+            Intent intent = new Intent("com.example.myapplication.PING_BACKEND");
+            sendBroadcast(intent);
+            statusText.setText("Pinging server...");
+        });
 
         applyThresholdButton.setOnClickListener(v -> {
             try {
@@ -156,6 +195,7 @@ public class MainActivity extends AppCompatActivity {
         IntentFilter filter = new IntentFilter();
         filter.addAction("com.example.myapplication.WAKE_WORD_DETECTED");
         filter.addAction("com.example.myapplication.COMMAND_TRANSCRIBED");
+        filter.addAction("com.example.myapplication.PING_RESULT");
         ContextCompat.registerReceiver(this, wakeWordReceiver, 
                 filter, 
                 ContextCompat.RECEIVER_NOT_EXPORTED);
