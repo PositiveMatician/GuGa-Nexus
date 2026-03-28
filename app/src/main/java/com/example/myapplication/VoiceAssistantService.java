@@ -68,6 +68,11 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
                 Log.d("Assistant", "Backend IP updated to: " + backendIp);
             } else if ("com.example.myapplication.PING_BACKEND".equals(intent.getAction())) {
                 pingBackend();
+            } else if ("com.example.myapplication.SEND_MANUAL_COMMAND".equals(intent.getAction())) {
+                String command = intent.getStringExtra("command");
+                if (command != null && !command.trim().isEmpty()) {
+                    sendCommandToBackend(command);
+                }
             }
         }
     };
@@ -171,6 +176,7 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
         filter.addAction("com.example.myapplication.SIMULATE_WAKE_WORD");
         filter.addAction("com.example.myapplication.UPDATE_IP");
         filter.addAction("com.example.myapplication.PING_BACKEND");
+        filter.addAction("com.example.myapplication.SEND_MANUAL_COMMAND");
         androidx.core.content.ContextCompat.registerReceiver(this, actionReceiver,
                 filter,
                 androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED);

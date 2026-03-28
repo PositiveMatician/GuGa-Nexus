@@ -18,6 +18,8 @@ import android.os.Looper;
 import android.widget.EditText;
 import android.widget.Switch;
 import android.content.SharedPreferences;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -41,6 +43,8 @@ public class MainActivity extends AppCompatActivity {
     private EditText ipInput;
     private Button saveIpButton;
     private Button pingButton;
+    private EditText manualCommandInput;
+    private Button sendManualCommandButton;
     private SharedPreferences prefs;
     private String currentWakeWord = "JARVIS";
     
@@ -93,6 +97,8 @@ public class MainActivity extends AppCompatActivity {
         ipInput = findViewById(R.id.ipInput);
         saveIpButton = findViewById(R.id.saveIpButton);
         pingButton = findViewById(R.id.pingButton);
+        manualCommandInput = findViewById(R.id.manualCommandInput);
+        sendManualCommandButton = findViewById(R.id.sendManualCommandButton);
 
         prefs = getSharedPreferences("AssistantPrefs", MODE_PRIVATE);
         String savedIp = prefs.getString("backend_ip", "");
@@ -150,6 +156,16 @@ public class MainActivity extends AppCompatActivity {
             sendBroadcast(intent);
         });
 
+        sendManualCommandButton.setOnClickListener(v -> sendManualCommand());
+
+        manualCommandInput.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_SEND) {
+                sendManualCommand();
+                return true;
+            }
+            return false;
+        });
+
         initButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -163,6 +179,24 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    private void sendManualCommand() {
+        String command = manualCommandInput.getText().toString().trim();
+        if (!command.isEmpty()) {
+            Intent intent = new Intent("com.example.myapplication.SEND_MANUAL_COMMAND");
+            intent.putExtra("command", command);
+            sendBroadcast(intent);
+            
+            manualCommandInput.setText("");
+            statusText.setText("Sent: " + command);
+            
+            // Close keyboard
+            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.hideSoftInputFromWindow(manualCommandInput.getWindowToken(), 0);
+            }
+        }
     }
 
     private void onPermissionsApproved() {
