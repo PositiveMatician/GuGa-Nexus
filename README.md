@@ -8,8 +8,8 @@ a manual wake button (Done)
 
 a wakeword training option for specipic user and ability to train any other word which works better for waking by being audibaly distinct and easier to detect.
 
-a way for computer to make the phone speak back and alert me about notifications
+a way for computer to make the phone speak back and alert me about notifications(Done)
 
 A websocket connection instead of a tcp (optional){
     tcp for when both devices keep shuffling in and out of connection  , websocket when connection is stable.
-}
+}(DONE)

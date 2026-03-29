@@ -21,7 +21,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="Enter Backend IP (e.g., 192.168.1.5)"
+            android:hint="Enter Address (e.g., 192.168.1.5:6769)"
             android:inputType="textUri" />
 
         <Button
@@ -97,7 +97,7 @@
         android:id="@+id/modelSwitch"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Model: Jarvis (Off) / Alexa (On)"
+        android:text="Model: Assistant (Off) / Alexa (On)"
         android:layout_marginBottom="24dp" />
 
     <androidx.appcompat.widget.SwitchCompat

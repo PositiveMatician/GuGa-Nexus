@@ -1,46 +1,74 @@
 package com.example.myapplication;
 
 import android.Manifest;
-import android.content.pm.PackageManager;
-import android.os.Bundle;
-import android.view.View;
-import android.widget.Button;
-import android.widget.TextView;
-import android.widget.Toast;
-import android.widget.EditText;
-import android.content.Intent;
-import android.os.Build;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.widget.Switch;
-import android.content.SharedPreferences;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
-import com.journeyapps.barcodescanner.ScanContract;
-import com.journeyapps.barcodescanner.ScanOptions;
-import androidx.activity.result.ActivityResultLauncher;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Switch;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.SwitchCompat;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.journeyapps.barcodescanner.ScanContract;
+import com.journeyapps.barcodescanner.ScanOptions;
+
+import androidx.activity.result.ActivityResultLauncher;
+
 public class MainActivity extends AppCompatActivity {
 
+    // -----------------------------------------------------------------------
+    // Constants
+    // -----------------------------------------------------------------------
     private static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
+    private static final String PREFS_NAME = "AssistantPrefs";
+    private static final String PREF_BACKEND_IP = "backend_ip";
+    private static final int WAKE_FLASH_DURATION_MS = 2000;
+
+    // Broadcast action constants — single source of truth, avoids typos
+    private static final String ACTION_WAKE_WORD_DETECTED = "com.example.myapplication.WAKE_WORD_DETECTED";
+    private static final String ACTION_COMMAND_TRANSCRIBED = "com.example.myapplication.COMMAND_TRANSCRIBED";
+    private static final String ACTION_PING_RESULT = "com.example.myapplication.PING_RESULT";
+    private static final String ACTION_ASSISTANT_RESPONSE = "com.example.myapplication.ASSISTANT_RESPONSE";
+    private static final String ACTION_SOCKET_CONNECTED = "com.example.myapplication.SOCKET_CONNECTED";
+    private static final String ACTION_SOCKET_DISCONNECTED = "com.example.myapplication.SOCKET_DISCONNECTED";
+    private static final String ACTION_UPDATE_THRESHOLD = "com.example.myapplication.UPDATE_THRESHOLD";
+    private static final String ACTION_SWITCH_MODEL = "com.example.myapplication.SWITCH_MODEL";
+    private static final String ACTION_SIMULATE_WAKE_WORD = "com.example.myapplication.SIMULATE_WAKE_WORD";
+    private static final String ACTION_UPDATE_IP = "com.example.myapplication.UPDATE_IP";
+    private static final String ACTION_PING_BACKEND = "com.example.myapplication.PING_BACKEND";
+    private static final String ACTION_CONNECT_SOCKET = "com.example.myapplication.CONNECT_SOCKET";
+    private static final String ACTION_SEND_MANUAL_COMMAND = "com.example.myapplication.SEND_MANUAL_COMMAND";
+    private static final String ACTION_TOGGLE_LISTENING = "com.example.myapplication.TOGGLE_LISTENING";
+
+    // -----------------------------------------------------------------------
+    // Views
+    // -----------------------------------------------------------------------
     private TextView statusText;
-    private View mainLayout;
+    private android.view.View mainLayout;
     private EditText thresholdInput;
     private Button applyThresholdButton;
     private Switch modelSwitch;
-    private androidx.appcompat.widget.SwitchCompat listeningToggle;
+    private SwitchCompat listeningToggle;
     private TextView thresholdLabel;
     private Button manualWakeButton;
     private EditText ipInput;
@@ -50,69 +78,128 @@ public class MainActivity extends AppCompatActivity {
     private Button connectSocketButton;
     private EditText manualCommandInput;
     private Button sendManualCommandButton;
-    private SharedPreferences prefs;
-    private String currentWakeWord = "JARVIS";
 
-    private final ActivityResultLauncher<ScanOptions> qrCodeLauncher = registerForActivityResult(
-            new ScanContract(),
+    // -----------------------------------------------------------------------
+    // State
+    // -----------------------------------------------------------------------
+    private SharedPreferences prefs;
+    private String currentWakeWord = "ASSISTANT";
+
+    // Single shared handler — never allocate a new Handler on the fly
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+
+    // -----------------------------------------------------------------------
+    // QR scanner launcher
+    // -----------------------------------------------------------------------
+    private final ActivityResultLauncher<ScanOptions> qrCodeLauncher = registerForActivityResult(new ScanContract(),
             result -> {
                 if (result.getContents() != null) {
-                    String scannedIp = result.getContents();
-                    handleNewIp(scannedIp);
+                    handleNewIp(result.getContents());
                 }
-            }
-    );
-    
-    private final BroadcastReceiver wakeWordReceiver = new BroadcastReceiver() {
+            });
+
+    // -----------------------------------------------------------------------
+    // BroadcastReceiver
+    // -----------------------------------------------------------------------
+    private final BroadcastReceiver serviceReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if ("com.example.myapplication.WAKE_WORD_DETECTED".equals(intent.getAction())) {
-                statusText.setText("WAKE WORD DETECTED: " + currentWakeWord + "!");
-                if (mainLayout == null) {
-                    mainLayout = findViewById(R.id.main);
-                }
-                mainLayout.setBackgroundColor(Color.GREEN);
-                
-                new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                    mainLayout.setBackgroundColor(Color.WHITE);
-                    statusText.setText(ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED ? "Status: Listening for Wake Word: " + currentWakeWord : "Status: Listening...");
-                }, 2000);
-            } else if ("com.example.myapplication.COMMAND_TRANSCRIBED".equals(intent.getAction())) {
-                String command = intent.getStringExtra("command");
-                statusText.setText("You said: " + command);
-            } else if ("com.example.myapplication.PING_RESULT".equals(intent.getAction())) {
-                boolean success = intent.getBooleanExtra("success", false);
-                if (success) {
-                    statusText.setText("Ping Successful! Backend is connected.");
-                } else {
-                    statusText.setText("Ping Failed. Check IP and Wi-Fi.");
-                }
-            } else if ("com.example.myapplication.JARVIS_RESPONSE".equals(intent.getAction())) {
-                String message = intent.getStringExtra("message");
-                statusText.setText("Jarvis: " + message);
-            } else if ("com.example.myapplication.SOCKET_CONNECTED".equals(intent.getAction())) {
-                statusText.setText("Status: Live Audio Stream Connected");
-                statusText.setTextColor(Color.BLUE);
-            } else if ("com.example.myapplication.SOCKET_DISCONNECTED".equals(intent.getAction())) {
-                statusText.setText("Status: Audio Stream Disconnected");
-                statusText.setTextColor(Color.RED);
+            if (intent == null || intent.getAction() == null)
+                return;
+
+            switch (intent.getAction()) {
+
+                case ACTION_WAKE_WORD_DETECTED:
+                    statusText.setText("WAKE WORD DETECTED: " + currentWakeWord + "!");
+                    mainLayout.setBackgroundColor(Color.GREEN);
+                    // Restore background using the shared handler — no new allocation
+                    mainHandler.postDelayed(() -> {
+                        mainLayout.setBackgroundColor(getDefaultBackground());
+                        statusText.setText(buildListeningStatus());
+                    }, WAKE_FLASH_DURATION_MS);
+                    break;
+
+                case ACTION_COMMAND_TRANSCRIBED:
+                    statusText.setText("You said: " + intent.getStringExtra("command"));
+                    break;
+
+                case ACTION_PING_RESULT:
+                    boolean success = intent.getBooleanExtra("success", false);
+                    statusText.setText(success
+                            ? "Ping Successful! Backend is connected."
+                            : "Ping Failed. Check IP and Wi-Fi.");
+                    break;
+
+                case ACTION_ASSISTANT_RESPONSE:
+                    statusText.setText("Assistant: " + intent.getStringExtra("message"));
+                    break;
+
+                case ACTION_SOCKET_CONNECTED:
+                    statusText.setText("Status: Live Audio Stream Connected");
+                    statusText.setTextColor(Color.BLUE);
+                    break;
+
+                case ACTION_SOCKET_DISCONNECTED:
+                    statusText.setText("Status: Audio Stream Disconnected");
+                    statusText.setTextColor(Color.RED);
+                    break;
             }
         }
     };
 
+    // -----------------------------------------------------------------------
+    // Lifecycle
+    // -----------------------------------------------------------------------
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        
+
+        // Start the service immediately so networking (socket/ping) is always available
+        Intent serviceIntent = new Intent(this, VoiceAssistantService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
+
+        applyWindowInsets();
+        bindViews();
+        setupListeners();
+        restoreSavedIp();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        ContextCompat.registerReceiver(this, serviceReceiver,
+                buildIntentFilter(), ContextCompat.RECEIVER_NOT_EXPORTED);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        try {
+            unregisterReceiver(serviceReceiver);
+        } catch (IllegalArgumentException ignored) {
+            // Receiver wasn't registered — safe to ignore
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Initialisation helpers
+    // -----------------------------------------------------------------------
+    private void applyWindowInsets() {
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+    }
 
+    private void bindViews() {
+        mainLayout = findViewById(R.id.main);
         statusText = findViewById(R.id.statusText);
-        statusText.setText("Status: Ready for Network Config");
         thresholdInput = findViewById(R.id.thresholdInput);
         applyThresholdButton = findViewById(R.id.applyThresholdButton);
         modelSwitch = findViewById(R.id.modelSwitch);
@@ -127,72 +214,36 @@ public class MainActivity extends AppCompatActivity {
         manualCommandInput = findViewById(R.id.manualCommandInput);
         sendManualCommandButton = findViewById(R.id.sendManualCommandButton);
 
-        prefs = getSharedPreferences("AssistantPrefs", MODE_PRIVATE);
-        String savedIp = prefs.getString("backend_ip", "");
-        if (!savedIp.isEmpty()) {
-            ipInput.setText(savedIp);
-            Intent intent = new Intent("com.example.myapplication.UPDATE_IP");
-            intent.putExtra("ip", savedIp);
-            sendBroadcast(intent);
-        }
+        statusText.setText("Status: Ready for Network Config");
+    }
 
-        saveIpButton.setOnClickListener(v -> {
-            String ip = ipInput.getText().toString();
-            handleNewIp(ip);
-        });
+    private void setupListeners() {
+        saveIpButton.setOnClickListener(v -> handleNewIp(ipInput.getText().toString()));
 
         scanQrButton.setOnClickListener(v -> {
             ScanOptions options = new ScanOptions();
             options.setDesiredBarcodeFormats(ScanOptions.QR_CODE);
-            options.setPrompt("Scan Jarvis Backend QR Code");
+            options.setPrompt("Scan Assistant Backend QR Code");
             options.setBeepEnabled(true);
             options.setOrientationLocked(false);
             qrCodeLauncher.launch(options);
         });
 
         pingButton.setOnClickListener(v -> {
-            Intent intent = new Intent("com.example.myapplication.PING_BACKEND");
-            sendBroadcast(intent);
+            sendBroadcast(new Intent(ACTION_PING_BACKEND));
             statusText.setText("Pinging server...");
         });
 
         connectSocketButton.setOnClickListener(v -> {
-            Intent intent = new Intent("com.example.myapplication.CONNECT_SOCKET");
-            sendBroadcast(intent);
+            sendBroadcast(new Intent(ACTION_CONNECT_SOCKET));
             statusText.setText("Connecting Live Audio Stream...");
         });
 
-        applyThresholdButton.setOnClickListener(v -> {
-            try {
-                float thresholdValue = Float.parseFloat(thresholdInput.getText().toString());
-                thresholdLabel.setText("Sensitivity Threshold: " + thresholdValue);
-                Intent intent = new Intent("com.example.myapplication.UPDATE_THRESHOLD");
-                intent.putExtra("threshold", thresholdValue);
-                sendBroadcast(intent);
-                Toast.makeText(MainActivity.this, "Threshold applied", Toast.LENGTH_SHORT).show();
-            } catch (NumberFormatException e) {
-                Toast.makeText(MainActivity.this, "Invalid threshold value", Toast.LENGTH_SHORT).show();
-            }
-        });
+        applyThresholdButton.setOnClickListener(v -> applyThreshold());
 
-        modelSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            String modelFileName = isChecked ? "alexa_v0.1.tflite" : "hey_jarvis_v0.1.tflite";
-            currentWakeWord = isChecked ? "ALEXA" : "JARVIS";
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                statusText.setText("Status: Ready (Mic Approved).\nListening for Wake Word: " + currentWakeWord);
-            } else {
-                statusText.setText("Status: Model changed to " + currentWakeWord + ". Waiting for Permissions.");
-            }
-            
-            Intent intent = new Intent("com.example.myapplication.SWITCH_MODEL");
-            intent.putExtra("model_file", modelFileName);
-            sendBroadcast(intent);
-        });
+        modelSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> switchWakeWordModel(isChecked));
 
-        manualWakeButton.setOnClickListener(v -> {
-            Intent intent = new Intent("com.example.myapplication.SIMULATE_WAKE_WORD");
-            sendBroadcast(intent);
-        });
+        manualWakeButton.setOnClickListener(v -> sendBroadcast(new Intent(ACTION_SIMULATE_WAKE_WORD)));
 
         sendManualCommandButton.setOnClickListener(v -> sendManualCommand());
 
@@ -205,62 +256,84 @@ public class MainActivity extends AppCompatActivity {
         });
 
         listeningToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (isChecked) {
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) 
-                        != PackageManager.PERMISSION_GRANTED) {
-                    ActivityCompat.requestPermissions(this, 
-                            new String[]{Manifest.permission.RECORD_AUDIO}, 
-                            REQUEST_RECORD_AUDIO_PERMISSION);
-                    // Revert toggle until permission is granted
-                    listeningToggle.setChecked(false);
-                } else {
-                    startListeningAgent(true);
-                }
+            if (isChecked && !hasAudioPermission()) {
+                ActivityCompat.requestPermissions(this,
+                        new String[] { Manifest.permission.RECORD_AUDIO },
+                        REQUEST_RECORD_AUDIO_PERMISSION);
+                // Revert until permission granted
+                listeningToggle.setChecked(false);
             } else {
-                startListeningAgent(false);
+                startListeningAgent(isChecked);
             }
         });
     }
 
-    private void startListeningAgent(boolean start) {
-        // Ensure service is running
-        Intent serviceIntent = new Intent(this, VoiceAssistantService.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent);
-        } else {
-            startService(serviceIntent);
+    private void restoreSavedIp() {
+        prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String savedIp = prefs.getString(PREF_BACKEND_IP, "");
+        if (!savedIp.isEmpty()) {
+            ipInput.setText(savedIp);
+            broadcastIpUpdate(savedIp);
+            // Auto-connect socket after IP is registered by the service
+            mainHandler.postDelayed(() -> sendBroadcast(new Intent(ACTION_CONNECT_SOCKET)), 700);
         }
+    }
 
-        // Send toggle broadcast
-        Intent intent = new Intent("com.example.myapplication.TOGGLE_LISTENING");
-        intent.putExtra("state", start);
+    // -----------------------------------------------------------------------
+    // Actions
+    // -----------------------------------------------------------------------
+    private void applyThreshold() {
+        String raw = thresholdInput.getText().toString();
+        try {
+            float value = Float.parseFloat(raw);
+            thresholdLabel.setText("Sensitivity Threshold: " + value);
+            Intent intent = new Intent(ACTION_UPDATE_THRESHOLD);
+            intent.putExtra("threshold", value);
+            sendBroadcast(intent);
+            Toast.makeText(this, "Threshold applied", Toast.LENGTH_SHORT).show();
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, "Invalid threshold value", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void switchWakeWordModel(boolean isChecked) {
+        String modelFileName = isChecked ? "alexa_v0.1.tflite" : "hey_assistant_v0.1.tflite";
+        currentWakeWord = isChecked ? "ALEXA" : "ASSISTANT";
+        statusText.setText(hasAudioPermission()
+                ? "Status: Ready (Mic Approved).\nListening for Wake Word: " + currentWakeWord
+                : "Status: Model changed to " + currentWakeWord + ". Waiting for Permissions.");
+
+        Intent intent = new Intent(ACTION_SWITCH_MODEL);
+        intent.putExtra("model_file", modelFileName);
         sendBroadcast(intent);
-
-        if (start) {
-            statusText.setText("Status: Listening for Wake Word: " + currentWakeWord);
-        } else {
-            statusText.setText("Status: Sleeping (Mic Off)");
-        }
     }
 
     private void sendManualCommand() {
         String command = manualCommandInput.getText().toString().trim();
-        if (!command.isEmpty()) {
-            Intent intent = new Intent("com.example.myapplication.SEND_MANUAL_COMMAND");
-            intent.putExtra("command", command);
-            sendBroadcast(intent);
-            
-            manualCommandInput.setText("");
-            statusText.setText("Sent: " + command);
-            
-            // Close keyboard
-            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-            if (imm != null) {
-                imm.hideSoftInputFromWindow(manualCommandInput.getWindowToken(), 0);
-            }
-        }
+        if (command.isEmpty())
+            return;
+
+        Intent intent = new Intent(ACTION_SEND_MANUAL_COMMAND);
+        intent.putExtra("command", command);
+        sendBroadcast(intent);
+
+        manualCommandInput.setText("");
+        statusText.setText("Sent: " + command);
+        hideKeyboard();
     }
 
+    private void startListeningAgent(boolean start) {
+        // Service is already running from onCreate; just send the toggle broadcast
+        Intent toggleIntent = new Intent(ACTION_TOGGLE_LISTENING);
+        toggleIntent.putExtra("state", start);
+        sendBroadcast(toggleIntent);
+
+        statusText.setText(start
+                ? "Status: Listening for Wake Word: " + currentWakeWord
+                : "Status: Sleeping (Mic Off)");
+    }
+
+    /** Called after the user grants RECORD_AUDIO permission. */
     private void onPermissionsApproved() {
         listeningToggle.setChecked(true);
         startListeningAgent(true);
@@ -268,7 +341,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode,
+            @NonNull String[] permissions,
+            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQUEST_RECORD_AUDIO_PERMISSION) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
@@ -279,42 +354,81 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        IntentFilter filter = new IntentFilter();
-        filter.addAction("com.example.myapplication.WAKE_WORD_DETECTED");
-        filter.addAction("com.example.myapplication.COMMAND_TRANSCRIBED");
-        filter.addAction("com.example.myapplication.PING_RESULT");
-        filter.addAction("com.example.myapplication.JARVIS_RESPONSE");
-        filter.addAction("com.example.myapplication.SOCKET_CONNECTED");
-        filter.addAction("com.example.myapplication.SOCKET_DISCONNECTED");
-        ContextCompat.registerReceiver(this, wakeWordReceiver, 
-                filter, 
-                ContextCompat.RECEIVER_NOT_EXPORTED);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        unregisterReceiver(wakeWordReceiver);
-    }
-
+    /**
+     * Normalises the IP string, saves it to prefs, notifies the service,
+     * and auto-pings after a short delay.
+     */
     private void handleNewIp(String ip) {
-        ipInput.setText(ip);
-        prefs.edit().putString("backend_ip", ip).apply();
-        
-        Intent intent = new Intent("com.example.myapplication.UPDATE_IP");
-        intent.putExtra("ip", ip);
-        sendBroadcast(intent);
-        
-        statusText.setText("IP Saved: " + ip);
-        
-        // Auto-ping after 0.5s
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            Intent pingIntent = new Intent("com.example.myapplication.PING_BACKEND");
-            sendBroadcast(pingIntent);
+        // Strip common scheme prefixes — consistent with sanitizeIp() in the service
+        String clean = ip.trim();
+        if (clean.startsWith("https://"))
+            clean = clean.substring(8);
+        else if (clean.startsWith("http://"))
+            clean = clean.substring(7);
+        if (clean.endsWith("/"))
+            clean = clean.substring(0, clean.length() - 1);
+
+        ipInput.setText(clean);
+        prefs.edit().putString(PREF_BACKEND_IP, clean).apply();
+        broadcastIpUpdate(clean);
+        statusText.setText("IP Saved: " + clean);
+
+        // Auto-ping after short delay so the service has time to process the IP update,
+        // then connect socket shortly after
+        mainHandler.postDelayed(() -> {
+            sendBroadcast(new Intent(ACTION_PING_BACKEND));
             statusText.setText("Auto-pinging server...");
         }, 500);
+        mainHandler.postDelayed(() -> sendBroadcast(new Intent(ACTION_CONNECT_SOCKET)), 1200);
+    }
+
+    // -----------------------------------------------------------------------
+    // Utility helpers
+    // -----------------------------------------------------------------------
+    private void broadcastIpUpdate(String ip) {
+        Intent intent = new Intent(ACTION_UPDATE_IP);
+        intent.putExtra("ip", ip);
+        sendBroadcast(intent);
+    }
+
+    private boolean hasAudioPermission() {
+        return ContextCompat.checkSelfPermission(this,
+                Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private String buildListeningStatus() {
+        return hasAudioPermission()
+                ? "Status: Listening for Wake Word: " + currentWakeWord
+                : "Status: Listening...";
+    }
+
+    /** Returns the window background colour so we don't hardcode Color.WHITE. */
+    private int getDefaultBackground() {
+        android.util.TypedValue typedValue = new android.util.TypedValue();
+        getTheme().resolveAttribute(android.R.attr.windowBackground, typedValue, true);
+        // Fall back to white if the attribute isn't a colour resource
+        if (typedValue.type >= android.util.TypedValue.TYPE_FIRST_COLOR_INT
+                && typedValue.type <= android.util.TypedValue.TYPE_LAST_COLOR_INT) {
+            return typedValue.data;
+        }
+        return Color.WHITE;
+    }
+
+    private void hideKeyboard() {
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.hideSoftInputFromWindow(manualCommandInput.getWindowToken(), 0);
+        }
+    }
+
+    private IntentFilter buildIntentFilter() {
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(ACTION_WAKE_WORD_DETECTED);
+        filter.addAction(ACTION_COMMAND_TRANSCRIBED);
+        filter.addAction(ACTION_PING_RESULT);
+        filter.addAction(ACTION_ASSISTANT_RESPONSE);
+        filter.addAction(ACTION_SOCKET_CONNECTED);
+        filter.addAction(ACTION_SOCKET_DISCONNECTED);
+        return filter;
     }
 }
