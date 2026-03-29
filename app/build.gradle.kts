@@ -43,6 +43,9 @@ dependencies {
     implementation(libs.activity)
     implementation(libs.constraintlayout)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("io.socket:socket.io-client:2.1.0") {
+        exclude(group = "org.json", module = "json")
+    }
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)

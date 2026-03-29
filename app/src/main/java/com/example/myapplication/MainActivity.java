@@ -47,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
     private Button saveIpButton;
     private Button scanQrButton;
     private Button pingButton;
+    private Button connectSocketButton;
     private EditText manualCommandInput;
     private Button sendManualCommandButton;
     private SharedPreferences prefs;
@@ -86,6 +87,15 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     statusText.setText("Ping Failed. Check IP and Wi-Fi.");
                 }
+            } else if ("com.example.myapplication.JARVIS_RESPONSE".equals(intent.getAction())) {
+                String message = intent.getStringExtra("message");
+                statusText.setText("Jarvis: " + message);
+            } else if ("com.example.myapplication.SOCKET_CONNECTED".equals(intent.getAction())) {
+                statusText.setText("Status: Live Audio Stream Connected");
+                statusText.setTextColor(Color.BLUE);
+            } else if ("com.example.myapplication.SOCKET_DISCONNECTED".equals(intent.getAction())) {
+                statusText.setText("Status: Audio Stream Disconnected");
+                statusText.setTextColor(Color.RED);
             }
         }
     };
@@ -102,6 +112,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         statusText = findViewById(R.id.statusText);
+        statusText.setText("Status: Ready for Network Config");
         thresholdInput = findViewById(R.id.thresholdInput);
         applyThresholdButton = findViewById(R.id.applyThresholdButton);
         modelSwitch = findViewById(R.id.modelSwitch);
@@ -111,6 +122,7 @@ public class MainActivity extends AppCompatActivity {
         saveIpButton = findViewById(R.id.saveIpButton);
         scanQrButton = findViewById(R.id.scanQrButton);
         pingButton = findViewById(R.id.pingButton);
+        connectSocketButton = findViewById(R.id.connectSocketButton);
         listeningToggle = findViewById(R.id.listeningToggle);
         manualCommandInput = findViewById(R.id.manualCommandInput);
         sendManualCommandButton = findViewById(R.id.sendManualCommandButton);
@@ -142,6 +154,12 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent("com.example.myapplication.PING_BACKEND");
             sendBroadcast(intent);
             statusText.setText("Pinging server...");
+        });
+
+        connectSocketButton.setOnClickListener(v -> {
+            Intent intent = new Intent("com.example.myapplication.CONNECT_SOCKET");
+            sendBroadcast(intent);
+            statusText.setText("Connecting Live Audio Stream...");
         });
 
         applyThresholdButton.setOnClickListener(v -> {
@@ -268,6 +286,9 @@ public class MainActivity extends AppCompatActivity {
         filter.addAction("com.example.myapplication.WAKE_WORD_DETECTED");
         filter.addAction("com.example.myapplication.COMMAND_TRANSCRIBED");
         filter.addAction("com.example.myapplication.PING_RESULT");
+        filter.addAction("com.example.myapplication.JARVIS_RESPONSE");
+        filter.addAction("com.example.myapplication.SOCKET_CONNECTED");
+        filter.addAction("com.example.myapplication.SOCKET_DISCONNECTED");
         ContextCompat.registerReceiver(this, wakeWordReceiver, 
                 filter, 
                 ContextCompat.RECEIVER_NOT_EXPORTED);

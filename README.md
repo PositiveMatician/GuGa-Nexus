@@ -1,6 +1,6 @@
 Add a toggle to turn the wakeword listening off , so I can kill the background process whenever I needs and turn it back on again a way to save power. (done)
 
-A camera mode where you can just scan the qrcode to connect to a device in lan at port 6769
+A camera mode where you can just scan the qrcode to connect to a device in lan at port 6769(done)
 
 a manual input field in the app which works the same as wake word + command , only difference is you can silently provide a command by writing and pressing enter. (Done)
 

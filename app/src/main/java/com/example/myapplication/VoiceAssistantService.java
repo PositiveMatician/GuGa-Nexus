@@ -17,12 +17,22 @@ import android.os.Looper;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
+import io.socket.client.IO;
+import io.socket.client.Socket;
+import io.socket.emitter.Emitter;
+
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.util.Locale;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -42,6 +52,8 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
     private SpeechRecognizer speechRecognizer;
     private Intent recognizerIntent;
     private String backendIp = "";
+    private Socket mSocket;
+    private TextToSpeech tts;
     private OkHttpClient httpClient = new OkHttpClient();
     
     private static final int SAMPLE_RATE = 16000;
@@ -66,6 +78,9 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
                 backendIp = intent.getStringExtra("ip");
                 if (backendIp == null) backendIp = "";
                 Log.d("Assistant", "Backend IP updated to: " + backendIp);
+                // No longer auto-connecting Socket.IO here
+            } else if ("com.example.myapplication.CONNECT_SOCKET".equals(intent.getAction())) {
+                connectWebSocket();
             } else if ("com.example.myapplication.PING_BACKEND".equals(intent.getAction())) {
                 pingBackend();
             } else if ("com.example.myapplication.SEND_MANUAL_COMMAND".equals(intent.getAction())) {
@@ -123,6 +138,70 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
         createNotificationChannel();
         wakeWordDetector = new WakeWordDetector(this, this);
         initSpeechRecognizer();
+        initTTS();
+    }
+
+    private void initTTS() {
+        tts = new TextToSpeech(this, status -> {
+            if (status == TextToSpeech.SUCCESS) {
+                tts.setLanguage(Locale.US);
+            }
+        });
+    }
+
+    private void connectWebSocket() {
+        if (backendIp.isEmpty()) return;
+        
+        if (mSocket != null) {
+            mSocket.disconnect();
+            mSocket.off();
+        }
+
+        try {
+            String url = "http://" + sanitizeIp(backendIp) + ":6769";
+            Log.d("Assistant", "Connecting to Socket.IO at " + url);
+            mSocket = IO.socket(url);
+
+            mSocket.on(Socket.EVENT_CONNECT, args -> {
+                Log.d("Assistant", "Socket connected");
+                Intent connectedIntent = new Intent("com.example.myapplication.SOCKET_CONNECTED");
+                sendBroadcast(connectedIntent);
+                
+                // Also ask server for a status update just in case
+                mSocket.emit("request_status", new JSONObject());
+            });
+            mSocket.on(Socket.EVENT_DISCONNECT, args -> {
+                Log.d("Assistant", "Socket disconnected");
+                Intent disconnectedIntent = new Intent("com.example.myapplication.SOCKET_DISCONNECTED");
+                sendBroadcast(disconnectedIntent);
+            });
+            mSocket.on("jarvis_response", args -> {
+                if (args.length > 0 && args[0] instanceof JSONObject) {
+                    JSONObject response = (JSONObject) args[0];
+                    try {
+                        String message = response.getString("message");
+                        Log.d("Assistant", "Jarvis says: " + message);
+                        
+                        // Speak it
+                        if (tts != null) {
+                            tts.speak(message, TextToSpeech.QUEUE_FLUSH, null, null);
+                        }
+
+                        // Broadcast to UI
+                        Intent intent = new Intent("com.example.myapplication.JARVIS_RESPONSE");
+                        intent.putExtra("message", message);
+                        sendBroadcast(intent);
+                        
+                    } catch (JSONException e) {
+                        Log.e("Assistant", "Error parsing jarvis_response", e);
+                    }
+                }
+            });
+
+            mSocket.connect();
+        } catch (URISyntaxException e) {
+            Log.e("Assistant", "Socket connection error", e);
+        }
     }
 
     private void initSpeechRecognizer() {
@@ -204,6 +283,7 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
         filter.addAction("com.example.myapplication.SIMULATE_WAKE_WORD");
         filter.addAction("com.example.myapplication.UPDATE_IP");
         filter.addAction("com.example.myapplication.PING_BACKEND");
+        filter.addAction("com.example.myapplication.CONNECT_SOCKET");
         filter.addAction("com.example.myapplication.SEND_MANUAL_COMMAND");
         filter.addAction("com.example.myapplication.TOGGLE_LISTENING");
         androidx.core.content.ContextCompat.registerReceiver(this, actionReceiver,
@@ -313,40 +393,51 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
     }
 
     private void sendCommandToBackend(String command) {
-        if (backendIp == null || backendIp.trim().isEmpty()) {
-            Log.e("Assistant", "Cannot send command: backendIp is empty");
-            return;
-        }
-        
-        String cleanIp = sanitizeIp(backendIp);
-        String url = "http://" + cleanIp + ":6769/api/command";
-        Log.d("Assistant", "Sending command to URL: " + url + " | Command: " + command);
-        
-        try {
-            org.json.JSONObject jsonBody = new org.json.JSONObject();
-            jsonBody.put("command", command);
-            
-            okhttp3.MediaType JSON = okhttp3.MediaType.parse("application/json; charset=utf-8");
-            okhttp3.RequestBody body = okhttp3.RequestBody.create(JSON, jsonBody.toString());
+        if (mSocket != null && mSocket.connected()) {
+            try {
+                JSONObject json = new JSONObject();
+                json.put("phrase", command);
+                Log.d("Assistant", "Emitting command via Socket.IO: " + command);
+                mSocket.emit("command", json);
+            } catch (JSONException e) {
+                Log.e("Assistant", "Error creating JSON for command", e);
+            }
+        } else {
+            Log.d("Assistant", "Socket not connected. Falling back to OkHttp POST.");
+            if (backendIp == null || backendIp.trim().isEmpty()) {
+                Log.e("Assistant", "Cannot send command: backendIp is empty");
+                return;
+            }
 
-            Request request = new Request.Builder()
-                    .url(url)
-                    .post(body)
-                    .build();
+            String cleanIp = sanitizeIp(backendIp);
+            String url = "http://" + cleanIp + ":6769/api/command";
             
-            httpClient.newCall(request).enqueue(new Callback() {
-                @Override
-                public void onFailure(Call call, IOException e) {
-                    Log.e("Assistant", "sendCommand failed", e);
-                }
-                @Override
-                public void onResponse(Call call, Response response) {
-                    Log.d("Assistant", "sendCommand result: " + response.isSuccessful());
-                    response.close();
-                }
-            });
-        } catch (Exception e) {
-            Log.e("Assistant", "Error creating JSON body for command", e);
+            try {
+                JSONObject jsonBody = new JSONObject();
+                jsonBody.put("command", command);
+                
+                okhttp3.MediaType JSON = okhttp3.MediaType.parse("application/json; charset=utf-8");
+                okhttp3.RequestBody body = okhttp3.RequestBody.create(JSON, jsonBody.toString());
+
+                Request request = new Request.Builder()
+                        .url(url)
+                        .post(body)
+                        .build();
+                
+                httpClient.newCall(request).enqueue(new Callback() {
+                    @Override
+                    public void onFailure(Call call, IOException e) {
+                        Log.e("Assistant", "Fallback sendCommand failed", e);
+                    }
+                    @Override
+                    public void onResponse(Call call, Response response) {
+                        Log.d("Assistant", "Fallback sendCommand result: " + response.isSuccessful());
+                        response.close();
+                    }
+                });
+            } catch (Exception e) {
+                Log.e("Assistant", "Error creating JSON for fallback command", e);
+            }
         }
     }
 
@@ -397,6 +488,16 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
             });
         }
         
+        if (mSocket != null) {
+            mSocket.disconnect();
+            mSocket.off();
+        }
+
+        if (tts != null) {
+            tts.stop();
+            tts.shutdown();
+        }
+
         unregisterReceiver(actionReceiver);
         
         super.onDestroy();
