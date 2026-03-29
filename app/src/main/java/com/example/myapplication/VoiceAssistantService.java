@@ -7,6 +7,7 @@ import android.media.*;
 import android.os.*;
 import android.speech.*;
 import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
@@ -52,10 +53,13 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
     private String backendAddress = "";
 
     private TextToSpeech tts;
+    private AudioManager audioManager;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private boolean receiverRegistered = false;
     /** True only when the listening toggle is ON. Gates TTS, STT, and wake word. */
     private boolean voiceEnabled = false;
+
+    private static final String UTTERANCE_ID_WAKE = "wake_utterance";
 
     // -------------------- Broadcast Receiver --------------------
 
@@ -132,6 +136,7 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
     public void onCreate() {
         super.onCreate();
         createNotificationChannel();
+        audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         wakeWordDetector = new WakeWordDetector(this, this);
         initSpeechRecognizer();
         initTTS();
@@ -336,17 +341,47 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
 
     @Override
     public void onWakeWordDetected() {
-
         stopWakeWordListening();
 
-        // Notify UI
+        // 1. Notify UI
         sendBroadcast(new Intent("com.example.myapplication.WAKE_WORD_DETECTED"));
 
+        // 2. Speak "Yes sir" and wait for onDone callback to start STT
+        if (tts != null && voiceEnabled) {
+            Bundle params = new Bundle();
+            params.putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, UTTERANCE_ID_WAKE);
+            tts.speak("Yes sir", TextToSpeech.QUEUE_FLUSH, params, UTTERANCE_ID_WAKE);
+        } else {
+            // Fallback if voice is disabled or TTS fails
+            startSTTFlow();
+        }
+    }
+
+    /**
+     * Mutes audio streams, starts SpeechRecognizer, and unmutes after 500ms.
+     * This suppresses the unwanted system "beep" sound.
+     */
+    private void startSTTFlow() {
         mainHandler.post(() -> {
-            if (speechRecognizer != null) {
-                speechRecognizer.cancel();
-                speechRecognizer.startListening(recognizerIntent);
+            if (speechRecognizer == null) return;
+
+            // 3. Mute system audio streams to suppress the "beep"
+            if (audioManager != null) {
+                audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_MUTE, 0);
+                audioManager.adjustStreamVolume(AudioManager.STREAM_NOTIFICATION, AudioManager.ADJUST_MUTE, 0);
             }
+
+            // 4. Start SpeechRecognizer immediately after muting
+            speechRecognizer.cancel();
+            speechRecognizer.startListening(recognizerIntent);
+
+            // 5. Unmute after 500ms (enough time for the beep to pass)
+            mainHandler.postDelayed(() -> {
+                if (audioManager != null) {
+                    audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_UNMUTE, 0);
+                    audioManager.adjustStreamVolume(AudioManager.STREAM_NOTIFICATION, AudioManager.ADJUST_UNMUTE, 0);
+                }
+            }, 500);
         });
     }
 
@@ -480,6 +515,28 @@ public class VoiceAssistantService extends Service implements WakeWordDetector.W
         tts = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) {
                 tts.setLanguage(Locale.US);
+
+                // Set UtteranceProgressListener once during initialization
+                tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                    @Override
+                    public void onStart(String utteranceId) { }
+
+                    @Override
+                    public void onDone(String utteranceId) {
+                        // When "Yes sir" finishes, start the STT/Mute flow
+                        if (UTTERANCE_ID_WAKE.equals(utteranceId)) {
+                            startSTTFlow();
+                        }
+                    }
+
+                    @Override
+                    public void onError(String utteranceId) {
+                        // Fallback if TTS fails
+                        if (UTTERANCE_ID_WAKE.equals(utteranceId)) {
+                            startSTTFlow();
+                        }
+                    }
+                });
             }
         });
     }
