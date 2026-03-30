@@ -63,7 +63,7 @@ HTML_PAGE = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Assistant Terminal</title>
+    <title>GuGa Terminal</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
@@ -94,7 +94,7 @@ HTML_PAGE = """
     </style>
 </head>
 <body>
-    <h2>Assistant Terminal</h2>
+    <h2>GuGa Terminal</h2>
     <div id="status">Connecting…</div>
     <div id="chat"></div>
     <div id="inputRow">
@@ -122,7 +122,7 @@ HTML_PAGE = """
             status.textContent = '○ Disconnected';
             appendMsg('system', '[SYSTEM]', 'Disconnected: ' + r);
         });
-        socket.on('assistant_response', (data) => appendMsg('bot', 'Assistant:', data.message));
+        socket.on('guga_response', (data) => appendMsg('bot', 'GuGa:', data.message));
 
         function sendCommand() {
             const input = document.getElementById('commandInput');
@@ -216,7 +216,7 @@ def handle_command_api():
 def handle_connect():
     connected_clients.add(request.sid)
     print(f"[+] Connected    sid={request.sid}  total={len(connected_clients)}")
-    emit("assistant_response", {"message": "Connection established. Assistant online."})
+    emit("guga_response", {"message": "Connection established. GuGa online."})
 
 
 @socketio.on("disconnect")
@@ -229,7 +229,7 @@ def handle_disconnect():
 def handle_command(data):
     command = data.get("phrase", "").strip()
     print(f"[WS] Command from {request.sid}: '{command}'")
-    emit("assistant_response", {"message": process_command(command)})
+    emit("guga_response", {"message": process_command(command)})
 
 
 # ------------------------------------------------------------
@@ -241,12 +241,12 @@ def process_command(command: str) -> str:
 
 
 def notify_all_clients(message: str) -> None:
-    socketio.emit("assistant_response", {"message": message})
+    socketio.emit("guga_response", {"message": message})
 
 
 def send_private_message(session_id: str, message: str) -> bool:
     if session_id in connected_clients:
-        socketio.emit("assistant_response", {"message": message}, room=session_id)
+        socketio.emit("guga_response", {"message": message}, room=session_id)
         return True
     return False
 
@@ -270,7 +270,7 @@ if __name__ == "__main__":
     local_ip = get_local_ip()
     base_url = f"http://{local_ip}:{PORT}"
 
-    print(f"\n🚀 Assistant Backend — {base_url}\n")
+    print(f"\n🚀 GuGa Backend — {base_url}\n")
     print(f"  GET  /ping                — health check")
     print(f"  GET  /clients             — list connected session IDs")
     print(f"  POST /send                — broadcast to ALL clients")
