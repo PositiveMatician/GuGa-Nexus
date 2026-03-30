@@ -58,3 +58,12 @@ curl -X POST http://localhost:6769/api/command \
      -H "Content-Type: application/json" \
      -d '{"command": "what time is it?"}'
 ```
+
+
+## TODO
+
+the server should only allow /send traffic from the same device the server is running on
+
+only trusted devices can create a socket connection , so I need to be able to differentiate between trusted and untrusted devices. Ability to allow temporary trust to browser which expires in a hour and have to be redone.
+
+the fullscreen version still have purple. it needs to be all black , find all traces of other colors rather than white and black in alpha model

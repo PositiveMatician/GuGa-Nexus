@@ -8,18 +8,23 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.IBinder;
+import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
+import androidx.security.crypto.EncryptedSharedPreferences;
+import androidx.security.crypto.MasterKey;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.security.GeneralSecurityException;
 import java.util.Locale;
 
 import io.socket.client.IO;
@@ -36,12 +41,58 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
     private static final String TAG = "GuGaAlpha";
     private static final String CHANNEL_ID = "GuGaServiceChannel";
     private static final String RESPONSE_CHANNEL_ID = "GuGaResponseChannel";
+    private static final String ENCRYPTED_PREFS_NAME = "guga_secure_prefs";
+    private static final String KEY_AUTH_TOKEN = "auth_token";
     private static final OkHttpClient HTTP_CLIENT = new OkHttpClient();
 
     private Socket mSocket;
     private String backendAddress = "";
     private TextToSpeech tts;
     private boolean ttsEnabled = true;
+
+    // ----------------------------------------------------------------
+    // Device Identity & Token Storage
+    // ----------------------------------------------------------------
+
+    /** Returns the stable Android device ID (unique per app signing). */
+    String fetchAndroidId() {
+        return Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+    }
+
+    /** Returns an EncryptedSharedPreferences instance backed by hardware-backed MasterKey. */
+    SharedPreferences getEncryptedPrefs() {
+        try {
+            MasterKey masterKey = new MasterKey.Builder(this)
+                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                    .build();
+            return EncryptedSharedPreferences.create(
+                    this,
+                    ENCRYPTED_PREFS_NAME,
+                    masterKey,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            );
+        } catch (GeneralSecurityException | IOException e) {
+            Log.e(TAG, "Failed to create EncryptedSharedPreferences", e);
+            // Fallback to regular prefs (should not happen on supported devices)
+            return getSharedPreferences("guga_prefs_fallback", MODE_PRIVATE);
+        }
+    }
+
+    /** Securely persists the pairing token. */
+    void saveAuthToken(String token) {
+        getEncryptedPrefs().edit().putString(KEY_AUTH_TOKEN, token).apply();
+        Log.d(TAG, "Auth token saved securely.");
+    }
+
+    /** Retrieves the stored auth token, or null if not paired yet. */
+    private String getAuthToken() {
+        return getEncryptedPrefs().getString(KEY_AUTH_TOKEN, null);
+    }
+
+    // ----------------------------------------------------------------
+    // Broadcast Receiver
+    // ----------------------------------------------------------------
 
     private final BroadcastReceiver activityReceiver = new BroadcastReceiver() {
         @Override
@@ -52,6 +103,7 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
             switch (action) {
                 case "com.example.myapplication.UPDATE_IP":
                     backendAddress = intent.getStringExtra("ip");
+                    Log.d(TAG, "IP updated to: " + backendAddress);
                     break;
                 case "com.example.myapplication.PING_BACKEND":
                     pingBackend();
@@ -65,17 +117,25 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
                 case "com.example.myapplication.SET_TTS_ENABLED":
                     ttsEnabled = intent.getBooleanExtra("enabled", true);
                     break;
+                case "com.example.myapplication.SAVE_AUTH_TOKEN":
+                    String token = intent.getStringExtra("token");
+                    if (token != null) saveAuthToken(token);
+                    break;
             }
             Log.d(TAG, "Received broadcast: " + action);
         }
     };
+
+    // ----------------------------------------------------------------
+    // Lifecycle
+    // ----------------------------------------------------------------
 
     @Override
     public void onCreate() {
         super.onCreate();
         createNotificationChannel();
         startForeground(1, buildNotification("Ready"));
-        
+
         tts = new TextToSpeech(this, this);
         backendAddress = getSharedPreferences("AlphaPrefs", MODE_PRIVATE).getString("backend_ip", "");
         ttsEnabled = getSharedPreferences("AlphaPrefs", MODE_PRIVATE).getBoolean("tts_enabled", true);
@@ -86,7 +146,10 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
         filter.addAction("com.example.myapplication.CONNECT_SOCKET");
         filter.addAction("com.example.myapplication.SEND_MANUAL_COMMAND");
         filter.addAction("com.example.myapplication.SET_TTS_ENABLED");
+        filter.addAction("com.example.myapplication.SAVE_AUTH_TOKEN");
         registerReceiver(activityReceiver, filter, Context.RECEIVER_EXPORTED);
+
+        Log.d(TAG, "GuGaService started. Device ID: " + fetchAndroidId());
     }
 
     @Override
@@ -98,6 +161,10 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
     public void onInit(int status) {
         if (status == TextToSpeech.SUCCESS) tts.setLanguage(Locale.US);
     }
+
+    // ----------------------------------------------------------------
+    // Networking
+    // ----------------------------------------------------------------
 
     private void pingBackend() {
         if (backendAddress.isEmpty()) return;
@@ -146,8 +213,18 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
         if (backendAddress.isEmpty()) return;
         try {
             if (mSocket != null) mSocket.disconnect();
-            mSocket = IO.socket("http://" + backendAddress);
+
+            // Pass device_id and auth_token as query parameters for server identification
+            String deviceId = fetchAndroidId();
+            String authToken = getAuthToken();
+
+            IO.Options opts = new IO.Options();
+            opts.query = "device_id=" + deviceId + (authToken != null ? "&token=" + authToken : "");
+            Log.d(TAG, "Connecting socket with device_id=" + deviceId + " token_present=" + (authToken != null));
+
+            mSocket = IO.socket("http://" + backendAddress, opts);
             mSocket.on(Socket.EVENT_CONNECT, args -> sendBroadcast(new Intent("com.example.myapplication.SOCKET_CONNECTED")));
+            mSocket.on(Socket.EVENT_DISCONNECT, args -> sendBroadcast(new Intent("com.example.myapplication.SOCKET_DISCONNECTED")));
             mSocket.on("guga_response", args -> {
                 if (args.length > 0 && args[0] instanceof JSONObject) {
                     try {
@@ -168,14 +245,18 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
         } catch (URISyntaxException ignored) {}
     }
 
+    // ----------------------------------------------------------------
+    // Notifications
+    // ----------------------------------------------------------------
+
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel serviceChannel = new NotificationChannel(
                     CHANNEL_ID, "GuGa Channel", NotificationManager.IMPORTANCE_LOW);
-            
+
             NotificationChannel responseChannel = new NotificationChannel(
                     RESPONSE_CHANNEL_ID, "GuGa Replies", NotificationManager.IMPORTANCE_HIGH);
-            responseChannel.setDescription("Alerts when GuGa replies via text");
+            responseChannel.setDescription("Alerts when GuGu replies via text");
 
             NotificationManager nm = getSystemService(NotificationManager.class);
             nm.createNotificationChannel(serviceChannel);
@@ -195,7 +276,7 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
         NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (nm != null) nm.notify(2, notification);
     }
-    
+
     private Notification buildNotification(String content) {
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("GuGa")
@@ -203,6 +284,10 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .build();
     }
+
+    // ----------------------------------------------------------------
+    // Cleanup
+    // ----------------------------------------------------------------
 
     @Override
     public void onDestroy() {

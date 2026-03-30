@@ -1,3 +1,6 @@
+import json
+import os
+import secrets
 import socket
 import sys
 from typing import Set
@@ -54,6 +57,27 @@ socketio = SocketIO(
 )
 
 connected_clients: Set[str] = set()
+pending_pairings: dict = {}  # device_id -> PIN string
+TRUSTED_DEVICES_FILE = "trusted_devices.json"
+
+
+def load_trusted_devices() -> dict:
+    """Load trusted devices from JSON file."""
+    if not os.path.exists(TRUSTED_DEVICES_FILE):
+        return {}
+    try:
+        with open(TRUSTED_DEVICES_FILE, "r") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError):
+        return {}
+
+
+def save_trusted_device(device_id: str, token: str) -> None:
+    """Persist a paired device's token to JSON file."""
+    devices = load_trusted_devices()
+    devices[device_id] = token
+    with open(TRUSTED_DEVICES_FILE, "w") as f:
+        json.dump(devices, f, indent=2)
 
 
 # ------------------------------------------------------------
@@ -193,12 +217,7 @@ def send_to_one(session_id: str):
 
 @app.route("/api/command", methods=["POST"])
 def handle_command_api():
-    """HTTP fallback for Android clients that can't use WebSockets.
-
-    curl -X POST http://localhost:6769/api/command \\
-         -H "Content-Type: application/json" \\
-         -d '{"command": "hello"}'
-    """
+    """HTTP fallback for Android clients that can't use WebSockets."""
     data = request.get_json(silent=True) or {}
     command = data.get("command", "").strip()
     if not command:
@@ -207,6 +226,45 @@ def handle_command_api():
     response_msg = process_command(command)
     notify_all_clients(response_msg)
     return jsonify({"message": response_msg}), 200
+
+
+@app.route("/api/hello", methods=["POST"])
+def handle_hello():
+    """Device introduces itself. Returns 'trusted' or 'pin_required'."""
+    data = request.get_json(silent=True) or {}
+    device_id = data.get("device_id", "").strip()
+    if not device_id:
+        return jsonify({"error": "device_id required"}), 400
+
+    trusted = load_trusted_devices()
+    if device_id in trusted:
+        print(f"[SECURITY] Known device reconnected: {device_id}")
+        return jsonify({"status": "trusted"}), 200
+
+    # New device — generate PIN
+    pin = "".join([str(secrets.randbelow(10)) for _ in range(8)])
+    pending_pairings[device_id] = pin
+    print(f"\n[SECURITY] New device detected! Pairing PIN: {pin}\n")
+    return jsonify({"status": "pin_required"}), 200
+
+
+@app.route("/api/verify_pin", methods=["POST"])
+def handle_verify_pin():
+    """Verify the PIN entered by the user. Returns token on success."""
+    data = request.get_json(silent=True) or {}
+    device_id = data.get("device_id", "").strip()
+    pin = data.get("pin", "").strip()
+
+    expected_pin = pending_pairings.get(device_id)
+    if not expected_pin or expected_pin != pin:
+        print(f"[SECURITY] PIN verification FAILED for device: {device_id}")
+        return jsonify({"error": "Invalid PIN"}), 401
+
+    token = secrets.token_hex(32)  # 256-bit secure token
+    save_trusted_device(device_id, token)
+    pending_pairings.pop(device_id, None)
+    print(f"[SECURITY] Device paired successfully: {device_id}")
+    return jsonify({"status": "paired", "token": token}), 200
 
 
 # ------------------------------------------------------------
@@ -275,7 +333,10 @@ if __name__ == "__main__":
     print(f"  GET  /clients             — list connected session IDs")
     print(f"  POST /send                — broadcast to ALL clients")
     print(f"  POST /send/<session_id>   — message ONE client")
-    print(f"  POST /api/command         — HTTP fallback command\n")
+    print(f"  POST /api/command         — HTTP fallback command")
+    print(f"  POST /api/hello           — device handshake")
+    print(f"  POST /api/verify_pin      — PIN verification\n")
+
 
     generate_qr(base_url, inverted=QR_INVERTED, show_gui=QR_SHOW_GUI)
 
