@@ -149,7 +149,14 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
         filter.addAction("com.example.myapplication.SAVE_AUTH_TOKEN");
         registerReceiver(activityReceiver, filter, Context.RECEIVER_EXPORTED);
 
-        Log.d(TAG, "GuGaService started. Device ID: " + fetchAndroidId());
+        String storedToken = getAuthToken();
+        Log.d(TAG, "GuGaService started. Device ID: " + fetchAndroidId()
+                + " | Token present: " + (storedToken != null));
+
+        // Auto-connect if IP is present
+        if (!backendAddress.isEmpty() && storedToken != null) {
+            connectWebSocket();
+        }
     }
 
     @Override
@@ -189,24 +196,60 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
         sendBroadcast(intent);
     }
 
-    private void sendCommandToBackend(String command) {
+    private void sendCommandToBackend(String commandText) {
         if (backendAddress.isEmpty()) return;
+
+        String authToken = getAuthToken();
+        String deviceId = fetchAndroidId();
+
+        if (authToken == null) {
+            Log.e(TAG, "No auth token — cannot send encrypted command. Please re-pair.");
+            return;
+        }
+
+        // Build plaintext payload
+        String plaintext;
+        try {
+            JSONObject phraseObj = new JSONObject();
+            phraseObj.put("phrase", commandText);
+            plaintext = phraseObj.toString();
+        } catch (JSONException e) {
+            Log.e(TAG, "Failed to build command JSON", e);
+            return;
+        }
+
+        // Prefer socket if connected
+        if (mSocket != null && mSocket.connected()) {
+            try {
+                JSONObject encrypted = CryptoUtils.encrypt(plaintext, authToken);
+                encrypted.put("device_id", deviceId);
+                Log.d(TAG, "Sending encrypted command via socket");
+                mSocket.emit("command", encrypted);
+            } catch (Exception e) {
+                Log.e(TAG, "Socket encryption/send failed", e);
+            }
+            return;
+        }
+
+        // HTTP fallback — encrypted
         String url = "http://" + backendAddress + "/api/command";
         try {
-            JSONObject json = new JSONObject();
-            json.put("command", command);
-            RequestBody body = RequestBody.create(json.toString(), MediaType.parse("application/json"));
+            JSONObject encrypted = CryptoUtils.encrypt(plaintext, authToken);
+            encrypted.put("device_id", deviceId);
+            RequestBody body = RequestBody.create(encrypted.toString(), MediaType.parse("application/json"));
             Request request = new Request.Builder().url(url).post(body).build();
             HTTP_CLIENT.newCall(request).enqueue(new Callback() {
                 @Override public void onFailure(Call call, IOException e) {
-                    Log.e(TAG, "Failed to send command", e);
+                    Log.e(TAG, "HTTP command send failed", e);
                 }
                 @Override public void onResponse(Call call, Response response) {
-                    Log.d(TAG, "Command sent, response: " + response.code());
+                    Log.d(TAG, "HTTP command sent, response: " + response.code());
                     response.close();
                 }
             });
-        } catch (JSONException ignored) {}
+        } catch (Exception e) {
+            Log.e(TAG, "HTTP encryption/send failed", e);
+        }
     }
 
     private void connectWebSocket() {
@@ -228,8 +271,20 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
             mSocket.on("guga_response", args -> {
                 if (args.length > 0 && args[0] instanceof JSONObject) {
                     try {
-                        String message = ((JSONObject) args[0]).getString("message");
-                        Log.d(TAG, "Socket message received: " + message);
+                        JSONObject payload = (JSONObject) args[0];
+                        String currentToken = getAuthToken();
+                        String message;
+
+                        // Try to decrypt; if token missing or decryption fails, fall back to plain
+                        if (currentToken != null && payload.has("iv") && payload.has("ciphertext")) {
+                            String decryptedJson = CryptoUtils.decrypt(payload, currentToken);
+                            message = new JSONObject(decryptedJson).getString("message");
+                            Log.d(TAG, "Decrypted socket message: " + message);
+                        } else {
+                            message = payload.getString("message");
+                            Log.d(TAG, "Plain socket message: " + message);
+                        }
+
                         Intent intent = new Intent("com.example.myapplication.GUGA_RESPONSE");
                         intent.putExtra("message", message);
                         sendBroadcast(intent);
@@ -238,7 +293,9 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
                         } else {
                             showResponseNotification(message);
                         }
-                    } catch (JSONException ignored) {}
+                    } catch (Exception e) {
+                        Log.e(TAG, "Failed to process guga_response", e);
+                    }
                 }
             });
             mSocket.connect();

@@ -66,6 +66,7 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isSettingsOpen = false;
     private boolean isBackendOnline = false;
+    private boolean isSocketConnected = false;
 
     private SharedPreferences prefs;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -108,17 +109,21 @@ public class MainActivity extends AppCompatActivity {
                     Log.d(TAG, "Ping result: " + success);
                     updateConnectionVisibility();
                     statusText.setText(success ? "STATUS: BACKEND ONLINE" : "STATUS: PING FAILED");
-                    statusText.setTextColor(success ? Color.WHITE : Color.RED);
+                    statusText.setTextColor(Color.WHITE);
                     break;
                 case ACTION_SOCKET_CONNECTED:
                     Log.d(TAG, "Socket connected");
+                    isSocketConnected = true;
+                    updateConnectionVisibility();
                     statusText.setText("STATUS: LIVE SYNC ACTIVE");
                     statusText.setTextColor(Color.WHITE);
                     break;
                 case ACTION_SOCKET_DISCONNECTED:
                     Log.d(TAG, "Socket disconnected");
+                    isSocketConnected = false;
+                    updateConnectionVisibility();
                     statusText.setText("STATUS: DISCONNECTED");
-                    statusText.setTextColor(Color.GRAY);
+                    statusText.setTextColor(Color.WHITE);
                     break;
                 case ACTION_GUGA_RESPONSE:
                     String message = intent.getStringExtra("message");
@@ -206,8 +211,13 @@ public class MainActivity extends AppCompatActivity {
         });
 
         connectSocketButton.setOnClickListener(v -> {
-            Log.d(TAG, "Connect Socket button clicked");
-            sendBroadcast(new Intent(ACTION_CONNECT_SOCKET));
+            Log.d(TAG, "Connect Socket button clicked - checking trust");
+            String ip = ipInput.getText().toString().trim();
+            if (!ip.isEmpty()) {
+                performHandshake(ip);
+            } else {
+                Toast.makeText(this, "Enter IP first", Toast.LENGTH_SHORT).show();
+            }
         });
 
         toggleSettingsButton.setOnClickListener(v -> {
@@ -241,7 +251,8 @@ public class MainActivity extends AppCompatActivity {
         String ip = prefs.getString(PREF_BACKEND_IP, "");
         if (!ip.isEmpty()) {
             ipInput.setText(ip);
-            mainHandler.postDelayed(() -> sendBroadcast(new Intent(ACTION_PING_BACKEND)), 500);
+            // Silent handshake on startup to restore live sync visibility/session
+            mainHandler.postDelayed(() -> performHandshake(ip), 500);
         }
         ttsToggle.setChecked(prefs.getBoolean(PREF_TTS_ENABLED, true));
     }
@@ -317,7 +328,7 @@ public class MainActivity extends AppCompatActivity {
         pinInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD);
         pinInput.setHint("8-digit pairing PIN");
         pinInput.setTextColor(Color.WHITE);
-        pinInput.setHintTextColor(Color.GRAY);
+        pinInput.setHintTextColor(Color.LTGRAY);
 
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
@@ -347,6 +358,7 @@ public class MainActivity extends AppCompatActivity {
             JSONObject body = new JSONObject();
             body.put("device_id", deviceId);
             body.put("pin", pin);
+            body.put("client_type", "app");
             RequestBody reqBody = RequestBody.create(body.toString(), MediaType.parse("application/json"));
             Request request = new Request.Builder()
                     .url("http://" + ip + "/api/verify_pin")
@@ -359,7 +371,7 @@ public class MainActivity extends AppCompatActivity {
                     Log.e(TAG, "PIN verification failed", e);
                     mainHandler.post(() -> {
                         statusText.setText("VERIFICATION FAILED");
-                        statusText.setTextColor(Color.RED);
+                        statusText.setTextColor(Color.WHITE);
                     });
                 }
 
@@ -371,7 +383,7 @@ public class MainActivity extends AppCompatActivity {
                             Log.w(TAG, "Wrong PIN entered");
                             mainHandler.post(() -> {
                                 statusText.setText("WRONG PIN — Try again");
-                                statusText.setTextColor(Color.RED);
+                                statusText.setTextColor(Color.WHITE);
                                 Toast.makeText(MainActivity.this, "Incorrect PIN", Toast.LENGTH_SHORT).show();
                             });
                             return;
@@ -419,12 +431,18 @@ public class MainActivity extends AppCompatActivity {
 
     private void handleNewIp(String ip) {
         String clean = cleanIp(ip);
+        if (clean.isEmpty()) return;
+        
         ipInput.setText(clean);
         prefs.edit().putString(PREF_BACKEND_IP, clean).apply();
+        
         Intent intent = new Intent(ACTION_UPDATE_IP);
         intent.putExtra("ip", clean);
         sendBroadcast(intent);
+        
         statusText.setText("IP UPDATED: " + clean);
+        // Trigger handshake on manual IP entry as well
+        performHandshake(clean);
     }
 
     private void toggleSettings() {
@@ -435,7 +453,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateConnectionVisibility() {
-        if (isBackendOnline) {
+        if (isBackendOnline || isSocketConnected) {
             connectionOverlay.setVisibility(android.view.View.GONE);
             mainContent.setVisibility(android.view.View.VISIBLE);
         } else {

@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:background="@color/background">
+
+    <!-- Title -->
+    <TextView
+        android:id="@+id/tv_phase_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="Train Your Wake Word"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="@color/textPrimary" />
+
+    <!-- Detail instruction -->
+    <TextView
+        android:id="@+id/tv_phase_detail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text=""
+        android:textSize="14sp"
+        android:lineSpacingExtra="3dp"
+        android:textColor="@color/textSecondary" />
+
+    <!-- Progress dots -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:layout_gravity="center_horizontal"
+        android:orientation="horizontal">
+
+        <View android:id="@+id/dot_1"
+            android:layout_width="14dp" android:layout_height="14dp"
+            android:layout_margin="5dp" android:background="@drawable/dot_empty" />
+        <View android:id="@+id/dot_2"
+            android:layout_width="14dp" android:layout_height="14dp"
+            android:layout_margin="5dp" android:background="@drawable/dot_empty" />
+        <View android:id="@+id/dot_3"
+            android:layout_width="14dp" android:layout_height="14dp"
+            android:layout_margin="5dp" android:background="@drawable/dot_empty" />
+        <View android:id="@+id/dot_4"
+            android:layout_width="14dp" android:layout_height="14dp"
+            android:layout_margin="5dp" android:background="@drawable/dot_empty" />
+        <View android:id="@+id/dot_5"
+            android:layout_width="14dp" android:layout_height="14dp"
+            android:layout_margin="5dp" android:background="@drawable/dot_empty" />
+    </LinearLayout>
+
+    <!-- Sample counter -->
+    <TextView
+        android:id="@+id/tv_sample_count"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="4dp"
+        android:text="0 / 5"
+        android:textSize="12sp"
+        android:textColor="@color/textSecondary" />
+
+    <!-- Waveform visualizer -->
+    <com.example.myapplication.WaveformView
+        android:id="@+id/waveform_view"
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:layout_marginTop="18dp"
+        android:background="@drawable/waveform_bg" />
+
+    <!-- Wave mode label — changes between normal and sensitive -->
+    <TextView
+        android:id="@+id/tv_wave_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="4dp"
+        android:text="Green bars = mic is hearing audio"
+        android:textSize="11sp"
+        android:textColor="@color/textSecondary" />
+
+    <!-- Log area -->
+    <TextView
+        android:id="@+id/tv_log"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="12dp"
+        android:padding="10dp"
+        android:background="@drawable/log_box_bg"
+        android:text="Log will appear here…"
+        android:textSize="11sp"
+        android:fontFamily="monospace"
+        android:textColor="@color/logText"
+        android:gravity="top" />
+
+    <!-- Spinner shown while saving -->
+    <ProgressBar
+        android:id="@+id/progress_spinner"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="8dp"
+        android:visibility="gone" />
+
+    <!-- Action button -->
+    <Button
+        android:id="@+id/btn_action"
+        android:layout_width="match_parent"
+        android:layout_height="54dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="16dp"
+        android:text="Begin"
+        android:textSize="16sp"
+        android:textAllCaps="false"
+        android:backgroundTint="@color/accent" />
+
+</LinearLayout>

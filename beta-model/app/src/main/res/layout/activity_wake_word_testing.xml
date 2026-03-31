@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="#121212">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Wake Word Testing"
+        android:textColor="#FFFFFF"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <TextView
+        android:id="@+id/tv_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Status: Idle"
+        android:textColor="#BBBBBB"
+        android:textSize="14sp"
+        android:layout_marginBottom="24dp"/>
+
+    <!-- Toggle and Simulate -->
+    <androidx.appcompat.widget.SwitchCompat
+        android:id="@+id/toggle_detection"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Enable Wake Word Detection"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:layout_marginBottom="16dp"/>
+
+    <Button
+        android:id="@+id/btn_simulate_wake"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Simulate Wake Word"
+        android:textAllCaps="false"
+        android:backgroundTint="#333333"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="32dp"/>
+
+    <!-- Confidence Score Area -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Current Confidence"
+        android:textColor="#888888"
+        android:textSize="12sp"
+        android:textAllCaps="true"
+        android:letterSpacing="0.1"/>
+
+    <TextView
+        android:id="@+id/tv_current_score"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0.0000"
+        android:textColor="#FFFFFF"
+        android:textSize="64sp"
+        android:fontFamily="monospace"
+        android:layout_marginBottom="8dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Recent Scores"
+        android:textColor="#888888"
+        android:textSize="12sp"
+        android:layout_marginBottom="4dp"/>
+
+    <TextView
+        android:id="@+id/tv_confidence_log"
+        android:layout_width="match_parent"
+        android:layout_height="120dp"
+        android:background="#1A1A1A"
+        android:padding="8dp"
+        android:text="..."
+        android:textColor="#00E676"
+        android:fontFamily="monospace"
+        android:textSize="12sp"
+        android:gravity="top"/>
+
+    <!-- Threshold Input -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Detection Threshold (0.0 - 1.0)"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp"
+        android:layout_marginTop="32dp"
+        android:layout_marginBottom="8dp"/>
+
+    <EditText
+        android:id="@+id/et_threshold"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#1A1A1A"
+        android:padding="12dp"
+        android:textColor="#FFFFFF"
+        android:inputType="numberDecimal"
+        android:hint="e.g. 0.85"
+        android:textColorHint="#444444"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Lower = more sensitive (more false positives)\nHigher = more specific (harder to trigger)"
+        android:textColor="#666666"
+        android:textSize="12sp"
+        android:layout_marginTop="4dp"/>
+
+</LinearLayout>

@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    tools:context=".MainActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginHorizontal="32dp"
+        android:layout_marginTop="24dp"
+        android:layout_marginBottom="8dp">
+
+        <EditText
+            android:id="@+id/ipInput"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Enter Address (e.g., 192.168.1.5:6769)"
+            android:inputType="textUri" />
+
+        <Button
+            android:id="@+id/saveIpButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Save IP" />
+
+        <Button
+            android:id="@+id/scanQrButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Scan QR" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/pingButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Ping Server"
+        android:layout_marginBottom="8dp" />
+
+    <Button
+        android:id="@+id/connectSocketButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Connect Live Audio Stream (Socket)"
+        android:layout_marginBottom="24dp" />
+
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Status: Waiting for Permissions"
+        android:textSize="18sp"
+        android:layout_marginBottom="24dp" />
+
+    <TextView
+        android:id="@+id/thresholdLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Sensitivity Threshold: 0.05"
+        android:textSize="16sp"
+        android:layout_marginBottom="8dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginHorizontal="32dp"
+        android:layout_marginBottom="16dp"
+        android:gravity="center">
+
+        <EditText
+            android:id="@+id/thresholdInput"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:inputType="numberDecimal"
+            android:text="0.05" />
+
+        <Button
+            android:id="@+id/applyThresholdButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Apply Threshold" />
+    </LinearLayout>
+
+
+    <androidx.appcompat.widget.SwitchCompat
+        android:id="@+id/listeningToggle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Wake Word Listening"
+        android:checked="false"
+        android:layout_marginBottom="16dp" />
+
+    <Button
+        android:id="@+id/btnViewLogs"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="View App Logs"
+        android:layout_marginBottom="8dp" />
+
+    <Button
+        android:id="@+id/trainVoiceButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Train Your Voice (Enrollment)"
+        android:layout_marginBottom="24dp" />
+
+    <Button
+        android:id="@+id/manualWakeButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Simulate Wake Word"
+        android:layout_marginBottom="16dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginHorizontal="32dp"
+        android:layout_marginBottom="16dp"
+        android:gravity="center">
+
+        <EditText
+            android:id="@+id/manualCommandInput"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Type a command..."
+            android:imeOptions="actionSend"
+            android:inputType="text" />
+
+        <Button
+            android:id="@+id/sendManualCommandButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Send" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btnTestWakeWord"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Test Wake Word"
+        android:textAllCaps="false" />
+
+</LinearLayout>
