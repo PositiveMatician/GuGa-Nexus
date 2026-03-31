@@ -506,19 +506,25 @@ HTML_PAGE = """
     }
 
     function connectSocket() {
+        let shownDisconnect = false;
+
         socket = io({
             query: { device_id: deviceId, token: token },
             transports: ['websocket', 'polling']
         });
 
         socket.on('connect', () => {
+            shownDisconnect = false;
             setStatus('online', 'online');
             addBubble('sys', 'connected');
         });
 
-        socket.on('disconnect', (reason) => {
-            setStatus('offline', 'error');
-            addBubble('sys', 'disconnected');
+        socket.on('disconnect', () => {
+            if (!shownDisconnect) {
+                shownDisconnect = true;
+                setStatus('offline', 'error');
+                addBubble('sys', 'disconnected');
+            }
         });
 
         socket.on('guga_response', (data) => {
@@ -527,11 +533,17 @@ HTML_PAGE = """
         });
 
         socket.on('connect_error', (err) => {
-            setStatus('refused', 'error');
-            addBubble('sys', err.message);
             if (err.message.includes('rejected')) {
                 localStorage.removeItem('guga_token');
-                addBubble('sys', 'token revoked — refresh to re-pair');
+                setStatus('auth revoked', 'error');
+                if (!shownDisconnect) {
+                    shownDisconnect = true;
+                    addBubble('sys', 'token revoked — refresh to re-pair');
+                }
+            } else if (!shownDisconnect) {
+                shownDisconnect = true;
+                setStatus('offline', 'error');
+                addBubble('sys', 'disconnected');
             }
         });
     }
