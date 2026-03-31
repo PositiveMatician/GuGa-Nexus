@@ -155,7 +155,7 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
 
     private void pingBackend() {
         if (backendAddress.isEmpty()) return;
-        Request request = new Request.Builder().url("http://" + backendAddress + "/").build();
+        Request request = new Request.Builder().url(backendAddress + "/ping").build();
         HTTP_CLIENT.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
@@ -212,7 +212,7 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
         }
 
         // HTTP fallback — encrypted
-        String url = "http://" + backendAddress + "/api/command";
+        String url = backendAddress + "/api/command";
         try {
             JSONObject encrypted = CryptoUtils.encrypt(plaintext, authToken);
             encrypted.put("device_id", deviceId);
@@ -243,9 +243,9 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
 
             IO.Options opts = new IO.Options();
             opts.query = "device_id=" + deviceId + (authToken != null ? "&token=" + authToken : "");
-            Log.d(TAG, "Connecting socket with device_id=" + deviceId + " token_present=" + (authToken != null));
+            Log.d(TAG, "Connecting socket to " + backendAddress + " with device_id=" + deviceId);
 
-            mSocket = IO.socket("http://" + backendAddress, opts);
+            mSocket = IO.socket(backendAddress, opts);
             mSocket.on(Socket.EVENT_CONNECT, args -> sendBroadcast(new Intent("com.example.myapplication.SOCKET_CONNECTED")));
             mSocket.on(Socket.EVENT_DISCONNECT, args -> sendBroadcast(new Intent("com.example.myapplication.SOCKET_DISCONNECTED")));
             mSocket.on("guga_response", args -> {

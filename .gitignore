@@ -26,3 +26,9 @@ env/
 .venv
 /server/log/
 /server/trusted_devices.json
+/server/cloudflared
+/server/cloudflared.exe
+/server/nohup.out
+/server/*.out
+/*.log
+/server/*.log

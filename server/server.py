@@ -1,11 +1,19 @@
+import atexit
 import base64
 import json
 import os
+import platform
+import re
 import secrets
 import socket
+import subprocess
 import sys
+import threading
 import time
 from typing import Set
+
+from dotenv import load_dotenv
+load_dotenv()
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
@@ -60,7 +68,7 @@ socketio = SocketIO(
     async_mode="threading",
 )
 
-connected_clients: Set[str] = set()
+connected_clients: dict[str, str] = {}  # session_id -> device_id
 pending_pairings: dict = {}  # device_id -> PIN string
 TRUSTED_DEVICES_FILE = "trusted_devices.json"
 
@@ -128,9 +136,11 @@ def is_device_trusted(device_id: str) -> bool:
     if isinstance(entry, str):
         print(f"[SECURITY] Migrating legacy entry for {device_id}")
         token = entry
+        # Auto-detect type from prefix
+        client_type = "browser" if device_id.startswith("browser-") else "app"
         # Default to 30 days for migrated entries
         expires_at = time.time() + (30 * 24 * 3600)
-        save_trusted_device(device_id, token, "app", expires_at)
+        save_trusted_device(device_id, token, client_type, expires_at)
         return True
 
     if time.time() >= entry.get("expires_at", 0):
@@ -151,256 +161,394 @@ HTML_PAGE = """
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GUGA Terminal</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GUGA</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
-        :root {
-            --bg: #000000;
-            --surface: #0a0a0a;
-            --border: #1a1a1a;
-            --text-primary: #ffffff;
-            --text-secondary: #444444;
-            --accent: #ffffff;
-            --font: 'Inter', system-ui, -apple-system, sans-serif;
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+        html, body {
+            height: 100%;
+            overscroll-behavior: none;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        
         body {
-            background-color: var(--bg);
-            color: var(--text-primary);
-            font-family: var(--font);
-            height: 100vh;
+            background: #000;
+            color: #fff;
+            font-family: 'Nunito', sans-serif;
             display: flex;
             justify-content: center;
-            align-items: center;
+            position: fixed;
+            inset: 0;
             overflow: hidden;
         }
 
-        .dashboard {
+        .shell {
             width: 100%;
-            max-width: 800px;
-            height: 90vh;
+            max-width: 600px;
+            height: 100%;
             display: flex;
             flex-direction: column;
-            padding: 40px;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
         }
 
-        header {
-            text-align: center;
-            margin-bottom: 40px;
+        /* ── Header ── */
+        .hdr {
+            flex-shrink: 0;
+            padding: 24px 22px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
-        h1 {
-            font-size: 3rem;
-            font-weight: 200;
-            letter-spacing: 0.3em;
-            text-transform: uppercase;
-            margin-bottom: 8px;
+        .logo {
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            line-height: 1;
         }
 
-        #status {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            background: #111;
+            border-radius: 999px;
+            padding: 7px 14px 7px 10px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #555;
+            letter-spacing: 0.03em;
+            transition: color 0.3s;
         }
 
-        #chat {
+        .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #333;
+            flex-shrink: 0;
+            transition: background 0.3s;
+        }
+
+        .dot.online  { background: #fff; animation: blink 2.5s ease-in-out infinite; }
+        .dot.waiting { background: #666; animation: blink 1s ease-in-out infinite; }
+        .dot.error   { background: #555; }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.3; }
+        }
+
+        /* ── Feed ── */
+        .feed {
             flex: 1;
             overflow-y: auto;
-            margin-bottom: 32px;
-            padding-right: 20px;
-            scrollbar-width: thin;
-            scrollbar-color: var(--border) transparent;
-        }
-
-        #chat::-webkit-scrollbar { width: 4px; }
-        #chat::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-        .msg {
-            margin-bottom: 16px;
-            line-height: 1.6;
-            font-size: 0.95rem;
-            animation: fadeIn 0.4s ease forwards;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .system { color: var(--text-secondary); font-size: 0.8rem; font-weight: 300; }
-        .bot { font-weight: 400; }
-        .you { color: var(--text-secondary); }
-
-        .input-area {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 4px;
+            overflow-x: hidden;
+            padding: 8px 18px 4px;
             display: flex;
-            padding: 4px;
-            transition: border-color 0.3s;
+            flex-direction: column;
+            gap: 8px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
         }
+        .feed::-webkit-scrollbar { display: none; }
 
-        .input-area:focus-within {
-            border-color: #333;
-        }
-
-        #commandInput {
-            flex: 1;
-            background: transparent;
-            border: none;
-            color: var(--text-primary);
-            padding: 14px 20px;
-            font-size: 0.9rem;
-            font-weight: 300;
-            outline: none;
-        }
-
-        #commandInput::placeholder { color: #222; }
-
-        button {
-            background: var(--accent);
-            color: #000;
-            border: none;
-            padding: 0 32px;
+        /* ── Bubbles ── */
+        .bubble {
+            max-width: 82%;
+            padding: 10px 16px;
+            border-radius: 22px;
+            font-size: 0.88rem;
             font-weight: 600;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            cursor: pointer;
-            transition: opacity 0.2s;
-            border-radius: 2px;
+            line-height: 1.45;
+            animation: pop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+            word-break: break-word;
         }
 
-        button:hover { opacity: 0.9; }
+        @keyframes pop {
+            from { opacity: 0; transform: scale(0.85); }
+            to   { opacity: 1; transform: scale(1); }
+        }
 
-        /* Mobile Adjustments */
-        @media (max-width: 600px) {
-            .dashboard { padding: 20px; height: 100vh; }
-            h1 { font-size: 2rem; }
+        .bubble.sys {
+            align-self: center;
+            background: transparent;
+            color: #333;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            padding: 2px 0;
+            max-width: 100%;
+            text-align: center;
+            animation: none;
+        }
+
+        .bubble.bot {
+            align-self: flex-start;
+            background: #fff;
+            color: #000;
+            border-bottom-left-radius: 6px;
+        }
+
+        .bubble.usr {
+            align-self: flex-end;
+            background: #1a1a1a;
+            color: #fff;
+            border-bottom-right-radius: 6px;
+        }
+
+        /* Typing indicator */
+        .typing-bubble {
+            align-self: flex-start;
+            background: #fff;
+            border-radius: 22px;
+            border-bottom-left-radius: 6px;
+            padding: 12px 18px;
+            margin: 0 18px 4px;
+            display: none;
+            gap: 5px;
+            align-items: center;
+        }
+        .typing-bubble.active { display: flex; }
+
+        .typing-bubble span {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #000;
+            animation: bounce 1.1s ease-in-out infinite;
+        }
+        .typing-bubble span:nth-child(2) { animation-delay: 0.18s; }
+        .typing-bubble span:nth-child(3) { animation-delay: 0.36s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+            40%           { transform: translateY(-5px); opacity: 1; }
+        }
+
+        /* ── Input Row ── */
+        .input-row {
+            flex-shrink: 0;
+            padding: 10px 16px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #cmdInput {
+            flex: 1;
+            background: #111;
+            border: none;
+            border-radius: 999px;
+            color: #fff;
+            font-family: 'Nunito', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            padding: 13px 20px;
+            outline: none;
+            -webkit-appearance: none;
+            transition: background 0.2s;
+        }
+
+        #cmdInput::placeholder {
+            color: #333;
+            font-weight: 600;
+        }
+
+        #cmdInput:focus {
+            background: #141414;
+        }
+
+        .send-btn {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            border: none;
+            background: #fff;
+            color: #000;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: transform 0.12s, background 0.15s;
+            -webkit-appearance: none;
+        }
+
+        .send-btn:active {
+            transform: scale(0.88);
+            background: #ddd;
+        }
+
+        .send-btn svg {
+            width: 18px;
+            height: 18px;
+            stroke: #000;
+            fill: none;
+            stroke-width: 2.2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        @media (max-width: 400px) {
+            .hdr { padding: 18px 16px 12px; }
+            .feed { padding: 6px 14px 4px; }
+            .input-row { padding: 8px 12px 14px; }
         }
     </style>
 </head>
 <body>
-    <div class="dashboard">
-        <header>
-            <h1>GUGA</h1>
-            <div id="status">Establishing connection...</div>
-        </header>
+<div class="shell">
 
-        <div id="chat"></div>
-
-        <div class="input-area">
-            <input type="text" id="commandInput" placeholder="TYPE COMMAND..." onkeydown="handleEnter(event)" autocomplete="off">
-            <button onclick="sendCommand()">SEND</button>
+    <div class="hdr">
+        <div class="logo">guga.</div>
+        <div class="status-pill">
+            <div class="dot" id="statusDot"></div>
+            <span id="statusText">starting up</span>
         </div>
     </div>
 
-    <script>
-        let deviceId = localStorage.getItem('guga_device_id');
-        if (!deviceId) {
-            deviceId = 'browser-' + Math.random().toString(36).substring(2, 15);
-            localStorage.setItem('guga_device_id', deviceId);
-        }
+    <div class="feed" id="feed"></div>
 
-        let token = localStorage.getItem('guga_token');
-        let socket = null;
+    <div class="typing-bubble" id="typing">
+        <span></span><span></span><span></span>
+    </div>
 
-        const chatDisplay = document.getElementById('chat');
-        const statusDisplay = document.getElementById('status');
+    <div class="input-row">
+        <input
+            type="text"
+            id="cmdInput"
+            placeholder="say something..."
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+            inputmode="text"
+            onkeydown="onKey(event)"
+        />
+        <button class="send-btn" onclick="sendCommand()">
+            <svg viewBox="0 0 18 18">
+                <line x1="2" y1="9" x2="16" y2="9"/>
+                <polyline points="10,3 16,9 10,15"/>
+            </svg>
+        </button>
+    </div>
 
-        function appendMsg(cls, label, text) {
-            const div = document.createElement('div');
-            div.className = 'msg ' + cls;
-            div.innerHTML = (label ? `<span style="opacity: 0.5; margin-right: 8px;">${label}</span>` : '') + text;
-            chatDisplay.appendChild(div);
-            chatDisplay.scrollTop = chatDisplay.scrollHeight;
-        }
+</div>
+<script>
+    let deviceId = localStorage.getItem('guga_device_id');
+    if (!deviceId) {
+        deviceId = 'browser-' + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem('guga_device_id', deviceId);
+    }
 
-        async function initAuth() {
-            try {
-                const helloRes = await fetch('/api/hello', {
+    let token = localStorage.getItem('guga_token');
+    let socket = null;
+
+    const feed      = document.getElementById('feed');
+    const statusDot = document.getElementById('statusDot');
+    const statusTxt = document.getElementById('statusText');
+    const typingEl  = document.getElementById('typing');
+
+    function setStatus(label, state) {
+        statusTxt.textContent = label;
+        statusDot.className = 'dot ' + (state || '');
+    }
+
+    function addBubble(cls, text) {
+        const div = document.createElement('div');
+        div.className = 'bubble ' + cls;
+        div.textContent = text;
+        feed.appendChild(div);
+        feed.scrollTo({ top: feed.scrollHeight, behavior: 'smooth' });
+    }
+
+    function onKey(e) { if (e.key === 'Enter') sendCommand(); }
+
+    async function initAuth() {
+        setStatus('connecting...', 'waiting');
+        try {
+            const helloRes = await fetch('/api/hello', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ device_id: deviceId })
+            });
+            const helloData = await helloRes.json();
+
+            if (helloData.status === 'pin_required') {
+                const pin = prompt('enter pairing pin:');
+                if (!pin) { setStatus('cancelled', 'error'); return; }
+                const verifyRes = await fetch('/api/verify_pin', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ device_id: deviceId })
+                    body: JSON.stringify({ device_id: deviceId, pin: pin, client_type: 'browser' })
                 });
-                const helloData = await helloRes.json();
-
-                if (helloData.status === 'pin_required') {
-                    const pin = prompt('ENTER PAIRING PIN:');
-                    if (!pin) {
-                        statusDisplay.textContent = 'ERROR: PAIRING CANCELLED';
-                        return;
-                    }
-                    const verifyRes = await fetch('/api/verify_pin', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ device_id: deviceId, pin: pin, client_type: 'browser' })
-                    });
-                    const verifyData = await verifyRes.json();
-                    if (verifyData.status === 'paired') {
-                        token = verifyData.token;
-                        localStorage.setItem('guga_token', token);
-                        appendMsg('system', 'AUTH', 'AUTHENTICATED');
-                    } else {
-                        statusDisplay.textContent = 'ERROR: ' + (verifyData.error || 'INVALID PIN');
-                        return;
-                    }
+                const verifyData = await verifyRes.json();
+                if (verifyData.status === 'paired') {
+                    token = verifyData.token;
+                    localStorage.setItem('guga_token', token);
+                    addBubble('sys', 'paired ✓');
+                } else {
+                    setStatus('auth failed', 'error');
+                    addBubble('sys', verifyData.error || 'invalid pin');
+                    return;
                 }
-                connectSocket();
-            } catch (e) {
-                statusDisplay.textContent = 'ERROR: ' + e;
             }
+            connectSocket();
+        } catch (e) {
+            setStatus('error', 'error');
+            addBubble('sys', String(e));
         }
+    }
 
-        function connectSocket() {
-            socket = io({
-                query: { device_id: deviceId, token: token },
-                transports: ['websocket', 'polling']
-            });
+    function connectSocket() {
+        socket = io({
+            query: { device_id: deviceId, token: token },
+            transports: ['websocket', 'polling']
+        });
 
-            socket.on('connect', () => {
-                statusDisplay.textContent = 'SECURE CONNECTION ACTIVE';
-                appendMsg('system', 'SYS', 'HANDSHAKE COMPLETE');
-            });
+        socket.on('connect', () => {
+            setStatus('online', 'online');
+            addBubble('sys', 'connected');
+        });
 
-            socket.on('disconnect', (reason) => {
-                statusDisplay.textContent = 'OFFLINE';
-                appendMsg('system', 'SYS', 'CONNECTION LOST: ' + reason);
-            });
+        socket.on('disconnect', (reason) => {
+            setStatus('offline', 'error');
+            addBubble('sys', 'disconnected');
+        });
 
-            socket.on('guga_response', (data) => {
-                const msg = data.message || 'ENCRYPTED PAYLOAD';
-                appendMsg('bot', 'GUGA', msg);
-            });
+        socket.on('guga_response', (data) => {
+            typingEl.classList.remove('active');
+            addBubble('bot', data.message || 'encrypted payload');
+        });
 
-            socket.on('connect_error', (err) => {
-                statusDisplay.textContent = 'CONNECTION REFUSED';
-                appendMsg('system', 'ERR', err.message);
-                if (err.message.includes('rejected')) {
-                     localStorage.removeItem('guga_token');
-                     statusDisplay.textContent = 'AUTH REVOKED. REFRESH TO RE-PAIR.';
-                }
-            });
-        }
+        socket.on('connect_error', (err) => {
+            setStatus('refused', 'error');
+            addBubble('sys', err.message);
+            if (err.message.includes('rejected')) {
+                localStorage.removeItem('guga_token');
+                addBubble('sys', 'token revoked — refresh to re-pair');
+            }
+        });
+    }
 
-        function sendCommand() {
-            const input = document.getElementById('commandInput');
-            const text  = input.value.trim();
-            if (!text || !socket) return;
-            appendMsg('you', 'USER', text);
-            socket.emit('command', { phrase: text, device_id: deviceId });
-            input.value = '';
-        }
+    function sendCommand() {
+        const input = document.getElementById('cmdInput');
+        const text = input.value.trim();
+        if (!text || !socket) return;
+        addBubble('usr', text);
+        socket.emit('command', { phrase: text, device_id: deviceId });
+        input.value = '';
+        typingEl.classList.add('active');
+        feed.scrollTo({ top: feed.scrollHeight, behavior: 'smooth' });
+    }
 
-        function handleEnter(e) { if (e.key === 'Enter') sendCommand(); }
-
-        initAuth();
-    </script>
+    initAuth();
+</script>
 </body>
 </html>
 """
@@ -484,7 +632,7 @@ def handle_command_api():
         return jsonify({"error": "No command"}), 400
     print(f"[API] Command from {device_id}: '{command}'")
     response_msg = process_command(command)
-    notify_all_clients_encrypted(response_msg, trusted)
+    notify_all_clients(response_msg)
     return jsonify({"ok": True}), 200
 
 
@@ -557,14 +705,14 @@ def handle_connect():
     if entry.get('token') != token:
         print(f"[SECURITY] Socket token mismatch for device_id={device_id}")
         return False
-    connected_clients.add(request.sid)
+    connected_clients[request.sid] = device_id
     print(f"[+] Connected    sid={request.sid}  total={len(connected_clients)} (device_id={device_id})")
-    emit("guga_response", {"message": "Connection established. GuGa online."})
+    send_private_message(request.sid, "Connection established. GuGa online.")
 
 
 @socketio.on("disconnect")
 def handle_disconnect():
-    connected_clients.discard(request.sid)
+    connected_clients.pop(request.sid, None)
     print(f"[-] Disconnected  sid={request.sid}  total={len(connected_clients)}")
 
 
@@ -580,26 +728,31 @@ def handle_command(data):
         return
 
     try:
-        print(f"[WS] Received encrypted payload: {data}")
+        print(f"[WS] Incoming payload: {data}")
         token = trusted[device_id].get("token")
-        if not token:
-            raise ValueError("No token in trusted list")
-        phrase = CryptoHelper.decrypt(data, token)
-        phrase_obj = json.loads(phrase)
-        command = phrase_obj.get("phrase", "").strip()
+        client_type = trusted[device_id].get("type", "app")
+        
+        # Determine if we should attempt decryption
+        if "iv" in data and "ciphertext" in data and token:
+            print(f"[CRYPTO] Decrypting payload with token: {token[:8]}...")
+            phrase_json = CryptoHelper.decrypt(data, token)
+            phrase_obj = json.loads(phrase_json)
+            command = phrase_obj.get("phrase", "").strip()
+        elif client_type == "browser":
+            # Allow plaintext for browsers
+            print(f"[SECURITY] Allowing plaintext command for browser device: {device_id}")
+            command = data.get("phrase", "").strip()
+        else:
+            raise ValueError("Encrypted payload required for app clients")
+            
     except Exception as e:
-        print(f"[CRYPTO] Decrypt failed for {device_id}: {e}")
-        emit("error", {"message": f"Decryption error: {str(e)}"})
+        print(f"[CRYPTO] Process failed for {device_id}: {e}")
+        emit("error", {"message": f"Processing error: {str(e)}"})
         return
 
     print(f"[WS] Command from {device_id}: '{command}'")
     response_text = process_command(command)
-    token = trusted[device_id].get("token")
-    if not token:
-        print(f"[CRYPTO] No token for device {device_id}")
-        return
-    encrypted_response = CryptoHelper.encrypt(json.dumps({"message": response_text}), token)
-    emit("guga_response", encrypted_response)
+    notify_all_clients(response_text)
 
 
 # ------------------------------------------------------------
@@ -611,27 +764,52 @@ def process_command(command: str) -> str:
 
 
 def notify_all_clients(message: str) -> None:
-    socketio.emit("guga_response", {"message": message})
-
-
-def notify_all_clients_encrypted(message: str, trusted_devices: dict) -> None:
-    """Emit encrypted guga_response to each connected client using their token."""
-    payload = json.dumps({"message": message})
-    for device_id, device_info in trusted_devices.items():
+    """Emit guga_response to all connected clients (encrypted for apps, plain for browsers)."""
+    trusted = load_trusted_devices()
+    payload_json = json.dumps({"message": message})
+    
+    # Iterate over active sessions
+    for sid, device_id in list(connected_clients.items()):
         try:
+            device_info = trusted.get(device_id, {})
+            client_type = device_info.get("type", "app")
             token = device_info.get("token")
-            if not token: continue
-            encrypted = CryptoHelper.encrypt(payload, token)
-            socketio.emit("guga_response", encrypted)
+
+            if client_type == "browser" or device_id.startswith("browser-") or not token:
+                # Send plaintext for browsers
+                print(f"[WS] Sending PLAIN to {sid} ({device_id})")
+                socketio.emit("guga_response", {"message": message}, room=sid)
+            else:
+                # Encrypt for apps
+                print(f"[WS] Sending ENCRYPTED to {sid} ({device_id})")
+                encrypted = CryptoHelper.encrypt(payload_json, token)
+                socketio.emit("guga_response", encrypted, room=sid)
         except Exception as e:
-            print(f"[CRYPTO] Failed to encrypt for {device_id}: {e}")
+            print(f"[CRYPTO] Failed to send to {sid} ({device_id}): {e}")
 
 
 def send_private_message(session_id: str, message: str) -> bool:
-    if session_id in connected_clients:
-        socketio.emit("guga_response", {"message": message}, room=session_id)
+    """Send a private message to a specific session, with encryption if applicable."""
+    if session_id not in connected_clients:
+        return False
+        
+    device_id = connected_clients[session_id]
+    trusted = load_trusted_devices()
+    device_info = trusted.get(device_id, {})
+    client_type = device_info.get("type", "app")
+    token = device_info.get("token")
+    payload_json = json.dumps({"message": message})
+
+    try:
+        if client_type == "browser" or not token:
+            socketio.emit("guga_response", {"message": message}, room=session_id)
+        else:
+            encrypted = CryptoHelper.encrypt(payload_json, token)
+            socketio.emit("guga_response", encrypted, room=session_id)
         return True
-    return False
+    except Exception as e:
+        print(f"[CRYPTO] Private send failed for {session_id}: {e}")
+        return False
 
 
 # ------------------------------------------------------------
@@ -646,14 +824,59 @@ def get_local_ip() -> str:
             return "127.0.0.1"
 
 
+def start_cloudflare_tunnel(port: int) -> str:
+    """Start an ephemeral Cloudflare tunnel and capture the URL."""
+    print(f"[NETWORK] Spawning Cloudflare Tunnel for port {port}...")
+    
+    # Determine local binary path
+    filename = "cloudflared.exe" if platform.system().lower() == "windows" else "./cloudflared"
+    # Ensure it's the one in the same dir as server.py
+    cloudflare_cmd = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
+    
+    # If not found locally, try global
+    if not os.path.exists(cloudflare_cmd):
+        cloudflare_cmd = "cloudflared"
+
+    proc = subprocess.Popen(
+        [cloudflare_cmd, "tunnel", "--url", f"http://localhost:{port}"],
+        stderr=subprocess.PIPE,
+        text=True
+    )
+    # Ensure the tunnel dies when the main process exits
+    atexit.register(lambda: proc.terminate())
+    
+    url_pattern = re.compile(r"https://[-a-z0-9]+\.trycloudflare\.com")
+    
+    # Read stderr to find the URL
+    for line in iter(proc.stderr.readline, ""):
+        match = url_pattern.search(line)
+        if match:
+            url = match.group(0)
+            return url
+    return ""
+
+
 # ------------------------------------------------------------
 # Entry Point
 # ------------------------------------------------------------
 if __name__ == "__main__":
-    local_ip = get_local_ip()
-    base_url = f"http://{local_ip}:{PORT}"
+    mode = os.getenv("MODE", "lan").lower()
+    port = int(os.getenv("PORT", 6769))
+    
+    if mode == "public":
+        public_url = start_cloudflare_tunnel(port)
+        if public_url:
+            base_url = public_url
+            print(f"\n[NETWORK] Cloudflare Tunnel Active: {base_url}\n")
+        else:
+            print("\n[ERROR] Failed to start Cloudflare Tunnel. Falling back to LAN.\n")
+            local_ip = get_local_ip()
+            base_url = f"http://{local_ip}:{port}"
+    else:
+        local_ip = get_local_ip()
+        base_url = f"http://{local_ip}:{port}"
 
-    print(f"\n🚀 GuGa Backend — {base_url}\n")
+    print(f"🚀 GuGa Backend — {base_url}\n")
     print(f"  GET  /ping                — health check")
     print(f"  GET  /clients             — list connected session IDs")
     print(f"  POST /send                — broadcast to ALL clients")
@@ -662,10 +885,9 @@ if __name__ == "__main__":
     print(f"  POST /api/hello           — device handshake")
     print(f"  POST /api/verify_pin      — PIN verification\n")
 
-
     generate_qr(base_url, inverted=QR_INVERTED, show_gui=QR_SHOW_GUI)
 
     print(f"\n📱 Manual address: {base_url}")
     print("   Press Ctrl+C to stop.\n")
 
-    socketio.run(app, host=HOST, port=PORT, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
+    socketio.run(app, host="0.0.0.0", port=port, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)

@@ -80,15 +80,17 @@ public class MainActivity extends AppCompatActivity {
             new ScanContract(),
             result -> {
                 if (result.getContents() != null) {
-                    String scannedIp = cleanIp(result.getContents());
-                    // Save IP immediately, then start handshake
-                    ipInput.setText(scannedIp);
-                    prefs.edit().putString(PREF_BACKEND_IP, scannedIp).apply();
+                    String scannedUrl = result.getContents().trim();
+                    if (scannedUrl.endsWith("/")) scannedUrl = scannedUrl.substring(0, scannedUrl.length() - 1);
+                    
+                    // Save full URL immediately, then start handshake
+                    ipInput.setText(scannedUrl);
+                    prefs.edit().putString(PREF_BACKEND_IP, scannedUrl).apply();
                     Intent updateIntent = new Intent(ACTION_UPDATE_IP);
-                    updateIntent.putExtra("ip", scannedIp);
+                    updateIntent.putExtra("ip", scannedUrl);
                     sendBroadcast(updateIntent);
                     statusText.setText("Connecting to GuGu...");
-                    performHandshake(scannedIp);
+                    performHandshake(scannedUrl);
                 }
             });
 
@@ -289,7 +291,7 @@ public class MainActivity extends AppCompatActivity {
             body.put("force_pair", forcePair);
             RequestBody reqBody = RequestBody.create(body.toString(), MediaType.parse("application/json"));
             Request request = new Request.Builder()
-                    .url("http://" + ip + "/api/hello")
+                    .url(ip + "/api/hello")
                     .post(reqBody)
                     .build();
 
@@ -381,7 +383,7 @@ public class MainActivity extends AppCompatActivity {
             body.put("client_type", "app");
             RequestBody reqBody = RequestBody.create(body.toString(), MediaType.parse("application/json"));
             Request request = new Request.Builder()
-                    .url("http://" + ip + "/api/verify_pin")
+                    .url(ip + "/api/verify_pin")
                     .post(reqBody)
                     .build();
 
@@ -444,7 +446,7 @@ public class MainActivity extends AppCompatActivity {
     // ----------------------------------------------------------------
 
     private String cleanIp(String ip) {
-        String clean = ip.trim().replace("http://", "").replace("https://", "");
+        String clean = ip.trim();
         if (clean.endsWith("/")) clean = clean.substring(0, clean.length() - 1);
         return clean;
     }
