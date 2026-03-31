@@ -7,9 +7,17 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.media.AudioManager;
+import android.media.Ringtone;
+import android.media.RingtoneManager;
+import android.media.ToneGenerator;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.inputmethod.EditorInfo;
@@ -20,9 +28,12 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.activity.result.ActivityResultLauncher;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.journeyapps.barcodescanner.ScanContract;
 import com.journeyapps.barcodescanner.ScanOptions;
@@ -31,6 +42,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -57,10 +70,15 @@ public class MainActivity extends AppCompatActivity {
     private static final String ACTION_SEND_MANUAL_COMMAND = "com.example.myapplication.SEND_MANUAL_COMMAND";
     private static final String ACTION_SET_TTS_ENABLED   = "com.example.myapplication.SET_TTS_ENABLED";
     private static final String ACTION_SAVE_AUTH_TOKEN   = "com.example.myapplication.SAVE_AUTH_TOKEN";
+    private static final String ACTION_SET_FOREGROUND    = "com.example.myapplication.SET_FOREGROUND";
 
-    private TextView statusText, chatDisplay;
+    private TextView statusText;
+    private RecyclerView chatRecyclerView;
+    private ChatAdapter chatAdapter;
+    private List<ChatMessage> chatMessages = new ArrayList<>();
+    
     private EditText ipInput, manualCommandInput;
-    private Button saveIpButton, scanQrButton, pingButton, connectSocketButton, sendManualCommandButton, toggleSettingsButton;
+    private Button saveIpButton, scanQrButton, pingButton, connectSocketButton, sendManualCommandButton, toggleSettingsButton, clearHistoryButton;
     private SwitchCompat ttsToggle;
     private android.view.View settingsOverlay, connectionOverlay, mainContent;
 
@@ -71,6 +89,7 @@ public class MainActivity extends AppCompatActivity {
     private SharedPreferences prefs;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final OkHttpClient httpClient = new OkHttpClient();
+    private ToneGenerator toneGenerator;
 
     // ----------------------------------------------------------------
     // QR Scanner
@@ -83,7 +102,8 @@ public class MainActivity extends AppCompatActivity {
                     String scannedUrl = result.getContents().trim();
                     if (scannedUrl.endsWith("/")) scannedUrl = scannedUrl.substring(0, scannedUrl.length() - 1);
                     
-                    // Save full URL immediately, then start handshake
+                    vibrate(); 
+                    
                     ipInput.setText(scannedUrl);
                     prefs.edit().putString(PREF_BACKEND_IP, scannedUrl).apply();
                     Intent updateIntent = new Intent(ACTION_UPDATE_IP);
@@ -108,31 +128,27 @@ public class MainActivity extends AppCompatActivity {
                 case ACTION_PING_RESULT:
                     boolean success = intent.getBooleanExtra("success", false);
                     isBackendOnline = success;
-                    Log.d(TAG, "Ping result: " + success);
                     updateConnectionVisibility();
                     statusText.setText(success ? "STATUS: BACKEND ONLINE" : "STATUS: PING FAILED");
                     statusText.setTextColor(Color.WHITE);
                     break;
                 case ACTION_SOCKET_CONNECTED:
-                    Log.d(TAG, "Socket connected");
                     isSocketConnected = true;
                     updateConnectionVisibility();
                     statusText.setText("STATUS: LIVE SYNC ACTIVE");
                     statusText.setTextColor(Color.WHITE);
                     break;
                 case ACTION_SOCKET_DISCONNECTED:
-                    Log.d(TAG, "Socket disconnected");
                     isSocketConnected = false;
                     updateConnectionVisibility();
                     statusText.setText("STATUS: DISCONNECTED");
-                    statusText.setTextColor(Color.WHITE);
+                    statusText.setTextColor(Color.GRAY);
                     break;
                 case ACTION_GUGA_RESPONSE:
-                    String message = intent.getStringExtra("message");
-                    Log.d(TAG, "Assistant response: " + message);
-                    appendChat("GuGu: " + message);
-                    if (!ttsToggle.isChecked()) {
-                        Toast.makeText(context, "GuGu: " + message, Toast.LENGTH_SHORT).show();
+                    String msg = intent.getStringExtra("message");
+                    if (msg != null) {
+                        appendChat(new ChatMessage(msg, false));
+                        playTing();
                     }
                     break;
             }
@@ -149,38 +165,76 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        bindViews();
+        toneGenerator = new ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100);
+
+        initViews();
+        setupHistory();
         setupListeners();
-        restoreState();
-        updateConnectionVisibility();
+        setupBackButton();
 
-        startService(new Intent(this, GuGaService.class));
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
         IntentFilter filter = new IntentFilter();
         filter.addAction(ACTION_PING_RESULT);
-        filter.addAction(ACTION_GUGA_RESPONSE);
         filter.addAction(ACTION_SOCKET_CONNECTED);
         filter.addAction(ACTION_SOCKET_DISCONNECTED);
+        filter.addAction(ACTION_GUGA_RESPONSE);
         registerReceiver(serviceReceiver, filter, Context.RECEIVER_EXPORTED);
+
+        startService(new Intent(this, GuGaService.class));
+
+        String currentIp = prefs.getString(PREF_BACKEND_IP, "");
+        if (!currentIp.isEmpty()) {
+            ipInput.setText(currentIp);
+            performHandshake(currentIp);
+        }
+    }
+
+    private void setupBackButton() {
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (isSettingsOpen) {
+                    toggleSettings();
+                } else {
+                    setEnabled(false);
+                    MainActivity.this.onBackPressed();
+                    // On newer API, just finish() might be better, but this works for general cases
+                }
+            }
+        });
     }
 
     @Override
-    protected void onPause() {
-        super.onPause();
+    protected void onStart() {
+        super.onStart();
+        sendForegroundState(true);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        sendForegroundState(false);
+    }
+
+    private void sendForegroundState(boolean isForeground) {
+        Intent intent = new Intent(ACTION_SET_FOREGROUND);
+        intent.putExtra("isForeground", isForeground);
+        sendBroadcast(intent);
+    }
+
+    @Override
+    protected void onDestroy() {
         unregisterReceiver(serviceReceiver);
+        if (toneGenerator != null) toneGenerator.release();
+        super.onDestroy();
     }
 
     // ----------------------------------------------------------------
-    // View Setup
+    // Setup
     // ----------------------------------------------------------------
 
-    private void bindViews() {
+    private void initViews() {
         statusText           = findViewById(R.id.statusText);
-        chatDisplay          = findViewById(R.id.chatDisplay);
+        chatRecyclerView     = findViewById(R.id.chatRecyclerView);
         ipInput              = findViewById(R.id.ipInput);
         saveIpButton         = findViewById(R.id.saveIpButton);
         scanQrButton         = findViewById(R.id.scanQrButton);
@@ -190,48 +244,52 @@ public class MainActivity extends AppCompatActivity {
         sendManualCommandButton = findViewById(R.id.sendManualCommandButton);
         ttsToggle            = findViewById(R.id.ttsToggle);
         toggleSettingsButton = findViewById(R.id.toggleSettingsButton);
+        clearHistoryButton   = findViewById(R.id.clearHistoryButton);
         settingsOverlay      = findViewById(R.id.settingsOverlay);
         connectionOverlay    = findViewById(R.id.connectionOverlay);
         mainContent          = findViewById(R.id.mainContent);
+
+        chatAdapter = new ChatAdapter(chatMessages);
+        chatRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        chatRecyclerView.setAdapter(chatAdapter);
+
+        ttsToggle.setChecked(prefs.getBoolean(PREF_TTS_ENABLED, true));
+    }
+
+    private void setupHistory() {
+        List<ChatMessage> history = ChatHistory.load(this);
+        chatMessages.addAll(history);
+        chatAdapter.notifyDataSetChanged();
+        if (!chatMessages.isEmpty()) {
+            chatRecyclerView.scrollToPosition(chatMessages.size() - 1);
+        }
     }
 
     private void setupListeners() {
         saveIpButton.setOnClickListener(v -> handleNewIp(ipInput.getText().toString()));
-
         scanQrButton.setOnClickListener(v -> {
             ScanOptions options = new ScanOptions();
             options.setDesiredBarcodeFormats(ScanOptions.QR_CODE);
-            options.setPrompt("Scan GuGu Backend QR");
-            options.setBeepEnabled(true);
+            options.setPrompt("Scan GuGu IP");
+            options.setBeepEnabled(false);
             options.setOrientationLocked(false);
             qrCodeLauncher.launch(options);
         });
 
-        pingButton.setOnClickListener(v -> {
-            Log.d(TAG, "Ping button clicked");
-            sendBroadcast(new Intent(ACTION_PING_BACKEND));
-        });
-
+        pingButton.setOnClickListener(v -> sendBroadcast(new Intent(ACTION_PING_BACKEND)));
         connectSocketButton.setOnClickListener(v -> {
-            Log.d(TAG, "Connect Socket button clicked - checking trust");
             String ip = ipInput.getText().toString().trim();
-            if (!ip.isEmpty()) {
-                performHandshake(ip);
-            } else {
-                Toast.makeText(this, "Enter IP first", Toast.LENGTH_SHORT).show();
-            }
+            if (!ip.isEmpty()) performHandshake(ip);
         });
 
-        toggleSettingsButton.setOnClickListener(v -> {
-            Log.d(TAG, "Toggle settings clicked");
-            toggleSettings();
+        ttsToggle.setOnCheckedChangeListener((btn, checked) -> {
+            prefs.edit().putBoolean(PREF_TTS_ENABLED, checked).apply();
+            Intent intent = new Intent(ACTION_SET_TTS_ENABLED);
+            intent.putExtra("enabled", checked);
+            sendBroadcast(intent);
         });
 
-        sendManualCommandButton.setOnClickListener(v -> {
-            Log.d(TAG, "Send button clicked");
-            sendManualCommand();
-        });
-
+        sendManualCommandButton.setOnClickListener(v -> sendManualCommand());
         manualCommandInput.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_SEND) {
                 sendManualCommand();
@@ -240,65 +298,50 @@ public class MainActivity extends AppCompatActivity {
             return false;
         });
 
-        ttsToggle.setOnCheckedChangeListener((bv, isChecked) -> {
-            Log.d(TAG, "TTS toggle: " + isChecked);
-            prefs.edit().putBoolean(PREF_TTS_ENABLED, isChecked).apply();
-            Intent intent = new Intent(ACTION_SET_TTS_ENABLED);
-            intent.putExtra("enabled", isChecked);
-            sendBroadcast(intent);
+        toggleSettingsButton.setOnClickListener(v -> toggleSettings());
+
+        clearHistoryButton.setOnClickListener(v -> {
+            new AlertDialog.Builder(this)
+                .setTitle("Clear History")
+                .setMessage("Delete all saved messages?")
+                .setPositiveButton("Clear", (dialog, which) -> {
+                    ChatHistory.clear(this);
+                    chatMessages.clear();
+                    chatAdapter.notifyDataSetChanged();
+                    Toast.makeText(this, "History cleared", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
         });
     }
 
-    private void restoreState() {
-        String ip = prefs.getString(PREF_BACKEND_IP, "");
-        if (!ip.isEmpty()) {
-            ipInput.setText(ip);
-            // Silent handshake on startup to restore live sync visibility/session
-            mainHandler.postDelayed(() -> performHandshake(ip), 500);
-        }
-        ttsToggle.setChecked(prefs.getBoolean(PREF_TTS_ENABLED, true));
-    }
-
     // ----------------------------------------------------------------
-    // Phase 10.1: Cryptographic Handshake
+    // Phase 11 Handshake
     // ----------------------------------------------------------------
 
-    /** Gets the device's stable Android ID. */
     private String fetchAndroidId() {
         return Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
     }
 
-    /**
-     * Step 1: Send /api/hello to the server with the device ID.
-     * Determines whether to connect directly (trusted) or show PIN dialog.
-     */
-    private void performHandshake(String ip) {
-        performHandshake(ip, false);
+    private void performHandshake(String ipBase) {
+        performHandshake(ipBase, false);
     }
 
-    /**
-     * Step 1: Send /api/hello to the server with the device ID.
-     * Determines whether to connect directly (trusted) or show PIN dialog.
-     * @param forcePair if true, tells server to generate a new PIN even if trusted.
-     */
-    private void performHandshake(String ip, boolean forcePair) {
+    private void performHandshake(String ipBase, boolean forcePair) {
+        String url = cleanIp(ipBase) + "/api/hello";
         String deviceId = fetchAndroidId();
-        Log.d(TAG, "Performing handshake with ip=" + ip + " device=" + deviceId + " forcePair=" + forcePair);
-
+        
         try {
-            JSONObject body = new JSONObject();
-            body.put("device_id", deviceId);
-            body.put("force_pair", forcePair);
-            RequestBody reqBody = RequestBody.create(body.toString(), MediaType.parse("application/json"));
-            Request request = new Request.Builder()
-                    .url(ip + "/api/hello")
-                    .post(reqBody)
-                    .build();
+            JSONObject payload = new JSONObject();
+            payload.put("device_id", deviceId);
+            payload.put("force_pair", forcePair);
+            
+            RequestBody body = RequestBody.create(payload.toString(), MediaType.parse("application/json"));
+            Request request = new Request.Builder().url(url).post(body).build();
 
             httpClient.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
-                    Log.e(TAG, "Handshake failed", e);
                     mainHandler.post(() -> statusText.setText("HANDSHAKE FAILED"));
                 }
 
@@ -310,160 +353,124 @@ public class MainActivity extends AppCompatActivity {
                         String status = json.getString("status");
 
                         if ("trusted".equals(status)) {
-                            String localToken = SecurityUtils.getAuthToken(MainActivity.this);
-                            if (localToken == null) {
-                                Log.w(TAG, "Server trusts device but local token is missing — forcing re-pair");
+                            String token = SecurityUtils.getAuthToken(MainActivity.this);
+                            if (token == null) {
+                                mainHandler.post(() -> performHandshake(ipBase, true));
+                            } else {
                                 mainHandler.post(() -> {
-                                    statusText.setText("TOKEN MISSING — RE-PAIRING...");
-                                    performHandshake(ip, true);
+                                    statusText.setText("TRUSTED DEVICE");
+                                    sendBroadcast(new Intent(ACTION_CONNECT_SOCKET));
                                 });
-                                return;
                             }
-
-                            Log.d(TAG, "Device already trusted & token present — connecting");
-                            mainHandler.post(() -> {
-                                statusText.setText("STATUS: TRUSTED DEVICE");
-                                statusText.setTextColor(Color.WHITE);
-                                connectSocket();
-                            });
                         } else if ("pin_required".equals(status)) {
-                            Log.d(TAG, "PIN required — showing dialog");
-                            mainHandler.post(() -> showPinDialog(ip, deviceId));
+                            mainHandler.post(() -> showPinDialog(ipBase, deviceId));
                         }
-                    } catch (JSONException e) {
-                        Log.e(TAG, "Handshake parse error", e);
+                    } catch (Exception e) {
+                        Log.e(TAG, "Handshake response error", e);
                     } finally {
                         response.close();
                     }
                 }
             });
-        } catch (JSONException e) {
-            Log.e(TAG, "Handshake build error", e);
+        } catch (Exception e) {
+            Log.e(TAG, "Handshake request error", e);
         }
     }
 
-    /**
-     * Step 2: Show PIN entry dialog. Called when server requests PIN pairing.
-     */
     private void showPinDialog(String ip, String deviceId) {
         EditText pinInput = new EditText(this);
         pinInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD);
-        pinInput.setHint("8-digit pairing PIN");
+        pinInput.setHint("8-digit PIN");
         pinInput.setTextColor(Color.WHITE);
-        pinInput.setHintTextColor(Color.LTGRAY);
+        pinInput.setHintTextColor(Color.GRAY);
 
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(64, 32, 64, 0);
         layout.addView(pinInput);
 
-        new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
-                .setTitle("Pair with GuGu")
-                .setMessage("Enter the 8-digit PIN shown on your desktop:")
+        new AlertDialog.Builder(this)
+                .setTitle("Pair Device")
+                .setMessage("Enter the PIN shown on your GuGu dashboard:")
                 .setView(layout)
-                .setPositiveButton("PAIR", (dialog, which) -> {
+                .setPositiveButton("VERIFY", (dialog, which) -> {
                     String pin = pinInput.getText().toString().trim();
-                    if (!pin.isEmpty()) {
-                        verifyPin(ip, deviceId, pin);
-                    }
+                    if (!pin.isEmpty()) verifyPin(ip, deviceId, pin);
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
     }
 
-    /**
-     * Step 3: Submit PIN to /api/verify_pin. On success, save token and connect.
-     */
     private void verifyPin(String ip, String deviceId, String pin) {
-        mainHandler.post(() -> statusText.setText("Verifying PIN..."));
+        String url = cleanIp(ip) + "/api/verify_pin";
         try {
             JSONObject body = new JSONObject();
             body.put("device_id", deviceId);
             body.put("pin", pin);
             body.put("client_type", "app");
+
             RequestBody reqBody = RequestBody.create(body.toString(), MediaType.parse("application/json"));
-            Request request = new Request.Builder()
-                    .url(ip + "/api/verify_pin")
-                    .post(reqBody)
-                    .build();
+            Request request = new Request.Builder().url(url).post(reqBody).build();
 
             httpClient.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
-                    Log.e(TAG, "PIN verification failed", e);
-                    mainHandler.post(() -> {
-                        statusText.setText("VERIFICATION FAILED");
-                        statusText.setTextColor(Color.WHITE);
-                    });
+                    mainHandler.post(() -> statusText.setText("VERIFICATION FAILED"));
                 }
 
                 @Override
                 public void onResponse(Call call, Response response) throws IOException {
                     try {
                         String responseBody = response.body().string();
-                        if (response.code() == 401) {
-                            Log.w(TAG, "Wrong PIN entered");
+                        if (response.isSuccessful()) {
+                            JSONObject json = new JSONObject(responseBody);
+                            String token = json.getString("token");
+                            
+                            SecurityUtils.saveAuthToken(MainActivity.this, token);
+                            
+                            Intent intent = new Intent(ACTION_SAVE_AUTH_TOKEN);
+                            intent.putExtra("token", token);
+                            sendBroadcast(intent);
+                            
                             mainHandler.post(() -> {
-                                statusText.setText("WRONG PIN — Try again");
-                                statusText.setTextColor(Color.WHITE);
-                                Toast.makeText(MainActivity.this, "Incorrect PIN", Toast.LENGTH_SHORT).show();
+                                statusText.setText("PAIRED SUCCESSFULLY");
+                                sendBroadcast(new Intent(ACTION_CONNECT_SOCKET));
                             });
-                            return;
+                        } else {
+                            mainHandler.post(() -> Toast.makeText(MainActivity.this, "Invalid PIN", Toast.LENGTH_SHORT).show());
                         }
-                        JSONObject json = new JSONObject(responseBody);
-                        String token = json.getString("token");
-                        Log.d(TAG, "Pairing successful, token received.");
-
-                        // Save token securely via service
-                        Intent tokenIntent = new Intent(ACTION_SAVE_AUTH_TOKEN);
-                        tokenIntent.putExtra("token", token);
-                        sendBroadcast(tokenIntent);
-
-                        mainHandler.post(() -> {
-                            statusText.setText("Device Paired & Secured");
-                            statusText.setTextColor(Color.WHITE);
-                            connectSocket();
-                        });
-                    } catch (JSONException e) {
-                        Log.e(TAG, "PIN verify parse error", e);
+                    } catch (Exception e) {
+                        Log.e(TAG, "PIN verification error", e);
                     } finally {
                         response.close();
                     }
                 }
             });
-        } catch (JSONException e) {
-            Log.e(TAG, "PIN verify build error", e);
+        } catch (Exception e) {
+            Log.e(TAG, "PIN verification build error", e);
         }
     }
 
-    /** Broadcasts the connect-socket action to the service. */
-    private void connectSocket() {
-        sendBroadcast(new Intent(ACTION_CONNECT_SOCKET));
-    }
-
     // ----------------------------------------------------------------
-    // IP & UI Helpers
+    // Helpers
     // ----------------------------------------------------------------
 
     private String cleanIp(String ip) {
         String clean = ip.trim();
         if (clean.endsWith("/")) clean = clean.substring(0, clean.length() - 1);
+        if (!clean.startsWith("http")) clean = "http://" + clean;
         return clean;
     }
 
     private void handleNewIp(String ip) {
         String clean = cleanIp(ip);
         if (clean.isEmpty()) return;
-        
         ipInput.setText(clean);
         prefs.edit().putString(PREF_BACKEND_IP, clean).apply();
-        
         Intent intent = new Intent(ACTION_UPDATE_IP);
         intent.putExtra("ip", clean);
         sendBroadcast(intent);
-        
-        statusText.setText("IP UPDATED: " + clean);
-        // Trigger handshake on manual IP entry as well
+        statusText.setText("IP UPDATED");
         performHandshake(clean);
     }
 
@@ -487,7 +494,7 @@ public class MainActivity extends AppCompatActivity {
     private void sendManualCommand() {
         String cmd = manualCommandInput.getText().toString().trim();
         if (cmd.isEmpty()) return;
-        appendChat("You: " + cmd);
+        appendChat(new ChatMessage(cmd, true));
         Intent intent = new Intent(ACTION_SEND_MANUAL_COMMAND);
         intent.putExtra("command", cmd);
         sendBroadcast(intent);
@@ -495,10 +502,37 @@ public class MainActivity extends AppCompatActivity {
         hideKeyboard();
     }
 
-    private void appendChat(String text) {
-        String current = chatDisplay.getText().toString();
-        if (current.startsWith("Ready for GuGu")) current = "";
-        chatDisplay.setText(text + "\n\n" + current);
+    private void appendChat(ChatMessage message) {
+        mainHandler.post(() -> {
+            chatMessages.add(message);
+            chatAdapter.notifyItemInserted(chatMessages.size() - 1);
+            chatRecyclerView.scrollToPosition(chatMessages.size() - 1);
+            ChatHistory.save(this, chatMessages);
+        });
+    }
+
+    private void playTing() {
+        boolean ttsEnabled = prefs.getBoolean(PREF_TTS_ENABLED, true);
+        if (ttsEnabled) return; // Silent if TTS on
+
+        try {
+            Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+            Ringtone r = RingtoneManager.getRingtone(getApplicationContext(), notification);
+            r.play();
+        } catch (Exception e) {
+            if (toneGenerator != null) toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP, 200);
+        }
+    }
+
+    private void vibrate() {
+        Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        if (v != null && v.hasVibrator()) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                v.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE));
+            } else {
+                v.vibrate(100);
+            }
+        }
     }
 
     private void hideKeyboard() {

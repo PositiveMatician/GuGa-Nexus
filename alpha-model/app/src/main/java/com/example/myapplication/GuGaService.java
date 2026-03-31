@@ -3,6 +3,7 @@ package com.example.myapplication;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -16,15 +17,12 @@ import android.speech.tts.TextToSpeech;
 import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
-import androidx.security.crypto.EncryptedSharedPreferences;
-import androidx.security.crypto.MasterKey;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.security.GeneralSecurityException;
 import java.util.Locale;
 
 import io.socket.client.IO;
@@ -41,31 +39,27 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
     private static final String TAG = "GuGaAlpha";
     private static final String CHANNEL_ID = "GuGaServiceChannel";
     private static final String RESPONSE_CHANNEL_ID = "GuGaResponseChannel";
-    private static final String ENCRYPTED_PREFS_NAME = "guga_secure_prefs";
-    private static final String KEY_AUTH_TOKEN = "auth_token";
     private static final OkHttpClient HTTP_CLIENT = new OkHttpClient();
 
     private Socket mSocket;
     private String backendAddress = "";
     private TextToSpeech tts;
     private boolean ttsEnabled = true;
+    private boolean isAppInForeground = false;
 
     // ----------------------------------------------------------------
     // Device Identity & Token Storage
     // ----------------------------------------------------------------
 
-    /** Returns the stable Android device ID (unique per app signing). */
     String fetchAndroidId() {
         return Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
     }
 
-    /** Securely persists the pairing token. */
     void saveAuthToken(String token) {
         SecurityUtils.saveAuthToken(this, token);
         Log.d(TAG, "Auth token saved securely.");
     }
 
-    /** Retrieves the stored auth token, or null if not paired yet. */
     private String getAuthToken() {
         return SecurityUtils.getAuthToken(this);
     }
@@ -83,7 +77,6 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
             switch (action) {
                 case "com.example.myapplication.UPDATE_IP":
                     backendAddress = intent.getStringExtra("ip");
-                    Log.d(TAG, "IP updated to: " + backendAddress);
                     break;
                 case "com.example.myapplication.PING_BACKEND":
                     pingBackend();
@@ -101,8 +94,11 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
                     String token = intent.getStringExtra("token");
                     if (token != null) saveAuthToken(token);
                     break;
+                case "com.example.myapplication.SET_FOREGROUND":
+                    isAppInForeground = intent.getBooleanExtra("isForeground", false);
+                    Log.d(TAG, "App foreground state: " + isAppInForeground);
+                    break;
             }
-            Log.d(TAG, "Received broadcast: " + action);
         }
     };
 
@@ -127,13 +123,10 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
         filter.addAction("com.example.myapplication.SEND_MANUAL_COMMAND");
         filter.addAction("com.example.myapplication.SET_TTS_ENABLED");
         filter.addAction("com.example.myapplication.SAVE_AUTH_TOKEN");
+        filter.addAction("com.example.myapplication.SET_FOREGROUND");
         registerReceiver(activityReceiver, filter, Context.RECEIVER_EXPORTED);
 
         String storedToken = getAuthToken();
-        Log.d(TAG, "GuGaService started. Device ID: " + fetchAndroidId()
-                + " | Token present: " + (storedToken != null));
-
-        // Auto-connect if IP is present
         if (!backendAddress.isEmpty() && storedToken != null) {
             connectWebSocket();
         }
@@ -157,13 +150,8 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
         if (backendAddress.isEmpty()) return;
         Request request = new Request.Builder().url(backendAddress + "/ping").build();
         HTTP_CLIENT.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {
-                broadcastPing(false);
-            }
-            @Override
-            public void onResponse(Call call, Response response) {
-                Log.d(TAG, "Ping response: " + response.code());
+            @Override public void onFailure(Call call, IOException e) { broadcastPing(false); }
+            @Override public void onResponse(Call call, Response response) {
                 broadcastPing(response.isSuccessful());
                 response.close();
             }
@@ -178,40 +166,26 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
 
     private void sendCommandToBackend(String commandText) {
         if (backendAddress.isEmpty()) return;
-
         String authToken = getAuthToken();
         String deviceId = fetchAndroidId();
+        if (authToken == null) return;
 
-        if (authToken == null) {
-            Log.e(TAG, "No auth token — cannot send encrypted command. Please re-pair.");
-            return;
-        }
-
-        // Build plaintext payload
         String plaintext;
         try {
             JSONObject phraseObj = new JSONObject();
             phraseObj.put("phrase", commandText);
             plaintext = phraseObj.toString();
-        } catch (JSONException e) {
-            Log.e(TAG, "Failed to build command JSON", e);
-            return;
-        }
+        } catch (JSONException e) { return; }
 
-        // Prefer socket if connected
         if (mSocket != null && mSocket.connected()) {
             try {
                 JSONObject encrypted = CryptoUtils.encrypt(plaintext, authToken);
                 encrypted.put("device_id", deviceId);
-                Log.d(TAG, "Sending encrypted command via socket");
                 mSocket.emit("command", encrypted);
-            } catch (Exception e) {
-                Log.e(TAG, "Socket encryption/send failed", e);
-            }
+            } catch (Exception e) { Log.e(TAG, "Socket send failed", e); }
             return;
         }
 
-        // HTTP fallback — encrypted
         String url = backendAddress + "/api/command";
         try {
             JSONObject encrypted = CryptoUtils.encrypt(plaintext, authToken);
@@ -219,31 +193,21 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
             RequestBody body = RequestBody.create(encrypted.toString(), MediaType.parse("application/json"));
             Request request = new Request.Builder().url(url).post(body).build();
             HTTP_CLIENT.newCall(request).enqueue(new Callback() {
-                @Override public void onFailure(Call call, IOException e) {
-                    Log.e(TAG, "HTTP command send failed", e);
-                }
-                @Override public void onResponse(Call call, Response response) {
-                    Log.d(TAG, "HTTP command sent, response: " + response.code());
-                    response.close();
-                }
+                @Override public void onFailure(Call call, IOException e) {}
+                @Override public void onResponse(Call call, Response response) { response.close(); }
             });
-        } catch (Exception e) {
-            Log.e(TAG, "HTTP encryption/send failed", e);
-        }
+        } catch (Exception e) {}
     }
 
     private void connectWebSocket() {
         if (backendAddress.isEmpty()) return;
         try {
             if (mSocket != null) mSocket.disconnect();
-
-            // Pass device_id and auth_token as query parameters for server identification
             String deviceId = fetchAndroidId();
             String authToken = getAuthToken();
 
             IO.Options opts = new IO.Options();
             opts.query = "device_id=" + deviceId + (authToken != null ? "&token=" + authToken : "");
-            Log.d(TAG, "Connecting socket to " + backendAddress + " with device_id=" + deviceId);
 
             mSocket = IO.socket(backendAddress, opts);
             mSocket.on(Socket.EVENT_CONNECT, args -> sendBroadcast(new Intent("com.example.myapplication.SOCKET_CONNECTED")));
@@ -255,27 +219,28 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
                         String currentToken = getAuthToken();
                         String message;
 
-                        // Try to decrypt; if token missing or decryption fails, fall back to plain
                         if (currentToken != null && payload.has("iv") && payload.has("ciphertext")) {
                             String decryptedJson = CryptoUtils.decrypt(payload, currentToken);
                             message = new JSONObject(decryptedJson).getString("message");
-                            Log.d(TAG, "Decrypted socket message: " + message);
                         } else {
                             message = payload.getString("message");
-                            Log.d(TAG, "Plain socket message: " + message);
                         }
 
                         Intent intent = new Intent("com.example.myapplication.GUGA_RESPONSE");
                         intent.putExtra("message", message);
                         sendBroadcast(intent);
+
+                        // Also persist directly in case MainActivity is killed
+                        ChatHistory.append(this, new ChatMessage(message, false));
+
                         if (ttsEnabled && tts != null) {
                             tts.speak(message, TextToSpeech.QUEUE_FLUSH, null, null);
-                        } else {
+                        } 
+                        
+                        if (!isAppInForeground) {
                             showResponseNotification(message);
                         }
-                    } catch (Exception e) {
-                        Log.e(TAG, "Failed to process guga_response", e);
-                    }
+                    } catch (Exception e) { Log.e(TAG, "Response process failed", e); }
                 }
             });
             mSocket.connect();
@@ -290,11 +255,8 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel serviceChannel = new NotificationChannel(
                     CHANNEL_ID, "GuGa Channel", NotificationManager.IMPORTANCE_LOW);
-
             NotificationChannel responseChannel = new NotificationChannel(
                     RESPONSE_CHANNEL_ID, "GuGa Replies", NotificationManager.IMPORTANCE_HIGH);
-            responseChannel.setDescription("Alerts when GuGu replies via text");
-
             NotificationManager nm = getSystemService(NotificationManager.class);
             nm.createNotificationChannel(serviceChannel);
             nm.createNotificationChannel(responseChannel);
@@ -302,16 +264,27 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
     }
 
     private void showResponseNotification(String message) {
-        Notification notification = new NotificationCompat.Builder(this, RESPONSE_CHANNEL_ID)
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, 
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, RESPONSE_CHANNEL_ID)
                 .setContentTitle("GuGu")
                 .setContentText(message)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .build();
+                .setContentIntent(pendingIntent);
+
+        if (ttsEnabled) {
+            builder.setSilent(true);
+        } else {
+            builder.setDefaults(NotificationCompat.DEFAULT_ALL);
+        }
 
         NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        if (nm != null) nm.notify(2, notification);
+        if (nm != null) nm.notify(2, builder.build());
     }
 
     private Notification buildNotification(String content) {
@@ -321,10 +294,6 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .build();
     }
-
-    // ----------------------------------------------------------------
-    // Cleanup
-    // ----------------------------------------------------------------
 
     @Override
     public void onDestroy() {

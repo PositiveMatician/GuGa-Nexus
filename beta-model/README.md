@@ -62,5 +62,7 @@ curl -X POST http://localhost:6769/api/command \
 
 ## TODO
 
-a way to communicate over email
+Add floating notifications along with the existing push notification for more attention.
+
+Go through the alpha build and remove all the unnecessary garbage files there , like the ui files for wakeword and audio visualisation which isn't needed in the alpha model. Trim in down to what is being used and remove everything else. the size of the base app has gone up to 107mb , try to slim it down , as the app isn't so big that it should take that much space. 
 

@@ -26,22 +26,14 @@
             android:layout_marginTop="48dp"
             android:layout_marginBottom="32dp" />
 
-        <ScrollView
-            android:id="@+id/chatScrollView"
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/chatRecyclerView"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:layout_marginBottom="16dp">
-            
-            <TextView
-                android:id="@+id/chatDisplay"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Ready for GuGu..."
-                android:textColor="@color/white"
-                android:textSize="18sp"
-                android:lineSpacingExtra="8dp" />
-        </ScrollView>
+            android:layout_marginBottom="16dp"
+            android:clipToPadding="false"
+            android:paddingBottom="8dp" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -216,17 +208,35 @@
                 android:background="#1A1A1A"
                 android:layout_marginBottom="32dp" />
 
-            <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/ttsToggle"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="TEXT TO SPEECH"
-                android:textColor="@color/white"
-                android:fontFamily="sans-serif-medium"
-                android:textSize="14sp"
+                android:orientation="horizontal"
                 android:layout_marginBottom="32dp"
-                app:thumbTint="@color/white"
-                app:trackTint="#333333" />
+                android:gravity="center_vertical">
+
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/ttsToggle"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="TEXT TO SPEECH"
+                    android:textColor="@color/white"
+                    android:fontFamily="sans-serif-medium"
+                    android:textSize="14sp"
+                    app:thumbTint="@color/white"
+                    app:trackTint="#333333" />
+
+                <Button
+                    android:id="@+id/clearHistoryButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="CLEAR"
+                    android:textSize="10sp"
+                    android:backgroundTint="#1a1a1a"
+                    android:textColor="#fff"
+                    android:layout_marginStart="8dp" />
+            </LinearLayout>
 
             <Button
                 android:id="@+id/connectSocketButton"
