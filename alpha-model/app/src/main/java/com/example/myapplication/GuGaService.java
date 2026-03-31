@@ -59,35 +59,15 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
         return Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
     }
 
-    /** Returns an EncryptedSharedPreferences instance backed by hardware-backed MasterKey. */
-    SharedPreferences getEncryptedPrefs() {
-        try {
-            MasterKey masterKey = new MasterKey.Builder(this)
-                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                    .build();
-            return EncryptedSharedPreferences.create(
-                    this,
-                    ENCRYPTED_PREFS_NAME,
-                    masterKey,
-                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            );
-        } catch (GeneralSecurityException | IOException e) {
-            Log.e(TAG, "Failed to create EncryptedSharedPreferences", e);
-            // Fallback to regular prefs (should not happen on supported devices)
-            return getSharedPreferences("guga_prefs_fallback", MODE_PRIVATE);
-        }
-    }
-
     /** Securely persists the pairing token. */
     void saveAuthToken(String token) {
-        getEncryptedPrefs().edit().putString(KEY_AUTH_TOKEN, token).apply();
+        SecurityUtils.saveAuthToken(this, token);
         Log.d(TAG, "Auth token saved securely.");
     }
 
     /** Retrieves the stored auth token, or null if not paired yet. */
     private String getAuthToken() {
-        return getEncryptedPrefs().getString(KEY_AUTH_TOKEN, null);
+        return SecurityUtils.getAuthToken(this);
     }
 
     // ----------------------------------------------------------------

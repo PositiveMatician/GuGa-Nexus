@@ -148,46 +148,158 @@ def is_device_trusted(device_id: str) -> bool:
 # ------------------------------------------------------------
 HTML_PAGE = """
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>GuGa Terminal</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GUGA Terminal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
-        * { box-sizing: border-box; }
-        body { background: #121212; color: #00ff00; font-family: monospace; padding: 20px; margin: 0; }
-        h2 { margin-top: 0; }
-        #status { font-size: 0.8em; color: #888; margin-bottom: 6px; }
+        :root {
+            --bg: #000000;
+            --surface: #0a0a0a;
+            --border: #1a1a1a;
+            --text-primary: #ffffff;
+            --text-secondary: #444444;
+            --accent: #ffffff;
+            --font: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .dashboard {
+            width: 100%;
+            max-width: 800px;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            padding: 40px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 200;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        #status {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
         #chat {
-            height: 60vh; overflow-y: auto;
-            border: 1px solid #333; padding: 10px;
-            margin-bottom: 10px; border-radius: 4px;
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 32px;
+            padding-right: 20px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
         }
-        #chat p { margin: 4px 0; word-break: break-word; }
-        .system { color: #888; }
-        .you    { color: #00bfff; }
-        .bot    { color: #00ff00; }
-        #inputRow { display: flex; gap: 8px; }
+
+        #chat::-webkit-scrollbar { width: 4px; }
+        #chat::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+        .msg {
+            margin-bottom: 16px;
+            line-height: 1.6;
+            font-size: 0.95rem;
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .system { color: var(--text-secondary); font-size: 0.8rem; font-weight: 300; }
+        .bot { font-weight: 400; }
+        .you { color: var(--text-secondary); }
+
+        .input-area {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            display: flex;
+            padding: 4px;
+            transition: border-color 0.3s;
+        }
+
+        .input-area:focus-within {
+            border-color: #333;
+        }
+
         #commandInput {
-            flex: 1; padding: 10px;
-            background: #222; border: 1px solid #444;
-            color: white; border-radius: 4px; font-family: monospace;
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            padding: 14px 20px;
+            font-size: 0.9rem;
+            font-weight: 300;
+            outline: none;
         }
+
+        #commandInput::placeholder { color: #222; }
+
         button {
-            padding: 10px 20px; background: #00ff00;
-            color: black; border: none; cursor: pointer;
-            border-radius: 4px; font-weight: bold;
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0 32px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            border-radius: 2px;
+        }
+
+        button:hover { opacity: 0.9; }
+
+        /* Mobile Adjustments */
+        @media (max-width: 600px) {
+            .dashboard { padding: 20px; height: 100vh; }
+            h1 { font-size: 2rem; }
         }
     </style>
 </head>
 <body>
-    <h2>GuGa Terminal</h2>
-    <div id="status">Connecting…</div>
-    <div id="chat"></div>
-    <div id="inputRow">
-        <input type="text" id="commandInput" placeholder="Type a message…" onkeydown="handleEnter(event)">
-        <button onclick="sendCommand()">Send</button>
+    <div class="dashboard">
+        <header>
+            <h1>GUGA</h1>
+            <div id="status">Establishing connection...</div>
+        </header>
+
+        <div id="chat"></div>
+
+        <div class="input-area">
+            <input type="text" id="commandInput" placeholder="TYPE COMMAND..." onkeydown="handleEnter(event)" autocomplete="off">
+            <button onclick="sendCommand()">SEND</button>
+        </div>
     </div>
+
     <script>
         let deviceId = localStorage.getItem('guga_device_id');
         if (!deviceId) {
@@ -198,15 +310,15 @@ HTML_PAGE = """
         let token = localStorage.getItem('guga_token');
         let socket = null;
 
-        const chat   = document.getElementById('chat');
-        const status = document.getElementById('status');
+        const chatDisplay = document.getElementById('chat');
+        const statusDisplay = document.getElementById('status');
 
         function appendMsg(cls, label, text) {
-            const p = document.createElement('p');
-            p.className = cls;
-            p.textContent = (label ? label + ' ' : '') + text;
-            chat.appendChild(p);
-            chat.scrollTop = chat.scrollHeight;
+            const div = document.createElement('div');
+            div.className = 'msg ' + cls;
+            div.innerHTML = (label ? `<span style="opacity: 0.5; margin-right: 8px;">${label}</span>` : '') + text;
+            chatDisplay.appendChild(div);
+            chatDisplay.scrollTop = chatDisplay.scrollHeight;
         }
 
         async function initAuth() {
@@ -219,9 +331,9 @@ HTML_PAGE = """
                 const helloData = await helloRes.json();
 
                 if (helloData.status === 'pin_required') {
-                    const pin = prompt('Enter the 8-digit PIN shown on the server console:');
+                    const pin = prompt('ENTER PAIRING PIN:');
                     if (!pin) {
-                        status.textContent = '❌ Pairing cancelled';
+                        statusDisplay.textContent = 'ERROR: PAIRING CANCELLED';
                         return;
                     }
                     const verifyRes = await fetch('/api/verify_pin', {
@@ -233,47 +345,45 @@ HTML_PAGE = """
                     if (verifyData.status === 'paired') {
                         token = verifyData.token;
                         localStorage.setItem('guga_token', token);
-                        appendMsg('system', '[AUTH]', 'Pairing successful.');
+                        appendMsg('system', 'AUTH', 'AUTHENTICATED');
                     } else {
-                        status.textContent = '❌ Pairing failed: ' + (verifyData.error || 'Unknown error');
+                        statusDisplay.textContent = 'ERROR: ' + (verifyData.error || 'INVALID PIN');
                         return;
                     }
                 }
                 connectSocket();
             } catch (e) {
-                status.textContent = '❌ Auth error: ' + e;
+                statusDisplay.textContent = 'ERROR: ' + e;
             }
         }
 
         function connectSocket() {
-            // Use query parameters for auth consistent with server code
             socket = io({
                 query: { device_id: deviceId, token: token },
                 transports: ['websocket', 'polling']
             });
 
             socket.on('connect', () => {
-                status.textContent = '● Connected (' + socket.io.engine.transport.name + ')';
-                appendMsg('system', '[SYSTEM]', 'Session active.');
+                statusDisplay.textContent = 'SECURE CONNECTION ACTIVE';
+                appendMsg('system', 'SYS', 'HANDSHAKE COMPLETE');
             });
 
-            socket.on('disconnect', (r) => {
-                status.textContent = '○ Disconnected';
-                appendMsg('system', '[SYSTEM]', 'Disconnected: ' + r);
+            socket.on('disconnect', (reason) => {
+                statusDisplay.textContent = 'OFFLINE';
+                appendMsg('system', 'SYS', 'CONNECTION LOST: ' + reason);
             });
 
             socket.on('guga_response', (data) => {
-                // Handle both encrypted and unencrypted (though server should encrypt for trusted)
-                const msg = data.message || 'Encrypted payload received (decrypt not implemented in browser yet)';
-                appendMsg('bot', 'GuGa:', msg);
+                const msg = data.message || 'ENCRYPTED PAYLOAD';
+                appendMsg('bot', 'GUGA', msg);
             });
 
             socket.on('connect_error', (err) => {
-                status.textContent = '❌ Connection Error';
-                appendMsg('system', '[ERROR]', err.message);
+                statusDisplay.textContent = 'CONNECTION REFUSED';
+                appendMsg('system', 'ERR', err.message);
                 if (err.message.includes('rejected')) {
                      localStorage.removeItem('guga_token');
-                     status.textContent = '❌ Auth Rejected. Refresh to re-pair.';
+                     statusDisplay.textContent = 'AUTH REVOKED. REFRESH TO RE-PAIR.';
                 }
             });
         }
@@ -282,8 +392,7 @@ HTML_PAGE = """
             const input = document.getElementById('commandInput');
             const text  = input.value.trim();
             if (!text || !socket) return;
-            appendMsg('you', 'You:', text);
-            // Browser dashboard sends plaintext for now, server handles it
+            appendMsg('you', 'USER', text);
             socket.emit('command', { phrase: text, device_id: deviceId });
             input.value = '';
         }
@@ -295,6 +404,7 @@ HTML_PAGE = """
 </body>
 </html>
 """
+
 
 
 # ------------------------------------------------------------
@@ -359,6 +469,8 @@ def handle_command_api():
     trusted = load_trusted_devices()
     entry = trusted.get(device_id, {})
     token = entry.get("token")
+    if not token:
+        return jsonify({"error": "No token for device"}), 403
     try:
         print(f"[API] Received encrypted payload: {data}")
         phrase = CryptoHelper.decrypt(data, token)
@@ -384,14 +496,19 @@ def handle_hello():
     if not device_id:
         return jsonify({"error": "device_id required"}), 400
 
-    if is_device_trusted(device_id):
+    force_pair = data.get("force_pair", False)
+
+    if is_device_trusted(device_id) and not force_pair:
         print(f"[SECURITY] Known device reconnected: {device_id}")
         return jsonify({"status": "trusted"}), 200
 
-    # New device — generate PIN
+    # New device or force_pair — generate PIN
     pin = "".join([str(secrets.randbelow(10)) for _ in range(8)])
     pending_pairings[device_id] = pin
-    print(f"\n[SECURITY] New device detected! Pairing PIN: {pin}\n")
+    if force_pair:
+        print(f"\n[SECURITY] Device {device_id} requested RE-PAIRING. PIN: {pin}\n")
+    else:
+        print(f"\n[SECURITY] New device detected! Pairing PIN: {pin}\n")
     return jsonify({"status": "pin_required"}), 200
 
 
@@ -464,7 +581,10 @@ def handle_command(data):
 
     try:
         print(f"[WS] Received encrypted payload: {data}")
-        phrase = CryptoHelper.decrypt(data, trusted[device_id])
+        token = trusted[device_id].get("token")
+        if not token:
+            raise ValueError("No token in trusted list")
+        phrase = CryptoHelper.decrypt(data, token)
         phrase_obj = json.loads(phrase)
         command = phrase_obj.get("phrase", "").strip()
     except Exception as e:
@@ -474,7 +594,10 @@ def handle_command(data):
 
     print(f"[WS] Command from {device_id}: '{command}'")
     response_text = process_command(command)
-    token = trusted[device_id]
+    token = trusted[device_id].get("token")
+    if not token:
+        print(f"[CRYPTO] No token for device {device_id}")
+        return
     encrypted_response = CryptoHelper.encrypt(json.dumps({"message": response_text}), token)
     emit("guga_response", encrypted_response)
 
@@ -494,8 +617,10 @@ def notify_all_clients(message: str) -> None:
 def notify_all_clients_encrypted(message: str, trusted_devices: dict) -> None:
     """Emit encrypted guga_response to each connected client using their token."""
     payload = json.dumps({"message": message})
-    for device_id, token in trusted_devices.items():
+    for device_id, device_info in trusted_devices.items():
         try:
+            token = device_info.get("token")
+            if not token: continue
             encrypted = CryptoHelper.encrypt(payload, token)
             socketio.emit("guga_response", encrypted)
         except Exception as e:
@@ -543,4 +668,4 @@ if __name__ == "__main__":
     print(f"\n📱 Manual address: {base_url}")
     print("   Press Ctrl+C to stop.\n")
 
-    socketio.run(app, host=HOST, port=PORT, debug=False, use_reloader=False)
+    socketio.run(app, host=HOST, port=PORT, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)

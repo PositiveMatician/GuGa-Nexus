@@ -271,12 +271,22 @@ public class MainActivity extends AppCompatActivity {
      * Determines whether to connect directly (trusted) or show PIN dialog.
      */
     private void performHandshake(String ip) {
+        performHandshake(ip, false);
+    }
+
+    /**
+     * Step 1: Send /api/hello to the server with the device ID.
+     * Determines whether to connect directly (trusted) or show PIN dialog.
+     * @param forcePair if true, tells server to generate a new PIN even if trusted.
+     */
+    private void performHandshake(String ip, boolean forcePair) {
         String deviceId = fetchAndroidId();
-        Log.d(TAG, "Performing handshake with ip=" + ip + " device=" + deviceId);
+        Log.d(TAG, "Performing handshake with ip=" + ip + " device=" + deviceId + " forcePair=" + forcePair);
 
         try {
             JSONObject body = new JSONObject();
             body.put("device_id", deviceId);
+            body.put("force_pair", forcePair);
             RequestBody reqBody = RequestBody.create(body.toString(), MediaType.parse("application/json"));
             Request request = new Request.Builder()
                     .url("http://" + ip + "/api/hello")
@@ -298,7 +308,17 @@ public class MainActivity extends AppCompatActivity {
                         String status = json.getString("status");
 
                         if ("trusted".equals(status)) {
-                            Log.d(TAG, "Device already trusted — connecting");
+                            String localToken = SecurityUtils.getAuthToken(MainActivity.this);
+                            if (localToken == null) {
+                                Log.w(TAG, "Server trusts device but local token is missing — forcing re-pair");
+                                mainHandler.post(() -> {
+                                    statusText.setText("TOKEN MISSING — RE-PAIRING...");
+                                    performHandshake(ip, true);
+                                });
+                                return;
+                            }
+
+                            Log.d(TAG, "Device already trusted & token present — connecting");
                             mainHandler.post(() -> {
                                 statusText.setText("STATUS: TRUSTED DEVICE");
                                 statusText.setTextColor(Color.WHITE);
