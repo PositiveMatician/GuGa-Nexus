@@ -253,7 +253,9 @@ public class MainActivity extends AppCompatActivity {
         chatRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         chatRecyclerView.setAdapter(chatAdapter);
 
-        ttsToggle.setChecked(prefs.getBoolean(PREF_TTS_ENABLED, true));
+        boolean ttsEnabled = prefs.getBoolean(PREF_TTS_ENABLED, true);
+        ttsToggle.setChecked(ttsEnabled);
+        updateTtsToggleColor(ttsEnabled);
     }
 
     private void setupHistory() {
@@ -284,6 +286,7 @@ public class MainActivity extends AppCompatActivity {
 
         ttsToggle.setOnCheckedChangeListener((btn, checked) -> {
             prefs.edit().putBoolean(PREF_TTS_ENABLED, checked).apply();
+            updateTtsToggleColor(checked);
             Intent intent = new Intent(ACTION_SET_TTS_ENABLED);
             intent.putExtra("enabled", checked);
             sendBroadcast(intent);
@@ -313,6 +316,14 @@ public class MainActivity extends AppCompatActivity {
                 .setNegativeButton("Cancel", null)
                 .show();
         });
+    }
+
+    private void updateTtsToggleColor(boolean enabled) {
+        int color = enabled ? Color.WHITE : Color.GRAY;
+        ttsToggle.setTextColor(color);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            ttsToggle.setThumbTintList(android.content.res.ColorStateList.valueOf(color));
+        }
     }
 
     // ----------------------------------------------------------------

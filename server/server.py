@@ -13,7 +13,8 @@ import time
 from typing import Set
 
 from dotenv import load_dotenv
-load_dotenv()
+env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+load_dotenv(dotenv_path=env_path)
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
@@ -871,7 +872,44 @@ def start_cloudflare_tunnel(port: int) -> str:
 # ------------------------------------------------------------
 # Entry Point
 # ------------------------------------------------------------
+# ------------------------------------------------------------
+# OS Notification Alerter Lifecycle
+# ------------------------------------------------------------
+alerter_proc = None
+
+def start_alerter():
+    global alerter_proc
+    val = os.getenv("ENABLE_OS_NOTIFICATIONS", "False")
+    print(f"[DEBUG] ENABLE_OS_NOTIFICATIONS value: '{val}'")
+    if val.lower() == "true":
+        print("[OS ADAPTER] Starting OS Notification Alerter...")
+        # Use the local venv python if available
+        venv_python = os.path.join(os.path.dirname(os.path.abspath(__file__)), "venv", "bin", "python3")
+        if not os.path.exists(venv_python):
+            venv_python = "python3" # Fallback
+            
+        alerter_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "os_notification_alerter.py")
+        try:
+            # We use a new session to ensure it doesn't immediately die if the shell is closed, 
+            # though here it's managed by the server proc.
+            alerter_proc = subprocess.Popen([venv_python, alerter_script])
+        except Exception as e:
+            print(f"[OS ADAPTER] Failed to start alerter binary: {e}")
+
+def stop_alerter():
+    global alerter_proc
+    if alerter_proc:
+        print("[OS ADAPTER] Stopping OS Notification Alerter...")
+        alerter_proc.terminate()
+        try:
+            alerter_proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            alerter_proc.kill()
+
+atexit.register(stop_alerter)
+
 if __name__ == "__main__":
+    start_alerter()
     mode = os.getenv("MODE", "lan").lower()
     port = int(os.getenv("PORT", 6769))
     

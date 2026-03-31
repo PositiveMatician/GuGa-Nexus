@@ -75,6 +75,24 @@ def download_cloudflared():
     except Exception as e:
         print(f"[ERROR] Download failed: {e}")
 
+def ensure_env_exists():
+    env_file = ".env"
+    if not os.path.exists(env_file):
+        print("[SETUP] Creating default .env file...")
+        default_content = (
+            "ENABLE_OS_NOTIFICATIONS=True\n"
+            "MODE=lan\n"
+            "PORT=6769\n"
+        )
+        try:
+            with open(env_file, "w") as f:
+                f.write(default_content)
+            print("[SETUP] .env file created successfully.")
+        except Exception as e:
+            print(f"[ERROR] Failed to create .env file: {e}")
+    else:
+        print("[SKIP] .env file already exists.")
+
 if __name__ == "__main__":
     print("\n" + "="*40)
     print("      GuGa Assistant Server Setup")
@@ -82,6 +100,7 @@ if __name__ == "__main__":
     
     install_requirements()
     download_cloudflared()
+    ensure_env_exists()
     
     print("\n" + "="*40)
     print("  SUCCESS: Environment is ready!")

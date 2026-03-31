@@ -1,0 +1,18 @@
+# Server environment and secrets
+.env
+trusted_devices.json
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+ENV/
+env/
+
+# Logs and binaries
+log/
+*.log
+*.out
+cloudflared
+cloudflared.exe
