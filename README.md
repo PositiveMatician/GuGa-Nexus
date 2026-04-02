@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="alpha-model/app/src/main/assets/logo.png" width="128" height="128" />
+</p>
+
 # GuGa Nexus - Android Assistant & Linux Server
 
 GuGa Nexus is a minimalist, secure, and privacy-focused ecosystem that allows you to sync notifications and run remote commands between your Android devices and a Linux host.
