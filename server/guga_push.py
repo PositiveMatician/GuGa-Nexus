@@ -16,6 +16,7 @@ import argparse
 import sys
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import time
@@ -134,16 +135,27 @@ mode flags (override auto-detection):
   -m / --message    Force message mode — treat all args as a plain string.
   -r / --run        Force run mode    — treat all args as a command to execute.
 
-examples:
-  echo "Deploy done" | guga                        # auto: message via stdin
-  guga "Build finished"                            # auto: plain message
-  guga python train.py --epochs 100               # auto: run mode
-  guga calc maintenance.cobol                     # auto: run mode
+auto-detection rules:
+  1. stdin piped, no args  →  message mode
+  2. single non-executable string  →  message mode
+  3. everything else  →  run mode
 
-  guga --message "build done"                     # explicit: message
-  guga --message python train.py                  # explicit: sends the literal string "python train.py"
-  guga --run calc maintenance.cobol               # explicit: run mode
-  guga --run ./my_script --title "GPU Server"     # explicit: run + title
+examples:
+  echo "Deploy done" | guga                         # auto: message via stdin
+  guga "Build finished"                             # auto: plain message
+  guga python train.py --epochs 100                # auto: run mode
+  guga calc maintenance.cobol                      # auto: run mode
+
+  guga -m "build done"                             # explicit: message
+  guga -m "python train.py"                        # sends the literal string, does not run
+  guga -r "sleep 5"                                # explicit: run (splits into tokens)
+  guga -r ./deploy.sh --title "Prod Server"        # explicit: run + title
+
+  guga -r python train.py --silent --title "GPU"   # run silently, labelled notification
+
+for more details:
+  man guga
+  tldr guga
         """,
     )
 
@@ -211,6 +223,10 @@ def main():
         if not positional:
             print("❌ --run requires a command to execute.", file=sys.stderr)
             sys.exit(1)
+        # If the user passed a single quoted string like "sleep 1" or "python train.py --lr 0.01",
+        # split it into proper tokens so subprocess can execute it correctly.
+        if len(positional) == 1:
+            positional = shlex.split(positional[0])
         run_command(positional, args.server, args.silent, args.title)
         return
 

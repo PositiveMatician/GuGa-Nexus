@@ -40,22 +40,35 @@ def install_linux_packages():
 
     # Package name mapping
     package_map = {
-        "apt-get": "dbus-x11",
-        "dnf": "dbus-x11",
-        "yum": "dbus-x11",
-        "pacman": "dbus",
-        "zypper": "dbus-1-x11",
+        "apt-get": ["dbus-x11", "python3-pip"],
+        "dnf": ["dbus-x11", "python3-pip"],
+        "yum": ["dbus-x11", "python3-pip"],
+        "pacman": ["dbus", "python-pip"],
+        "zypper": ["dbus-1-x11", "python3-pip"],
     }
     
-    pkg_name = package_map.get(cmd, "dbus-x11")
+    pkgs = package_map.get(cmd, ["dbus-x11", "python3-pip"])
     
-    print(f"[SETUP] Detected {cmd}. Running: sudo {cmd} {' '.join(args)} {pkg_name}")
+    # Filter out already installed packages to avoid unnecessary sudo if possible
+    to_install = []
+    if not shutil.which("dbus-monitor"):
+        to_install.append(pkgs[0])
     try:
-        subprocess.check_call(["sudo"] + [cmd] + args + [pkg_name])
+        subprocess.check_call([sys.executable, "-m", "pip", "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except:
+        to_install.append(pkgs[1])
+
+    if not to_install:
+        print("[SETUP] All system dependencies are already present.")
+        return
+
+    print(f"[SETUP] Detected {cmd}. Running: sudo {cmd} {' '.join(args)} {' '.join(to_install)}")
+    try:
+        subprocess.check_call(["sudo"] + [cmd] + args + to_install)
         print("[SETUP] System dependencies installed successfully.")
     except Exception as e:
         print(f"[ERROR] Failed to install packages: {e}")
-        print(f"Please try manually: sudo {cmd} {' '.join(args)} {pkg_name}")
+        print(f"Please try manually: sudo {cmd} {' '.join(args)} {' '.join(to_install)}")
 
 def install_requirements():
     print("[SETUP] Installing Python dependencies...")
@@ -69,6 +82,42 @@ def install_requirements():
             print(f"[ERROR] Failed to install Python dependencies: {e}")
     else:
         print("[SKIP] No requirements.txt found.")
+
+def setup_man_page():
+    """Install the guga man pages from the man/ folder."""
+    man_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "man")
+    if not os.path.isdir(man_dir):
+        print(f"[SKIP] No {man_dir} found.")
+        return
+
+    print(f"[SETUP] Installing man pages from {man_dir}...")
+    
+    # Supported man sections (usually 1-8)
+    for filename in os.listdir(man_dir):
+        if not filename.endswith(tuple(f".{i}" for i in range(1, 9))):
+            continue
+            
+        section = filename.split(".")[-1]
+        dest_dir = f"/usr/local/share/man/man{section}"
+        source_man = os.path.join(man_dir, filename)
+        dest_man = os.path.join(dest_dir, filename)
+
+        try:
+            # Create directory if it doesn't exist
+            subprocess.check_call(["sudo", "mkdir", "-p", dest_dir])
+            # Copy the manual file
+            subprocess.check_call(["sudo", "cp", source_man, dest_man])
+            print(f"[SETUP] Installed {filename} to {dest_dir}")
+        except Exception as e:
+            print(f"[WARNING] Failed to install {filename}: {e}")
+
+    # Update man database once at the end
+    try:
+        if shutil.which("mandb"):
+            subprocess.check_call(["sudo", "mandb", "-q"])
+        print(f"[SETUP] Man database updated successfully.")
+    except Exception as e:
+        print(f"[WARNING] Could not update man database: {e}")
 
 def download_cloudflared():
     print("[SETUP] Checking for cloudflared binary...")
@@ -102,6 +151,33 @@ def download_cloudflared():
     except Exception as e:
         print(f"[ERROR] Download failed: {e}")
 
+def setup_guga_tool():
+    """Configure guga_push.py permissions and create global symlink."""
+    print("[SETUP] Configuring GuGa notification tool...")
+    
+    # Path to the source script
+    script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "guga_push.py")
+    if not os.path.exists(script_path):
+        print(f"[ERROR] guga_push.py not found at {script_path}")
+        return
+
+    # Make executable
+    print(f"[SETUP] Setting executable permission for {script_path}")
+    os.chmod(script_path, 0o755)
+
+    # Global symlink
+    link_path = "/usr/local/bin/guga"
+    print(f"[SETUP] Attempting to create global symlink: {link_path} -> {script_path}")
+    
+    # Use sudo if necessary for /usr/local/bin
+    try:
+        # ln -sf to overwrite any existing link
+        subprocess.check_call(["sudo", "ln", "-sf", script_path, link_path])
+        print(f"[SETUP] Successfully linked 'guga' to {link_path}")
+    except Exception as e:
+        print(f"[WARNING] Failed to create global symlink (requires sudo): {e}")
+        print(f"To do this manually, run: sudo ln -sf {script_path} {link_path}")
+
 def ensure_env_exists():
     env_file = ".env"
     if not os.path.exists(env_file):
@@ -121,6 +197,8 @@ if __name__ == "__main__":
     install_requirements()
     download_cloudflared()
     ensure_env_exists()
+    setup_guga_tool()
+    setup_man_page()
     
     print("\n" + "="*40)
     print("  SUCCESS: Environment is ready!")

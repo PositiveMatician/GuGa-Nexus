@@ -1,0 +1,122 @@
+.TH GUGA 1 "2024" "guga" "User Commands"
+.SH NAME
+guga \- send notifications to Android via the GuGa server
+.SH SYNOPSIS
+.B guga
+[\fIOPTIONS\fR] [\fIMESSAGE\fR | \fICOMMAND\fR [\fIARGS\fR...]]
+.br
+.B echo
+\fI"message"\fR |
+.B guga
+.SH DESCRIPTION
+.B guga
+is a command-line notification tool that sends messages to an Android device
+via a local GuGa WebSocket server. It supports two modes of operation:
+.PP
+.B Message mode
+sends a plain string as a push notification.
+.PP
+.B Run mode
+executes a command, streams its output to the terminal as normal, then
+automatically sends a notification with the exit status, elapsed time,
+and last line of output when the command finishes.
+.PP
+The mode is auto-detected from the arguments, but can be forced explicitly
+using \fB\-m\fR or \fB\-r\fR.
+.SH OPTIONS
+.TP
+.B \-m, \-\-message
+Force message mode. All positional arguments are joined into a single string
+and sent as a notification. Never executes anything.
+.TP
+.B \-r, \-\-run
+Force run mode. Positional arguments are treated as a command to execute.
+If a single quoted string is given (e.g. \fB"sleep 5"\fR), it is split into
+tokens automatically using shell-like parsing.
+.TP
+.B \-\-server \fIPORT\fR
+GuGa server port to connect to. Default: \fB6769\fR.
+.TP
+.B \-\-silent
+Suppress all output from guga itself. The watched command's output still
+streams to the terminal normally in run mode.
+.TP
+.B \-\-title \fILABEL\fR
+Optional label included in the notification. Useful when running guga
+across multiple machines (e.g. \fB"GPU Server"\fR, \fB"Dev Box"\fR).
+.TP
+.B \-h, \-\-help
+Show a help message and exit.
+.SH AUTO-DETECTION RULES
+When neither \fB\-m\fR nor \fB\-r\fR is given, guga determines the mode as follows:
+.IP 1. 4
+If stdin is a pipe and no positional args are given \(-> \fBmessage mode\fR.
+.IP 2. 4
+If there is exactly one positional arg and it is not an executable or file \(-> \fBmessage mode\fR.
+.IP 3. 4
+Everything else \(-> \fBrun mode\fR.
+.SH EXAMPLES
+.SS Message mode
+.TP
+.B echo "Deploy done" | guga
+Send a notification from stdin.
+.TP
+.B guga "Build finished \[u2705]"
+Send a plain string notification.
+.TP
+.B guga \-m "python train.py"
+Force message mode — sends the literal string, does not run anything.
+.SS Run mode
+.TP
+.B guga python train.py \-\-epochs 100
+Run a Python script and notify on completion.
+.TP
+.B guga calc maintenance.cobol
+Run a command with arguments. Notification includes elapsed time and last output line.
+.TP
+.B guga \-r "sleep 5"
+Force run mode with a single quoted string (split into tokens automatically).
+.TP
+.B guga \-r ./deploy.sh \-\-title "Prod Server"
+Run a script and label the notification with the server name.
+.SS Scripting
+.TP
+.B guga python train.py \-\-silent \-\-title "GPU"
+Run silently — no guga output in the terminal, notification still fires.
+.TP
+.B make build && guga "Build done" || guga "Build failed"
+Use guga inside shell pipelines.
+.SH INSTALLATION
+.SS Install the script
+.nf
+chmod +x guga_push.py
+sudo ln \-s "$(pwd)/guga_push.py" /usr/local/bin/guga
+.fi
+.SS Install this man page
+.nf
+sudo cp guga.1 /usr/local/share/man/man1/guga.1
+sudo mandb
+man guga
+.fi
+.SH SERVER
+.B guga
+connects to a local Flask/WebSocket server that relays messages to an Android
+device over an end-to-end encrypted WebSocket connection. The server only
+accepts connections from localhost on the \fB/send\fR route.
+.PP
+Start the server before using guga:
+.nf
+python3 server/server.py
+.fi
+.SH EXIT STATUS
+In message mode, guga exits \fB0\fR on success, \fB1\fR on failure.
+.PP
+In run mode, guga exits with the same code as the watched command, so it is
+transparent in scripts and Makefiles.
+.SH SEE ALSO
+.BR curl (1),
+.BR notify\-send (1)
+.SH BUGS
+Report issues at the project repository.
+.SH AUTHOR
+Written by the GuGa project contributors.

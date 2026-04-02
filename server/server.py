@@ -294,6 +294,20 @@ HTML_PAGE = """
             animation: none;
         }
 
+        .bubble.title {
+            align-self: flex-start;
+            background: transparent;
+            color: #555;
+            font-size: 0.65rem;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            padding: 0 0 2px 4px;
+            margin-bottom: -4px;
+            max-width: 100%;
+            animation: none;
+        }
+
         .bubble.bot {
             align-self: flex-start;
             background: #fff;
@@ -474,6 +488,13 @@ HTML_PAGE = """
         feed.scrollTo({ top: feed.scrollHeight, behavior: 'smooth' });
     }
 
+    function addNotification(title, message) {
+        if (title) {
+            addBubble('title', title);
+        }
+        addBubble('bot', message);
+    }
+
     function onKey(e) { if (e.key === 'Enter') sendCommand(); }
 
     async function initAuth() {
@@ -536,7 +557,9 @@ HTML_PAGE = """
 
         socket.on('guga_response', (data) => {
             typingEl.classList.remove('active');
-            addBubble('bot', data.message || 'encrypted payload');
+            if (data.title || data.message) {
+                addNotification(data.title, data.message || 'encrypted payload');
+            }
         });
 
         socket.on('connect_error', (err) => {
@@ -601,9 +624,10 @@ def send_to_all():
         return jsonify({"error": "Forbidden"}), 403
     data = request.get_json(silent=True) or {}
     message = data.get("message", "").strip()
+    title = data.get("title", "").strip()
     if not message:
         return jsonify({"error": "No message provided"}), 400
-    notify_all_clients(message)
+    notify_all_clients(message, title)
     return jsonify({"ok": True, "sent_to": len(connected_clients)}), 200
 
 
@@ -782,10 +806,14 @@ def process_command(command: str) -> str:
     return f"Command '{command}' not found. Please wait for the admin to update the command list."
 
 
-def notify_all_clients(message: str) -> None:
+def notify_all_clients(message: str, title: str = None) -> None:
     """Emit guga_response to all connected clients (encrypted for apps, plain for browsers)."""
     trusted = load_trusted_devices()
-    payload_json = json.dumps({"message": message})
+    payload_data = {"message": message}
+    if title:
+        payload_data["title"] = title
+        
+    payload_json = json.dumps(payload_data)
     
     # Iterate over active sessions
     for sid, device_id in list(connected_clients.items()):
@@ -797,7 +825,7 @@ def notify_all_clients(message: str) -> None:
             if client_type == "browser" or device_id.startswith("browser-") or not token:
                 # Send plaintext for browsers
                 print(f"[WS] Sending PLAIN to {sid} ({device_id})")
-                socketio.emit("guga_response", {"message": message}, room=sid)
+                socketio.emit("guga_response", payload_data, room=sid)
             else:
                 # Encrypt for apps
                 print(f"[WS] Sending ENCRYPTED to {sid} ({device_id})")
