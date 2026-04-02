@@ -10,8 +10,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.IBinder;
+import androidx.core.content.ContextCompat;
 import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
@@ -110,7 +112,11 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
     public void onCreate() {
         super.onCreate();
         createNotificationChannel();
-        startForeground(1, buildNotification("Ready"));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(1, buildNotification("Ready"), ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
+        } else {
+            startForeground(1, buildNotification("Ready"));
+        }
 
         tts = new TextToSpeech(this, this);
         backendAddress = getSharedPreferences("AlphaPrefs", MODE_PRIVATE).getString("backend_ip", "");
@@ -124,7 +130,7 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
         filter.addAction("com.example.myapplication.SET_TTS_ENABLED");
         filter.addAction("com.example.myapplication.SAVE_AUTH_TOKEN");
         filter.addAction("com.example.myapplication.SET_FOREGROUND");
-        registerReceiver(activityReceiver, filter, Context.RECEIVER_EXPORTED);
+        ContextCompat.registerReceiver(this, activityReceiver, filter, ContextCompat.RECEIVER_EXPORTED);
 
         String storedToken = getAuthToken();
         if (!backendAddress.isEmpty() && storedToken != null) {

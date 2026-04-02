@@ -37,6 +37,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import androidx.core.content.ContextCompat;
 import com.journeyapps.barcodescanner.ScanContract;
 import com.journeyapps.barcodescanner.ScanOptions;
 
@@ -181,7 +182,7 @@ public class MainActivity extends AppCompatActivity {
         filter.addAction(ACTION_SOCKET_CONNECTED);
         filter.addAction(ACTION_SOCKET_DISCONNECTED);
         filter.addAction(ACTION_GUGA_RESPONSE);
-        registerReceiver(serviceReceiver, filter, Context.RECEIVER_EXPORTED);
+        ContextCompat.registerReceiver(this, serviceReceiver, filter, ContextCompat.RECEIVER_EXPORTED);
 
         startService(new Intent(this, GuGaService.class));
 
@@ -483,6 +484,7 @@ public class MainActivity extends AppCompatActivity {
     // ----------------------------------------------------------------
 
     private String cleanIp(String ip) {
+        if (ip == null) return "";
         String clean = ip.trim();
         if (clean.endsWith("/")) clean = clean.substring(0, clean.length() - 1);
         if (!clean.startsWith("http")) clean = "http://" + clean;

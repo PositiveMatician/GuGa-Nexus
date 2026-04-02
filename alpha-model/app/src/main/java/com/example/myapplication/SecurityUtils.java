@@ -27,8 +27,8 @@ public class SecurityUtils {
                     EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                     EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             );
-        } catch (GeneralSecurityException | IOException e) {
-            Log.e(TAG, "Failed to create EncryptedSharedPreferences", e);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to create EncryptedSharedPreferences (potential Keystore issue)", e);
             return context.getSharedPreferences("guga_prefs_fallback", Context.MODE_PRIVATE);
         }
     }
