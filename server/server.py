@@ -16,6 +16,12 @@ from dotenv import load_dotenv
 env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
 load_dotenv(dotenv_path=env_path)
 
+# Enforce Linux-only restriction
+if platform.system() != "Linux":
+    print("❌ ERROR: This server is designed to run on Linux only.")
+    print(f"Current OS: {platform.system()}")
+    sys.exit(1)
+
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 import qrcode
@@ -163,7 +169,7 @@ HTML_PAGE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GUGA</title>
+    <title>GuGa</title>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
@@ -720,7 +726,7 @@ def handle_connect():
         return False
     connected_clients[request.sid] = device_id
     print(f"[+] Connected    sid={request.sid}  total={len(connected_clients)} (device_id={device_id})")
-    send_private_message(request.sid, "Connection established. GuGa online.")
+    send_private_message(request.sid, "Connection established. GuGu online.")
 
 
 @socketio.on("disconnect")
@@ -772,8 +778,8 @@ def handle_command(data):
 # Core Logic
 # ------------------------------------------------------------
 def process_command(command: str) -> str:
-    """Replace this with your real assistant logic."""
-    return f"Echo: {command}"
+    """Take the command and return a temporary not found message."""
+    return f"Command '{command}' not found. Please wait for the admin to update the command list."
 
 
 def notify_all_clients(message: str) -> None:

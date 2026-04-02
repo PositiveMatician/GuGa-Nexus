@@ -15,7 +15,7 @@
 .cxx
 local.properties
 
-# Python
+# Python artifacts
 __pycache__/
 *.py[cod]
 *$py.class
@@ -24,6 +24,14 @@ ENV/
 env/
 .env
 .venv
+.python-version
+.pytest_cache/
+.ipynb_checkpoints/
+*.egg-info/
+dist/
+target/
+
+# GuGa Server Specifics
 /server/log/
 /server/trusted_devices.json
 /server/cloudflared
@@ -32,3 +40,6 @@ env/
 /server/*.out
 /*.log
 /server/*.log
+/server/alerter.log
+/server/raw_dbus.log
+/server/server.log

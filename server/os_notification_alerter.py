@@ -1,7 +1,16 @@
 import asyncio
+import asyncio.subprocess
 import re
 import aiohttp
 import os
+import platform
+import sys
+
+# Enforce Linux-only restriction
+if platform.system() != "Linux":
+    print("❌ ERROR: OS Notification monitoring only works on Linux (D-Bus required).")
+    print(f"Current OS: {platform.system()}")
+    sys.exit(1)
 
 # ------------------------------------------------------------
 # Configuration
@@ -84,6 +93,10 @@ async def monitor_notifications():
         )
     except Exception as e:
         print(f"Failed to start dbus-monitor: {e}")
+        return
+
+    if not proc.stdout:
+        print("Failed to capture dbus-monitor stdout.")
         return
 
     print("Monitoring D-Bus for notifications (method calls only)...")

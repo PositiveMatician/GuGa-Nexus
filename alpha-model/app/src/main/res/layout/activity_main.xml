@@ -250,6 +250,7 @@
                 android:textAllCaps="false"
                 android:fontFamily="sans-serif-medium" />
 
+
             <TextView
                 android:id="@+id/statusText"
                 android:layout_width="match_parent"

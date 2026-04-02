@@ -12,6 +12,8 @@ import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.media.ToneGenerator;
 import android.net.Uri;
+import android.net.ConnectivityManager;
+import android.net.NetworkCapabilities;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -141,8 +143,10 @@ public class MainActivity extends AppCompatActivity {
                 case ACTION_SOCKET_DISCONNECTED:
                     isSocketConnected = false;
                     updateConnectionVisibility();
-                    statusText.setText("STATUS: DISCONNECTED");
-                    statusText.setTextColor(Color.GRAY);
+                    runOnUiThread(() -> {
+                        statusText.setText("⚠️ Connection Failed. Hint: Ensure you are on the same Wi-Fi network as the server, or check if the Python server is running.");
+                        statusText.setTextColor(Color.GRAY);
+                    });
                     break;
                 case ACTION_GUGA_RESPONSE:
                     String msg = intent.getStringExtra("message");
@@ -280,6 +284,10 @@ public class MainActivity extends AppCompatActivity {
 
         pingButton.setOnClickListener(v -> sendBroadcast(new Intent(ACTION_PING_BACKEND)));
         connectSocketButton.setOnClickListener(v -> {
+            if (!isNetworkAvailable()) {
+                statusText.setText("⚠️ Hint: Turn on Wi-Fi or Cellular Data to connect.");
+                return;
+            }
             String ip = ipInput.getText().toString().trim();
             if (!ip.isEmpty()) performHandshake(ip);
         });
@@ -339,6 +347,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void performHandshake(String ipBase, boolean forcePair) {
+        if (!isNetworkAvailable()) {
+            statusText.setText("⚠️ Hint: Turn on Wi-Fi or Cellular Data to connect.");
+            return;
+        }
         String url = cleanIp(ipBase) + "/api/hello";
         String deviceId = fetchAndroidId();
         
@@ -413,6 +425,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void verifyPin(String ip, String deviceId, String pin) {
+        if (!isNetworkAvailable()) {
+            statusText.setText("⚠️ Hint: Turn on Wi-Fi or Cellular Data to connect.");
+            return;
+        }
         String url = cleanIp(ip) + "/api/verify_pin";
         try {
             JSONObject body = new JSONObject();
@@ -532,6 +548,22 @@ public class MainActivity extends AppCompatActivity {
             r.play();
         } catch (Exception e) {
             if (toneGenerator != null) toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP, 200);
+        }
+    }
+
+    private boolean isNetworkAvailable() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (cm == null) return false;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            android.net.Network network = cm.getActiveNetwork();
+            if (network == null) return false;
+            NetworkCapabilities capabilities = cm.getNetworkCapabilities(network);
+            return capabilities != null && (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) || 
+                                           capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                                           capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET));
+        } else {
+            android.net.NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+            return activeNetwork != null && activeNetwork.isConnected();
         }
     }
 
