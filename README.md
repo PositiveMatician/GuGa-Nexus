@@ -41,7 +41,8 @@ The server acts as the central hub for your commands and notifications.
 ### 2. 📲 Android App (GuGa)
 The mobile app is your remote control for the Linux host.
 - **Download**: ⚠️ **Do not build from source unless you are a developer.** 
-- **Stable Release**: Download the latest `.apk` from the [Releases](https://github.com/PositiveMatician/GuGa-Nexus/releases) section of this repository.
+- **Stable Release**: Download the [GuGa-Alpha.apk](https://github.com/PositiveMatician/GuGa-Nexus/releases/tag/v1.0.0) for a reliable, premium experience.
+- **Nightly Build**: Download the [GuGa-Beta-Nightly.apk](https://github.com/PositiveMatician/GuGa-Nexus/releases/tag/nightly) for experimental features.
 - **Installation**: Sideload the APK onto your Android device.
 
 ---
