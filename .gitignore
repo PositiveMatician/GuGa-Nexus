@@ -44,3 +44,21 @@ target/
 /server/alerter.log
 /server/raw_dbus.log
 /server/server.log
+
+# IDE and build artifacts
+/.idea/
+**/.idea/
+**/build/
+**/out/
+**/__pycache__/
+**/*.iml
+**/*.log
+
+# Project-specific directories
+/alpha-model/.idea/
+/beta-model/.idea/
+/alpha-model/build/
+/beta-model/build/
+/server/__pycache__/
+/server/log
+/.vscode/
