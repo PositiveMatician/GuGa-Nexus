@@ -15,6 +15,7 @@ env/
 
 # Logs and binaries
 log/
+log
 *.log
 *.out
 cloudflared
