@@ -16,12 +16,46 @@ GuGa Nexus is a minimalist, secure, and privacy-focused ecosystem that allows yo
 - **Minimalist Aesthetic**: Professional, distraction-free branding.
 - **Remote Execution**: Securely trigger commands on your host machine from your phone.
 
-## Getting Started (Server)
+## 🚀 Quick Start Tutorial
 
-1. Navigate to the `server/` directory.
-2. Run the setup script: `python3 post.py` (This will install dependencies and system tools).
-3. Start the server: `python3 server.py`.
-4. Scan the generated QR code or enter the pairing PIN in the GuGa Android app.
+To get the **GuGa Nexus** ecosystem running, follow these steps:
+
+### 1. 🖥️ Linux Server (GuGu)
+The server acts as the central hub for your commands and notifications.
+- **Download**: You only need the `server/` folder from this repository.
+- **Setup**:
+    ```bash
+    cd server
+    python3 post.py  # Automatically installs dependencies and system tools
+    ```
+- **Run**:
+    ```bash
+    python3 server.py
+    ```
+- **Pairing**: Once started, a QR code and an 8-digit PIN will be displayed on your terminal.
+
+### 2. 📲 Android App (GuGa)
+The mobile app is your remote control for the Linux host.
+- **Download**: ⚠️ **Do not build from source unless you are a developer.** 
+- **Stable Release**: Download the latest `.apk` from the [Releases](https://github.com/PositiveMatician/GuGa-Nexus/releases) section of this repository.
+- **Installation**: Sideload the APK onto your Android device.
+
+---
+
+## 🎮 How to Use
+
+1.  **Connect**: Open the **GuGa** app on your phone.
+2.  **Pairing**:
+    *   Tap the **Settings** arrow (`>`) on the home screen.
+    *   Tap **SCAN QR** and scan the code shown on your server terminal, OR manually enter the IP address.
+    *   Enter the 8-digit PIN displayed on your server to establish a **Zero-Trust** connection.
+3.  **Interaction**:
+    *   Once connected, the status will show **LIVE SYNC ACTIVE**.
+    *   Type commands in the chat box to interact with your Linux host.
+    *   System notifications from your Linux machine will automatically appear as notifications on your phone!
+4.  **Persistence**: Tap **LIVE PERSISTENCE** in settings to keep the connection active even when the app is in the background.
+
+---
 
 ## License
 
