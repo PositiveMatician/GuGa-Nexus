@@ -21,6 +21,7 @@ public class ChatHistory {
             for (ChatMessage m : messages) {
                 JSONObject obj = new JSONObject();
                 obj.put("text", m.getText());
+                obj.put("title", m.getTitle());
                 obj.put("isUser", m.isUser());
                 array.put(obj);
             }
@@ -53,7 +54,11 @@ public class ChatHistory {
             JSONArray array = new JSONArray(new String(bytes));
             for (int i = 0; i < array.length(); i++) {
                 JSONObject obj = array.getJSONObject(i);
-                list.add(new ChatMessage(obj.getString("text"), obj.getBoolean("isUser")));
+                list.add(new ChatMessage(
+                    obj.getString("text"),
+                    obj.optString("title", null),
+                    obj.getBoolean("isUser")
+                ));
             }
         } catch (FileNotFoundException ignored) {
         } catch (Exception e) {

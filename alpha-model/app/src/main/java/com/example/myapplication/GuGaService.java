@@ -224,16 +224,25 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
                         JSONObject payload = (JSONObject) args[0];
                         String currentToken = getAuthToken();
                         String message;
+                        String title = null;
 
                         if (currentToken != null && payload.has("iv") && payload.has("ciphertext")) {
                             String decryptedJson = CryptoUtils.decrypt(payload, currentToken);
-                            message = new JSONObject(decryptedJson).getString("message");
+                            JSONObject decryptedObj = new JSONObject(decryptedJson);
+                            message = decryptedObj.getString("message");
+                            if (decryptedObj.has("title")) {
+                                title = decryptedObj.getString("title");
+                            }
                         } else {
                             message = payload.getString("message");
+                            if (payload.has("title")) {
+                                title = payload.getString("title");
+                            }
                         }
 
                         Intent intent = new Intent("com.example.myapplication.GUGA_RESPONSE");
                         intent.putExtra("message", message);
+                        if (title != null) intent.putExtra("title", title);
                         sendBroadcast(intent);
 
                         // Also persist directly in case MainActivity is killed
@@ -244,7 +253,7 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
                         } 
                         
                         if (!isAppInForeground) {
-                            showResponseNotification(message);
+                            showResponseNotification(message, title);
                         }
                     } catch (Exception e) { Log.e(TAG, "Response process failed", e); }
                 }
@@ -269,14 +278,16 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
         }
     }
 
-    private void showResponseNotification(String message) {
+    private void showResponseNotification(String message, String title) {
         Intent intent = new Intent(this, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, 
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
+        String displayTitle = (title != null && !title.isEmpty()) ? title : "GuGa";
+
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, RESPONSE_CHANNEL_ID)
-                .setContentTitle("GuGu")
+                .setContentTitle(displayTitle)
                 .setContentText(message)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setAutoCancel(true)

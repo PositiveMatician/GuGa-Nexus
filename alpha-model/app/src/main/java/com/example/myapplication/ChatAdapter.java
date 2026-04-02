@@ -35,7 +35,18 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder
 
     @Override
     public void onBindViewHolder(@NonNull ChatViewHolder holder, int position) {
-        holder.messageText.setText(messages.get(position).getText());
+        ChatMessage msg = messages.get(position);
+        holder.messageText.setText(msg.getText());
+        
+        if (holder.titleText != null) {
+            String title = msg.getTitle();
+            if (title != null && !title.isEmpty()) {
+                holder.titleText.setText(title);
+                holder.titleText.setVisibility(View.VISIBLE);
+            } else {
+                holder.titleText.setVisibility(View.GONE);
+            }
+        }
     }
 
     @Override
@@ -45,10 +56,12 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder
 
     static class ChatViewHolder extends RecyclerView.ViewHolder {
         TextView messageText;
+        TextView titleText;
 
         ChatViewHolder(View itemView) {
             super(itemView);
             messageText = itemView.findViewById(R.id.messageText);
+            titleText = itemView.findViewById(R.id.titleText);
         }
     }
 }

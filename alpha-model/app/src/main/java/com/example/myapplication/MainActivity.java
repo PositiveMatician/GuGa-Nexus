@@ -151,8 +151,9 @@ public class MainActivity extends AppCompatActivity {
                     break;
                 case ACTION_GUGA_RESPONSE:
                     String msg = intent.getStringExtra("message");
+                    String title = intent.getStringExtra("title");
                     if (msg != null) {
-                        appendChat(new ChatMessage(msg, false));
+                        appendChat(new ChatMessage(msg, title, false));
                         playTing();
                     }
                     break;
