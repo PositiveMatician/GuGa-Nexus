@@ -152,7 +152,7 @@ def download_cloudflared():
 # ─────────────────────────────────────────────────────────────────────────────
 # 5. .env configuration
 # ─────────────────────────────────────────────────────────────────────────────
-def ensure_env_exists(mode: str, os_notif: str):
+def ensure_env_exists(mode: str, os_notif: str, force: bool = False):
     step("Writing configuration…")
 
     env_file = os.path.join(HERE, ".env")
@@ -170,18 +170,41 @@ def ensure_env_exists(mode: str, os_notif: str):
                 f.write(f"{k}={v}\n")
         ok(f".env created")
     else:
-        # Patch any missing keys without overwriting existing user values
         with open(env_file, "r") as f:
-            content = f.read()
-        existing_keys = [l.split("=")[0].strip() for l in content.splitlines() if "=" in l]
+            lines = f.read().splitlines()
+
+        updated = False
+        new_lines = []
+        for line in lines:
+            if not line.strip() or not "=" in line:
+                new_lines.append(line)
+                continue
+                
+            k = line.split("=", 1)[0].strip()
+            if force and k in ["MODE", "ENABLE_OS_NOTIFICATIONS"]:
+                # Only overwrite mode and notif settings if forcing
+                if line.strip() != f"{k}={defaults[k]}":
+                    new_lines.append(f"{k}={defaults[k]}")
+                    updated = True
+                else:
+                    new_lines.append(line)
+            else:
+                new_lines.append(line)
+                
+        existing_keys = [l.split("=")[0].strip() for l in new_lines if "=" in l]
         missing = {k: v for k, v in defaults.items() if k not in existing_keys}
-        if missing:
-            with open(env_file, "a") as f:
-                if not content.endswith("\n"):
-                    f.write("\n")
-                for k, v in missing.items():
-                    f.write(f"{k}={v}\n")
-            ok(f".env updated  (added: {', '.join(missing.keys())})")
+        
+        for k, v in missing.items():
+            new_lines.append(f"{k}={v}")
+            updated = True
+            
+        if updated:
+            with open(env_file, "w") as f:
+                f.write("\n".join(new_lines) + "\n")
+            if missing:
+                ok(f".env updated  (added: {', '.join(missing.keys())})")
+            else:
+                ok(".env updated with new configuration")
         else:
             ok(".env already up to date")
 
@@ -254,6 +277,11 @@ def install_systemd_service(venv_dir: str):
         current_user = subprocess.check_output(["logname"], text=True).strip()
     except Exception:
         current_user = os.environ.get("USER", "root")
+        
+    try:
+        current_uid = subprocess.check_output(["id", "-u", current_user], text=True).strip()
+    except Exception:
+        current_uid = "1000"
 
     service = textwrap.dedent(f"""\
         [Unit]
@@ -268,6 +296,7 @@ def install_systemd_service(venv_dir: str):
         WorkingDirectory={HERE}
         EnvironmentFile={env_file}
         Environment="PYTHONUNBUFFERED=1"
+        Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/{current_uid}/bus"
         ExecStart={gunicorn} --worker-class eventlet -w 1 server:app --bind 0.0.0.0:6769 --log-level error
         Restart=on-failure
         RestartSec=5
@@ -434,6 +463,17 @@ if __name__ == "__main__":
     qr_only  = "--qr" in sys.argv
     pin_only = "--show-pin" in sys.argv
 
+    if pin_only or qr_only:
+        import subprocess
+        try:
+            result = subprocess.run(["systemctl", "is-active", "guga"], capture_output=True, text=True)
+            if result.stdout.strip() != "active":
+                print(f"\n  {BOLD}{RED}Error:{RESET} {DIM}The 'guga' service is not running.{RESET}")
+                print(f"  {DIM}Please start the daemon first:{RESET} {BOLD}sudo systemctl start guga{RESET}\n")
+                sys.exit(1)
+        except Exception:
+            pass
+
     if pin_only:
         show_pin()
         sys.exit(0)
@@ -459,6 +499,7 @@ if __name__ == "__main__":
     else:
         mode     = ask_mode()
         os_notif = ask_os_notif()
+        ensure_env_exists(mode, os_notif, force=True)
 
     ok(f"Mode: {BOLD}{mode.upper()}{RESET}")
     ok(f"OS notifications: {BOLD}{os_notif}{RESET}")
@@ -468,7 +509,7 @@ if __name__ == "__main__":
     venv_dir = install_requirements()
     if mode == "public":
         download_cloudflared()
-    ensure_env_exists(mode, os_notif)
+    ensure_env_exists(mode, os_notif, force=False)
     setup_guga_tool()
     setup_man_page()
     install_systemd_service(venv_dir)

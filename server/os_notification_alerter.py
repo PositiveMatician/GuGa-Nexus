@@ -58,7 +58,7 @@ async def forward_to_server(app_name: str, title: str, body: str):
     clean_title = clean_text(title)
     clean_body = clean_text(body)
     
-    payload_msg = f"[{app_name}] {clean_title}: {clean_body}"
+    payload_msg = f"{clean_title}: {clean_body}"
     if not clean_title and not clean_body:
         return
 
@@ -69,7 +69,7 @@ async def forward_to_server(app_name: str, title: str, body: str):
     
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.post(SERVER_URL, json={"message": payload_msg}) as resp:
+            async with session.post(SERVER_URL, json={"message": payload_msg , "title":app_name}) as resp:
                 status_msg = f"Server Response: {resp.status}\n"
                 print(status_msg.strip())
                 with open(LOG_FILE, "a") as f:

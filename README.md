@@ -92,7 +92,8 @@ What setup.py does automatically:
   - Installs the man page at /usr/local/share/man/man1/guga.1
   - Prints the pairing QR code immediately on completion
 Reconfigure: `python3 setup.py --reconfigure`
-Reprint QR:  `python3 setup.py --qr`
+Reprint QR:  `guga --qr`
+Reprint PIN: `guga --show-pin`
 AI_INSTALL_END -->
 
 ### Requirements
@@ -147,7 +148,8 @@ sudo systemctl start guga       # start the server
 sudo systemctl stop guga        # stop the server
 sudo systemctl status guga      # check if it's running
 journalctl -u guga -f           # live server logs
-python3 setup.py --qr           # reprint the pairing QR code
+guga --qr                       # reprint the pairing QR code
+guga --show-pin                 # retrieve the latest pairing PIN
 python3 setup.py --reconfigure  # change mode or settings
 ```
 
@@ -170,6 +172,8 @@ Explicit flags:
   --server PORT   custom server port (default: 6769)
   --silent        suppress guga's own stdout/stderr
   --title LABEL   label prepended to the Android notification
+  --qr            show the pairing QR code natively from anywhere
+  --show-pin      retrieve the most recent PIN from daemon logs
 Run mode behaviour:
   - streams command stdout+stderr to terminal normally
   - on exit: sends notification with status (✅/❌), elapsed time, last output line
@@ -204,6 +208,10 @@ guga -r ./job.sh --title "GPU Server"
 
 # Suppress guga's own output in scripts and Makefiles
 guga python train.py --silent
+
+# Access pairing utilities from anywhere
+guga --qr
+guga --show-pin
 ```
 
 When watching a command, your Android notification looks like:
@@ -272,7 +280,7 @@ GuGa uses Cloudflare Tunnel to make your local server reachable over the interne
 **No domain. No port forwarding. No VPS.** Choose internet mode during `setup.py` and it handles the rest. The only caveat: if the server restarts, the tunnel gets a new URL and you'll need to re-scan the QR code.
 
 ```bash
-python3 server/setup.py --qr   # reprint the current pairing QR
+guga --qr   # reprint the current pairing QR
 ```
 
 ---
