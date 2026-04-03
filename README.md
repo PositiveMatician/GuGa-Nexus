@@ -226,9 +226,11 @@ The tunnel URL changes each time the service restarts. After a restart, run `gug
 ## Managing the Service
 
 ```bash
-guga --qr                      # print current connection QR and URL
-guga --show-pin                # print latest pairing PIN
-guga --install-service         # reconfigure (change mode, toggle OS notifications)
+guga --qr                             # Show the pairing QR code
+guga --show-pin                       # Show the secure Zero-Trust PIN
+guga --install-service --reconfigure  # Re-run the interactive setup
+guga --version                        # Show the current version
+guga --uninstall                      # Remove all GuGa system components
 
 sudo systemctl start guga      # start the server
 sudo systemctl stop guga       # stop the server

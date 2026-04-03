@@ -22,6 +22,7 @@ import subprocess
 import time
 import urllib.request
 import urllib.error
+from guga import __version__
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -157,7 +158,9 @@ setup & pairing:
   guga --qr                                        # show pairing QR code
   guga --show-pin                                  # show the latest pairing PIN
   guga --install-service                           # initialise background service
-  guga --install-service --reconfigure             # re-run configuration questons
+  guga --install-service --reconfigure             # re-run configuration questions
+  guga --version                                   # show current version
+  guga --uninstall                                 # remove all GuGa system components
 
 for more details:
   man guga
@@ -188,10 +191,21 @@ for more details:
         action="store_true",
         help="Initializes the Linux background systemd service and components.",
     )
+    proxy_mode.add_argument(
+        "--uninstall",
+        action="store_true",
+        help="Safely remove all GuGa system components (service, man pages, config).",
+    )
     parser.add_argument(
         "--reconfigure",
         action="store_true",
         help="Force re-run of configuration questions during --install-service.",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+        help="Show the current version and exit.",
     )
 
     # Explicit mode flags — mutually exclusive
@@ -233,8 +247,11 @@ def main():
     args = parse_args()
     
     # ── Proxy modes ───────────────────────────────────────────────────────────
-    if args.install_service or args.qr or args.show_pin:
-        from guga.installer import run_system_installer
+    if args.install_service or args.qr or args.show_pin or args.uninstall:
+        from guga.installer import run_system_installer, run_system_uninstaller
+        if args.uninstall:
+            run_system_uninstaller()
+            return
         run_system_installer(qr_only=args.qr, pin_only=args.show_pin, setup_only=args.install_service)
         return
 

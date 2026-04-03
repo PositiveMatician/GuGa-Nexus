@@ -456,3 +456,64 @@ def run_system_installer(qr_only=False, pin_only=False, setup_only=False):
     else:
         print(f"  {DIM}Run this command to pair your device:{RESET}")
     print(f"    {BOLD}guga --qr{RESET}\n")
+
+def run_system_uninstaller():
+    print()
+    print(f"  {BOLD}{'─' * 40}{RESET}")
+    print(f"  {BOLD}  GuGa Nexus  —  Uninstallation{RESET}")
+    print(f"  {BOLD}{'─' * 40}{RESET}")
+    print()
+
+    # 1. Stop and Disable Service
+    step("Stopping and disabling systemd service...")
+    try:
+        subprocess.run(["sudo", "systemctl", "stop", "guga"], stderr=subprocess.DEVNULL)
+        subprocess.run(["sudo", "systemctl", "disable", "guga"], stderr=subprocess.DEVNULL)
+        ok("Service stopped and disabled")
+    except Exception as e:
+        warn(f"Could not stop service: {e}")
+
+    # 2. Remove Service File
+    step("Removing systemd unit file...")
+    service_path = "/etc/systemd/system/guga.service"
+    try:
+        # Check existence via sudo if necessary, but since we use sudo rm it's fine
+        subprocess.run(["sudo", "rm", "-f", service_path], check=True)
+        subprocess.run(["sudo", "systemctl", "daemon-reload"], check=True)
+        ok("Service file removed")
+    except Exception as e:
+        warn(f"Could not remove service file: {e}")
+
+    # 3. Remove Man Page
+    step("Removing man page...")
+    man_path = "/usr/local/share/man/man1/guga.1"
+    try:
+        subprocess.run(["sudo", "rm", "-f", man_path], check=True)
+        if shutil.which("mandb"):
+            subprocess.run(["sudo", "mandb", "-q"], stderr=subprocess.DEVNULL)
+        ok("Man page removed")
+    except Exception as e:
+        warn(f"Could not remove man page: {e}")
+
+    # 4. Optional: Remove Config Directory
+    print()
+    choice = ask(f"  {BOLD}Remove all configuration and logs in {CONFIG_DIR}? [y/N]{RESET} ")
+    if choice.lower() == "y":
+        step(f"Removing {CONFIG_DIR}...")
+        try:
+            shutil.rmtree(CONFIG_DIR)
+            ok("Configuration directory deleted")
+        except Exception as e:
+            warn(f"Could not remove config directory: {e}")
+    else:
+        dim("Keeping configuration directory")
+
+    print()
+    print(f"  {BOLD}{'─' * 40}{RESET}")
+    print(f"  {GREEN}{BOLD}  System components removed successfully{RESET}")
+    print(f"  {BOLD}{'─' * 40}{RESET}")
+    print()
+    print(f"  {BOLD}Next step:{RESET}")
+    print(f"  To completely remove the Python package, run:")
+    print(f"  {BOLD}pip uninstall GuGa{RESET}")
+    print()
