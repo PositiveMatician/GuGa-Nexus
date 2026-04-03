@@ -307,20 +307,34 @@ def install_systemd_service(venv_dir: str):
         warn("Could not start service — check with: journalctl -u guga -n 30")
 
 
-def get_cloudflare_url():
-    try:
-        import subprocess, re
-        log = subprocess.check_output(
-            ["journalctl", "-u", "guga", "-n", "80", "--no-pager"],
-            text=True, 
-            stderr=subprocess.DEVNULL
-        )
-        # findall returns a list. The last item is the most recent log entry.
-        matches = re.findall(r"https://[-a-z0-9]+\.trycloudflare\.com", log, flags=re.IGNORECASE)
-        url = matches[-1] if matches else None
-    except (subprocess.CalledProcessError, FileNotFoundError, ImportError):
-        url = None
-    return url
+def get_cloudflare_url(timeout=15):
+    import subprocess, re, time
+    start = time.time()
+    url_pattern = re.compile(r"https://[-a-z0-9]+\.trycloudflare\.com", flags=re.IGNORECASE)
+    
+    while time.time() - start < timeout:
+        try:
+            log = subprocess.check_output(
+                ["journalctl", "-u", "guga", "-n", "80", "--no-pager"],
+                text=True, 
+                stderr=subprocess.DEVNULL
+            )
+            
+            spawn_idx = log.rfind("spawning public tunnel")
+            if spawn_idx != -1:
+                matches = url_pattern.findall(log[spawn_idx:])
+                if matches:
+                    return matches[-1]
+            else:
+                matches = url_pattern.findall(log)
+                if matches:
+                    return matches[-1]
+        except Exception:
+            pass
+            
+        time.sleep(1)
+        
+    return None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -336,8 +350,6 @@ def print_qr(mode: str):
         port = "6769"
 
         if mode == "public":
-            # Give the tunnel a moment, then read URL from service journal
-            time.sleep(3)
             url = get_cloudflare_url()
 
             if not url:
@@ -382,9 +394,8 @@ def show_pin():
     if not pin:
         warn("No pending PIN found in recent logs.")
     else:
-        pin_spaced = "  ".join(pin)
         print(f"\n  {DIM}LATEST PAIRING PIN:{RESET}")
-        print(f"  {BOLD}{GREEN}{pin_spaced}{RESET}\n")
+        print(f"  {BOLD}{GREEN}{pin}{RESET}\n")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Interactive questions
@@ -461,13 +472,21 @@ if __name__ == "__main__":
     setup_guga_tool()
     setup_man_page()
     install_systemd_service(venv_dir)
-    print_qr(mode)
+
+    
 
     # ── Done ──────────────────────────────────────────────────────────────────
     print()
     print(f"  {BOLD}{'─' * 40}{RESET}")
     print(f"  {GREEN}{BOLD}  GuGa Nexus is installed and running{RESET}")
     print(f"  {BOLD}{'─' * 40}{RESET}")
+    print()
+    if mode == "public":
+        print(f"  {DIM}Cloudflare Tunnel is starting up in the background...{RESET}")
+        print(f"  {DIM}Run this command in a few seconds to pair your device:{RESET}")
+    else:
+        print(f"  {DIM}Run this command to pair your device:{RESET}")
+    print(f"    {BOLD}guga --qr{RESET}\n")
     print()
     print(f"  {DIM}useful commands{RESET}")
     print(f"    {CYAN}guga \"message\"{RESET}              send a notification")
