@@ -5,7 +5,8 @@
 <h1 align="center">GuGa Nexus</h1>
 
 <p align="center">
-  Send your Linux terminal and OS notifications straight to your Android. No cloud. No subscription. No port forwarding.
+  Send your Linux terminal and OS notifications straight to your Android.<br/>
+  No cloud. No subscription. No port forwarding.
 </p>
 
 <p align="center">
@@ -22,13 +23,39 @@
 
 ---
 
+<!-- AI_SUMMARY_START
+Project: GuGa Nexus
+Type: Linux-to-Android notification bridge
+Language: Python (server), Java (Android)
+Key binary: server/guga_push.py — installed globally as `guga`
+Server: Flask + Socket.IO + gunicorn + eventlet, runs as a systemd daemon
+Encryption: AES-256-GCM end-to-end between server and Android app
+Pairing: QR code + 8-digit PIN (Zero-Trust handshake)
+Internet: Cloudflare Tunnel (ephemeral, no domain required)
+Install: `cd server && python3 setup.py` — fully automated, interactive
+Primary use case: terminal job completion notifications, OS notification forwarding
+AI_SUMMARY_END -->
+
+## Jump to
+
+| I want to… | Go to |
+|---|---|
+| Install everything and get running | [Installation](#installation) |
+| Just send a terminal notification | [guga CLI](#guga--terminal-notifications-cli) |
+| Understand what this does | [What is GuGa Nexus?](#what-is-guga-nexus) |
+| See what features exist | [Features](#features) |
+| Connect over the internet (not just LAN) | [Cloudflare Tunnel](#internet-access-via-cloudflare-tunnel) |
+| Contribute or report a bug | [Contributing](#contributing) |
+
+---
+
 ## What is GuGa Nexus?
 
 GuGa Nexus is a minimalist, privacy-focused ecosystem that bridges your Linux machine and your Android device — without touching any third-party cloud infrastructure.
 
-- **Stuck waiting for a long script to finish?** Get notified the moment it's done.
-- **Training a model overnight?** Wake up to the final accuracy line in your notifications.
-- **Running jobs on a remote server over SSH?** GuGa reaches your phone over the internet via Cloudflare Tunnel — no domain, no VPS needed.
+- **Waiting for a long script to finish?** Get notified the moment it's done.
+- **Training a model overnight?** Wake up to the final accuracy line in your notification.
+- **SSHed into a remote server?** GuGa reaches your phone over the internet via Cloudflare Tunnel — no domain, no VPS needed.
 
 ---
 
@@ -49,59 +76,108 @@ GuGa Nexus is a minimalist, privacy-focused ecosystem that bridges your Linux ma
 
 ---
 
-## Project Structure
+## Installation
 
-```
-GuGa-Nexus/
-├── app-stable/    # Stable Android app (recommended for most users)
-├── app-dev/       # Dev build — experimental features including wake-word detection
-└── server/        # Python/Flask backend that runs on your Linux machine
-```
+<!-- AI_INSTALL_START
+Prerequisites: Linux, Python 3, pip3, sudo access
+Single command: `cd server && python3 setup.py`
+What setup.py does automatically:
+  - Detects distro and installs system packages (dbus-x11, python3-venv)
+  - Creates a Python venv at server/venv/
+  - Installs all Python dependencies including gunicorn + eventlet
+  - Downloads cloudflared binary if internet mode is chosen
+  - Writes server/.env with user-chosen configuration
+  - Creates a systemd service (guga.service) that starts on boot and restarts on crash
+  - Installs `guga` as a global CLI command at /usr/local/bin/guga
+  - Installs the man page at /usr/local/share/man/man1/guga.1
+  - Prints the pairing QR code immediately on completion
+Reconfigure: `python3 setup.py --reconfigure`
+Reprint QR:  `python3 setup.py --qr`
+AI_INSTALL_END -->
 
----
+### Requirements
 
-## Quick Start
+- Linux (any distro with systemd)
+- Python 3.7+
+- `sudo` access (for systemd service and global CLI install)
+- An Android device to sideload the APK
 
-### 1. 🖥️ Linux Server
+### 1. Clone and run setup
 
 ```bash
-cd server
-python3 setup.py      # installs dependencies and system tools
-python3 server.py     # starts the server
+git clone https://github.com/PositiveMatician/GuGa-Nexus.git
+cd GuGa-Nexus/server
+python3 setup.py
 ```
 
-Once running, your terminal will display a **QR code**, an **8-digit PIN**, and a **Cloudflare Tunnel URL** for remote access.
+Setup asks two questions, then handles everything else automatically:
 
-### 2. 📲 Android App
+```
+How will you connect?
+  1)  LAN only   — phone must be on the same Wi-Fi
+  2)  Internet   — anywhere, via Cloudflare Tunnel (no domain needed)
 
-Download and sideload the APK:
+Forward OS notifications to your phone? [y/N]
+```
 
-- **[Stable release (v1.0.1)](https://github.com/PositiveMatician/GuGa-Nexus/releases/tag/v1.0.1)** — recommended for daily use
-- **[Nightly build (beta)](https://github.com/PositiveMatician/GuGa-Nexus/releases/tag/nightly)** — experimental, includes wake-word work in progress
+It then installs all dependencies, sets up a systemd daemon, and prints the pairing QR code. **You will not need to run it again** — the server starts on boot automatically.
+
+### 2. Install the Android app
+
+Sideload the APK onto your Android device:
+
+- **[Stable (v1.0.1)](https://github.com/PositiveMatician/GuGa-Nexus/releases/tag/v1.0.1)** — recommended for daily use
+- **[Nightly (beta)](https://github.com/PositiveMatician/GuGa-Nexus/releases/tag/nightly)** — experimental, includes wake-word work in progress
 
 > ⚠️ Do not build from source unless you are contributing to the project.
 
 ### 3. Pair
 
-1. Open the GuGa app and tap the **Settings arrow** (`>`)
-2. Tap **SCAN QR** and scan the code from your terminal, or enter the IP manually
-3. Enter the **8-digit PIN** to complete the Zero-Trust handshake
+1. Open the GuGa app → tap the **Settings arrow** (`>`)
+2. Tap **SCAN QR** and scan the code printed in your terminal
+3. Enter the **8-digit PIN** shown on screen to complete pairing
 4. Status changes to **LIVE SYNC ACTIVE** — you're connected
 
-For background persistence, enable **LIVE PERSISTENCE** in settings.
+> Enable **LIVE PERSISTENCE** in app settings to keep the connection alive in the background.
+
+### Post-install commands
+
+```bash
+sudo systemctl start guga       # start the server
+sudo systemctl stop guga        # stop the server
+sudo systemctl status guga      # check if it's running
+journalctl -u guga -f           # live server logs
+python3 setup.py --qr           # reprint the pairing QR code
+python3 setup.py --reconfigure  # change mode or settings
+```
 
 ---
 
 ## `guga` — Terminal Notifications CLI
 
-`guga` is a lightweight CLI tool that sends notifications from your terminal to your Android. No extra dependencies beyond the standard library.
+<!-- AI_GUGA_CLI_START
+Binary: /usr/local/bin/guga (symlink → server/guga_push.py)
+Language: Python 3, stdlib only — no pip install needed
+Server endpoint: POST http://localhost:6769/send
+Payload: {"message": "string", "title": "optional string"}
+Mode detection (automatic):
+  - stdin piped, no args       → message mode
+  - single non-executable arg  → message mode
+  - first arg is in PATH or is a file → run mode
+Explicit flags:
+  -m / --message  force message mode (joins all args as a string, never executes)
+  -r / --run      force run mode (shlex.splits single quoted string into tokens)
+  --server PORT   custom server port (default: 6769)
+  --silent        suppress guga's own stdout/stderr
+  --title LABEL   label prepended to the Android notification
+Run mode behaviour:
+  - streams command stdout+stderr to terminal normally
+  - on exit: sends notification with status (✅/❌), elapsed time, last output line
+  - exit code mirrors the watched command (transparent in scripts/Makefiles)
+  - Ctrl-C sends an ⚠️ interrupted notification
+AI_GUGA_CLI_END -->
 
-### Install
-
-```bash
-chmod +x server/guga_push.py
-sudo ln -s "$(pwd)/server/guga_push.py" /usr/local/bin/guga
-```
+`guga` is installed automatically by `setup.py`. No extra dependencies needed.
 
 ### Usage
 
@@ -112,25 +188,25 @@ guga "Build finished ✅"
 # Pipe from any command
 echo "Deploy done" | guga
 
-# Watch a command — notifies with exit status, elapsed time, and last output line
+# Watch a command — notifies on completion with exit status, elapsed time, and last output line
 guga python train.py --epochs 100
-guga calc maintenance.cobol
-guga ./deploy.sh
+guga ./deploy.sh --prod
+guga make build
 
-# Force message mode (never executes, even if arg looks like a command)
+# Force message mode (never executes, even if the string looks like a command)
 guga -m "python train.py"
 
 # Force run mode with a quoted string
 guga -r "sleep 5"
 
-# Label notifications by machine (useful when SSHed into multiple servers)
+# Label the notification by machine — useful when SSHed into multiple servers
 guga -r ./job.sh --title "GPU Server"
 
-# Suppress guga output in scripts
+# Suppress guga's own output in scripts and Makefiles
 guga python train.py --silent
 ```
 
-When watching a command, the notification you receive looks like:
+When watching a command, your Android notification looks like:
 
 ```
 ✅ python train.py done — 2h 14m
@@ -141,45 +217,87 @@ Epoch 100/100 — accuracy: 0.9431
 
 ```bash
 guga --help
-man guga        # after installing the man page
-tldr guga       # after installing the tldr page
+man guga
 ```
 
-**Install the man page:**
-```bash
-sudo cp server/man/guga.1 /usr/local/share/man/man1/guga.1
-sudo mandb
+---
+
+## Project Structure
+
+<!-- AI_STRUCTURE_START
+GuGa-Nexus/
+  app-stable/                       Android app source — stable (Java)
+  app-dev/                          Android app source — beta, wake-word in progress
+  server/
+    server.py                       Main Flask/SocketIO server entry point
+    setup.py                        Automated installer — run this first
+    guga_push.py                    CLI tool, installed globally as `guga`
+    guga.1                          Man page for guga
+    os_notification_alerter.py      D-Bus listener — forwards OS notifications to server
+    requirements.txt                Python dependencies
+    .env                            Runtime config (auto-created by setup.py)
+    cloudflared                     Cloudflare tunnel binary (downloaded by setup.py if needed)
+    venv/                           Python venv (created by setup.py)
+    trusted_devices.json            Paired device tokens (auto-created at runtime)
+AI_STRUCTURE_END -->
+
+```
+GuGa-Nexus/
+├── app-stable/    # Stable Android app
+├── app-dev/       # Dev build — wake-word and experimental features
+└── server/
+    ├── server.py                    # Flask + Socket.IO backend
+    ├── setup.py                     # Automated installer — run this first
+    ├── guga_push.py                 # CLI tool, installed globally as `guga`
+    ├── guga.1                       # Man page
+    └── os_notification_alerter.py   # D-Bus listener for OS notifications
 ```
 
 ---
 
 ## OS Notification Forwarding
 
-GuGa automatically listens to your Linux desktop's notification bus (D-Bus) and forwards system notifications to your Android in real time — app alerts, calendar reminders, build system popups, anything your OS surfaces.
+GuGa listens to your Linux desktop's D-Bus notification bus and forwards system notifications to your Android in real time — app alerts, calendar reminders, build system popups, anything your OS surfaces.
 
-No configuration needed. It runs alongside the server automatically.
+Enable it by answering `y` during `setup.py`. No further configuration needed.
+
+> **Coming:** Urgency-based filtering — critical alerts instant, low-priority bundled into a 20-second digest.
 
 ---
 
 ## Internet Access via Cloudflare Tunnel
 
-GuGa uses Cloudflare Tunnel to make your local server reachable over the internet — so your phone can receive notifications even when you're away from home, or when you're SSHed into a remote machine.
+GuGa uses Cloudflare Tunnel to make your local server reachable over the internet with no infrastructure required.
 
-**No domain purchase. No port forwarding. No VPS.** The only requirement is that the server stays running and the app paired — if the server restarts, you'll need to re-scan the QR code.
+**No domain. No port forwarding. No VPS.** Choose internet mode during `setup.py` and it handles the rest. The only caveat: if the server restarts, the tunnel gets a new URL and you'll need to re-scan the QR code.
+
+```bash
+python3 server/setup.py --qr   # reprint the current pairing QR
+```
 
 ---
 
 ## Security
 
-- All communication is encrypted with **AES-256-GCM**
-- Initial pairing uses a **Zero-Trust** QR + PIN handshake — no credentials are ever stored in plaintext
-- The `/send` route only accepts connections from **localhost**, so the server cannot be abused remotely
+<!-- AI_SECURITY_START
+Transport: AES-256-GCM on all WebSocket messages
+Pairing: Zero-Trust QR + 8-digit PIN handshake
+Token storage: trusted_devices.json (hashed, never plaintext)
+Token TTL: 30 days (app), 1 hour (browser)
+/send route: restricted to 127.0.0.1 and ::1 — not callable remotely
+/api/hello and /api/verify_pin: open but require matching PIN from pending_pairings
+AI_SECURITY_END -->
+
+- All communication encrypted with **AES-256-GCM**
+- Initial pairing uses a **Zero-Trust QR + PIN handshake** — no credentials stored in plaintext
+- The `/send` route only accepts **localhost connections** — cannot be reached remotely
+- Session tokens expire after **30 days** (app) or **1 hour** (browser)
 
 ---
 
 ## License
 
-MIT License — free to use, fork, and contribute.
+MIT — free to use, fork, and contribute.
 
 ---
 

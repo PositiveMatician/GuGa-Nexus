@@ -1,3 +1,6 @@
+import eventlet
+eventlet.monkey_patch()
+
 import atexit
 import base64
 import json
@@ -112,13 +115,13 @@ def generate_qr(data: str, inverted: bool = False, show_gui: bool = False) -> No
 
 
 # ------------------------------------------------------------
-# Flask App & SocketIO  (threading mode — no monkey patching)
+# Flask App & SocketIO
 # ------------------------------------------------------------
 app = Flask(__name__)
 socketio = SocketIO(
     app,
     cors_allowed_origins=CORS_ALLOWED_ORIGINS,
-    async_mode="threading",
+    async_mode="eventlet",
 )
 
 connected_clients: dict[str, str] = {}  # session_id -> device_id
@@ -185,15 +188,12 @@ def is_device_trusted(device_id: str) -> bool:
     if isinstance(entry, str):
         log_debug(f"migrating legacy entry for {device_id}")
         token = entry
-        # Auto-detect type from prefix
         client_type = "browser" if device_id.startswith("browser-") else "app"
-        # Default to 30 days for migrated entries
         expires_at = time.time() + (30 * 24 * 3600)
         save_trusted_device(device_id, token, client_type, expires_at)
         return True
 
     if time.time() >= entry.get("expires_at", 0):
-        # Expired, remove entry
         log_event("⚠", YELLOW, "device expired", device_id)
         del trusted[device_id]
         with open(TRUSTED_DEVICES_FILE, "w") as f:
@@ -675,12 +675,7 @@ def send_to_all():
 
 @app.route("/send/<session_id>", methods=["POST"])
 def send_to_one(session_id: str):
-    """Send a message to ONE specific client by session ID.
-
-    curl -X POST http://localhost:6769/send/<sid> \\
-         -H "Content-Type: application/json" \\
-         -d '{"message": "Hey just you!"}'
-    """
+    """Send a message to ONE specific client by session ID."""
     data = request.get_json(silent=True) or {}
     message = data.get("message", "").strip()
     if not message:
@@ -780,9 +775,7 @@ def handle_connect():
     token = request.args.get('token')
     if not device_id or not token or not is_device_trusted(device_id):
         log_event("✗", RED, "connection rejected", f"device_id={device_id}")
-        # Disconnect the client immediately
         return False
-    # Verify token matches stored token
     trusted = load_trusted_devices()
     entry = trusted.get(device_id, {})
     if entry.get('token') != token:
@@ -844,15 +837,13 @@ def process_command(command: str) -> str:
 
 
 def notify_all_clients(message: str, title: str = None) -> None:
-    """Emit guga_response to all connected clients (encrypted for apps, plain for browsers)."""
+    """Emit guga_response to all connected clients."""
     trusted = load_trusted_devices()
     payload_data = {"message": message}
     if title:
         payload_data["title"] = title
-        
     payload_json = json.dumps(payload_data)
     
-    # Iterate over active sessions
     for sid, device_id in list(connected_clients.items()):
         try:
             device_info = trusted.get(device_id, {})
@@ -860,10 +851,8 @@ def notify_all_clients(message: str, title: str = None) -> None:
             token = device_info.get("token")
 
             if client_type == "browser" or device_id.startswith("browser-") or not token:
-                log_debug(f"sending plain to {sid} ({device_id})")
                 socketio.emit("guga_response", payload_data, room=sid)
             else:
-                log_debug(f"sending encrypted to {sid} ({device_id})")
                 encrypted = CryptoHelper.encrypt(payload_json, token)
                 socketio.emit("guga_response", encrypted, room=sid)
         except Exception as e:
@@ -871,7 +860,7 @@ def notify_all_clients(message: str, title: str = None) -> None:
 
 
 def send_private_message(session_id: str, message: str) -> bool:
-    """Send a private message to a specific session, with encryption if applicable."""
+    """Send a private message to a specific session."""
     if session_id not in connected_clients:
         return False
         
@@ -908,14 +897,11 @@ def get_local_ip() -> str:
 
 def start_cloudflare_tunnel(port: int) -> str:
     """Start an ephemeral Cloudflare tunnel and capture the URL."""
-    log(f"  {DIM}spawning Cloudflare tunnel…{RESET}")
+    log_event("⚙", CYAN, f"spawning tunnel on port {port}...")
     
-    # Determine local binary path
     filename = "cloudflared.exe" if platform.system().lower() == "windows" else "./cloudflared"
-    # Ensure it's the one in the same dir as server.py
     cloudflare_cmd = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
     
-    # If not found locally, try global
     if not os.path.exists(cloudflare_cmd):
         cloudflare_cmd = "cloudflared"
 
@@ -924,7 +910,6 @@ def start_cloudflare_tunnel(port: int) -> str:
         stderr=subprocess.PIPE,
         text=True
     )
-    # Ensure the tunnel dies when the main process exits
     atexit.register(lambda: proc.terminate())
     
     url_pattern = re.compile(r"https://[-a-z0-9]+\.trycloudflare\.com")
@@ -938,24 +923,22 @@ def start_cloudflare_tunnel(port: int) -> str:
     return ""
 
 
-# ------------------------------------------------------------
-# Entry Point
-# ------------------------------------------------------------
-# ------------------------------------------------------------
-# OS Notification Alerter Lifecycle
-# ------------------------------------------------------------
+# ── Background Process Lifecycle ──────────────────────────────────────────
 alerter_proc = None
+tunnel_url = None
 
 def start_alerter():
     global alerter_proc
     val = os.getenv("ENABLE_OS_NOTIFICATIONS", "False")
     log_debug(f"ENABLE_OS_NOTIFICATIONS={val!r}")
     if val.lower() == "true":
+        # Use sys.executable if venv python not found
         venv_python = os.path.join(os.path.dirname(os.path.abspath(__file__)), "venv", "bin", "python3")
         if not os.path.exists(venv_python):
-            venv_python = "python3"
+            venv_python = sys.executable
         alerter_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "os_notification_alerter.py")
         try:
+            log_event("⚙", CYAN, "starting OS alerter…")
             alerter_proc = subprocess.Popen([venv_python, alerter_script])
         except Exception as e:
             log_event("✗", RED, "OS notif alerter failed to start", str(e))
@@ -971,24 +954,37 @@ def stop_alerter():
 
 atexit.register(stop_alerter)
 
-if __name__ == "__main__":
-    os_notif_enabled = os.getenv("ENABLE_OS_NOTIFICATIONS", "False").lower() == "true"
+# ── Global Initialization (Runs even under Gunicorn) ────────────────────────
+def initialize_system():
+    global tunnel_url
+    
+    # 1. Start Alerter
     start_alerter()
 
+    # 2. Check for Public Mode / Cloudflare Tunnel
     mode = os.getenv("MODE", "lan").lower()
     port = int(os.getenv("PORT", 6769))
-
+    
     if mode == "public":
-        public_url = start_cloudflare_tunnel(port)
-        if public_url:
-            base_url = public_url
+        tunnel_url = start_cloudflare_tunnel(port)
+        if tunnel_url:
+            log_event("✓", GREEN, "tunnel online", tunnel_url)
+            # EXPLICIT LOG FOR RE-RUN TOOLS:
+            print(f"\n  {BOLD}{'─' * 40}{RESET}")
+            print(f"  {BOLD}  TUNNEL URL: {tunnel_url}{RESET}")
+            print(f"  {BOLD}{'─' * 40}{RESET}\n")
         else:
-            log_event("⚠", YELLOW, "Cloudflare tunnel failed — falling back to LAN")
-            local_ip = get_local_ip()
-            base_url = f"http://{local_ip}:{port}"
-    else:
-        local_ip = get_local_ip()
-        base_url = f"http://{local_ip}:{port}"
+            log_event("⚠", YELLOW, "tunnel failed", "falling back to LAN")
+
+# Only run initialization ONCE at module import time
+if not os.environ.get("GUGA_INITIALIZED"):
+    os.environ["GUGA_INITIALIZED"] = "true"
+    initialize_system()
+
+if __name__ == "__main__":
+    os_notif_enabled = os.getenv("ENABLE_OS_NOTIFICATIONS", "False").lower() == "true"
+    mode = os.getenv("MODE", "lan").lower()
+    port = int(os.getenv("PORT", 6769))
 
     # ── Startup banner ────────────────────────────────────────────────────────
     width = 40
@@ -997,7 +993,9 @@ if __name__ == "__main__":
     print(f"  {BOLD}  GuGa Nexus{RESET}  {DIM}backend server{RESET}")
     print(f"  {BOLD}{'─' * width}{RESET}")
     print()
-    print(f"  {DIM}address{RESET}   {BOLD}{base_url}{RESET}")
+    
+    final_url = tunnel_url if tunnel_url else f"http://{get_local_ip()}:{port}"
+    print(f"  {DIM}address{RESET}   {BOLD}{final_url}{RESET}")
     print(f"  {DIM}mode{RESET}      {BOLD}{mode.upper()}{RESET}")
     os_status = f"{GREEN}enabled{RESET}" if os_notif_enabled else f"{DIM}disabled{RESET}"
     print(f"  {DIM}os notif{RESET}  {os_status}")
@@ -1012,9 +1010,9 @@ if __name__ == "__main__":
     print()
 
     # ── QR code ───────────────────────────────────────────────────────────────
-    generate_qr(base_url, inverted=QR_INVERTED, show_gui=QR_SHOW_GUI)
+    generate_qr(final_url, inverted=QR_INVERTED, show_gui=QR_SHOW_GUI)
 
-    print(f"  {DIM}manual address →{RESET}  {BOLD}{base_url}{RESET}")
+    print(f"  {DIM}manual address →{RESET}  {BOLD}{final_url}{RESET}")
     print(f"  {DIM}press Ctrl+C to stop{RESET}")
     print()
 
