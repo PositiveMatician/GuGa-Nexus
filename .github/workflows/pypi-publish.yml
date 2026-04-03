@@ -1,4 +1,4 @@
-name: Publish Python 🐍 distribution 📦 to PyPI
+name: Build and Publish GuGa (PyPI + Android)
 
 on:
   release:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  build-and-publish:
+  build-and-publish-pypi:
     name: Build and publish Python 🐍 distribution 📦 to PyPI
     runs-on: ubuntu-latest
     permissions:
@@ -35,3 +35,40 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: server/dist/
+
+  build-and-upload-android:
+    name: Build Android APK 📱
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # IMPORTANT: Required to upload files to GitHub Releases!
+      
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+        working-directory: app-stable
+
+      - name: Build APK
+        # We build assembleDebug here so it is natively signed with the default debug key 
+        # and ready for immediate sideloading without throwing Android "unsigned" errors!
+        run: ./gradlew assembleDebug
+        working-directory: app-stable
+
+      - name: Rename APK
+        run: mv app-stable/app/build/outputs/apk/debug/app-debug.apk app-stable/app/build/outputs/apk/debug/guga-stable.apk
+        
+      - name: Upload APK to GitHub Release
+        # Only explicitly upload it to the release if a release triggered this run
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app-stable/app/build/outputs/apk/debug/guga-stable.apk

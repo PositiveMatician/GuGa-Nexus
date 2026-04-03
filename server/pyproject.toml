@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "GuGa"
-version = "1.0.3"
+version = "1.0.5"
 description = "Linux to Android notification bridge."
 readme = "README.md"
 requires-python = ">=3.7"
@@ -21,3 +21,7 @@ dependencies = [
 
 [project.scripts]
 guga = "guga.cli:main"
+
+[project.urls]
+"Homepage" = "https://github.com/PositiveMatician/GuGa-Nexus"
+"Repository" = "https://github.com/PositiveMatician/GuGa-Nexus"
