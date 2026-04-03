@@ -77,16 +77,32 @@ The server and its adapters read configuration from `server/.env`.
 | Key | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `PORT` | `int` | `6769` | The port the Flask/SocketIO server listens on. |
-| `MODE` | `str` | `lan` | `lan` for local network only, or `public` to spawn a Cloudflare Tunnel. |
-| `ENABLE_OS_NOTIFICATIONS` | `bool` | `True` | Whether `server.py` should automatically spawn the Alerter subprocess. |
-| `ALERTER_SERVER_URL` | `url` | `http://localhost:6769/send` | The endpoint the Alerter targets. Useful if running the server on a custom port. |
+| `MODE` | `str` | `public` | `lan` for local network only, or `public` to spawn a Cloudflare Tunnel. |
+| `ENABLE_OS_NOTIFICATIONS` | `bool` | `False` | Whether `server.py` should automatically spawn the Alerter subprocess. |
+| `ALERTER_SERVER_URL` | `url` | `http://localhost:6769/send` | The endpoint the Alerter targets. |
+| `GUGA_VERBOSE` | `bool` | `false` | Enable detailed debug logging (encryption/decryption traces). |
 
 ---
 
 ## 🛠️ Development & Maintenance
 
-### Starting in Debug Mode
-To see raw SocketIO traffic and detailed encryption logs, you can set `debug=True` in the `socketio.run` call at the bottom of `server.py`.
+### 🔍 Logging & Debugging
+The server uses a structured event logging system. To see more detailed information, including raw SocketIO traffic and encryption/decryption traces, set the `GUGA_VERBOSE` environment variable:
+
+```bash
+GUGA_VERBOSE=true python server.py
+```
+
+#### Event Symbols
+| Symbol | Meaning |
+| :--- | :--- |
+| `✓` | Success (e.g., device paired) |
+| `✗` | Error / Failure (e.g., PIN rejected, decrypt failed) |
+| `↑` | Connected (New session established) |
+| `↓` | Disconnected (Session ended) |
+| `→` | Command (Received phrase to process) |
+| `↩` | Reconnected (Known device identified) |
+| `⚠` | Warning (e.g., token expired, tunnel fallback) |
 
 ### Resetting All Trust
 To revoke access for all devices, simply delete `trusted_devices.json` and restart the server.

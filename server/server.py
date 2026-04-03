@@ -36,6 +36,51 @@ PORT = 6769
 QR_INVERTED = True
 QR_SHOW_GUI = False
 CORS_ALLOWED_ORIGINS = "*"
+VERBOSE = os.getenv("GUGA_VERBOSE", "false").lower() == "true"
+
+# ── Silence werkzeug's per-request HTTP logs ──────────────────────────────────
+import logging
+logging.getLogger("werkzeug").setLevel(logging.ERROR)
+
+# ── Logging helpers ───────────────────────────────────────────────────────────
+RESET  = "\033[0m"
+BOLD   = "\033[1m"
+DIM    = "\033[2m"
+GREEN  = "\033[32m"
+YELLOW = "\033[33m"
+RED    = "\033[31m"
+CYAN   = "\033[36m"
+
+def log(msg: str) -> None:
+    """Standard info log — always shown."""
+    print(f"  {msg}")
+
+def log_event(symbol: str, color: str, label: str, detail: str = "") -> None:
+    """Structured event line: symbol  LABEL  detail"""
+    detail_str = f"  {DIM}{detail}{RESET}" if detail else ""
+    print(f"  {color}{symbol}{RESET}  {BOLD}{label}{RESET}{detail_str}")
+
+def log_debug(msg: str) -> None:
+    """Only shown when GUGA_VERBOSE=true."""
+    if VERBOSE:
+        print(f"  {DIM}[debug] {msg}{RESET}")
+
+def print_pin_box(pin: str, label: str = "PAIRING PIN") -> None:
+    """Print a highly visible bordered box around the PIN."""
+    width = 30
+    border = "─" * width
+    pin_spaced = "  ".join(pin)
+    pad = (width - len(pin_spaced)) // 2
+    pin_line = " " * pad + pin_spaced
+
+    print()
+    print(f"  {YELLOW}┌{border}┐{RESET}")
+    print(f"  {YELLOW}│{RESET}  {DIM}{label}{RESET}{' ' * (width - len(label) - 2)}{YELLOW}│{RESET}")
+    print(f"  {YELLOW}│{RESET}{' ' * width}{YELLOW}│{RESET}")
+    print(f"  {YELLOW}│{RESET}{BOLD}{GREEN}{pin_line}{' ' * (width - len(pin_line))}{RESET}{YELLOW}│{RESET}")
+    print(f"  {YELLOW}│{RESET}{' ' * width}{YELLOW}│{RESET}")
+    print(f"  {YELLOW}└{border}┘{RESET}")
+    print()
 
 # ------------------------------------------------------------
 # QR Code Helper
@@ -57,12 +102,13 @@ def generate_qr(data: str, inverted: bool = False, show_gui: bool = False) -> No
         except Exception as e:
             print(f"⚠ Could not open image viewer ({e}).", file=sys.stderr)
 
-    print("\n--- Scan this QR code with your phone ---")
+    print(f"\n  {'─' * 38}")
+    print(f"   Scan with GuGa app  ·  or enter address manually")
+    print(f"  {'─' * 38}\n")
     try:
         qr.print_ascii(invert=inverted)
-        print("(Inverted)" if inverted else "(Normal)")
     except Exception as e:
-        print(f"⚠ Failed to print ASCII QR: {e}", file=sys.stderr)
+        print(f"  ⚠ Could not render QR: {e}", file=sys.stderr)
 
 
 # ------------------------------------------------------------
@@ -86,28 +132,24 @@ TRUSTED_DEVICES_FILE = "trusted_devices.json"
 class CryptoHelper:
     @staticmethod
     def encrypt(plaintext_str: str, hex_token: str) -> dict:
-        print(f"[CRYPTO] Encrypting: '{plaintext_str}' with token: {hex_token[:8]}...")
+        log_debug(f"encrypting with token {hex_token[:8]}…")
         key = bytes.fromhex(hex_token)
         iv = os.urandom(12)
         aesgcm = AESGCM(key)
         ciphertext = aesgcm.encrypt(iv, plaintext_str.encode(), None)
-        res = {
+        return {
             "iv": base64.b64encode(iv).decode(),
             "ciphertext": base64.b64encode(ciphertext).decode(),
         }
-        print(f"[CRYPTO] Result: {res}")
-        return res
 
     @staticmethod
     def decrypt(encrypted_dict: dict, hex_token: str) -> str:
-        print(f"[CRYPTO] Decrypting payload with token: {hex_token[:8]}...")
+        log_debug(f"decrypting with token {hex_token[:8]}…")
         key = bytes.fromhex(hex_token)
         iv = base64.b64decode(encrypted_dict["iv"])
         ciphertext = base64.b64decode(encrypted_dict["ciphertext"])
         aesgcm = AESGCM(key)
-        plaintext = aesgcm.decrypt(iv, ciphertext, None).decode()
-        print(f"[CRYPTO] Decrypted: '{plaintext}'")
-        return plaintext
+        return aesgcm.decrypt(iv, ciphertext, None).decode()
 
 
 def load_trusted_devices() -> dict:
@@ -141,7 +183,7 @@ def is_device_trusted(device_id: str) -> bool:
 
     # Handle legacy string-only tokens (migrate them)
     if isinstance(entry, str):
-        print(f"[SECURITY] Migrating legacy entry for {device_id}")
+        log_debug(f"migrating legacy entry for {device_id}")
         token = entry
         # Auto-detect type from prefix
         client_type = "browser" if device_id.startswith("browser-") else "app"
@@ -152,7 +194,7 @@ def is_device_trusted(device_id: str) -> bool:
 
     if time.time() >= entry.get("expires_at", 0):
         # Expired, remove entry
-        print(f"[SECURITY] Entry for {device_id} EXPIRED. Removing.")
+        log_event("⚠", YELLOW, "device expired", device_id)
         del trusted[device_id]
         with open(TRUSTED_DEVICES_FILE, "w") as f:
             json.dump(trusted, f, indent=2)
@@ -663,17 +705,17 @@ def handle_command_api():
     if not token:
         return jsonify({"error": "No token for device"}), 403
     try:
-        print(f"[API] Received encrypted payload: {data}")
+        log_debug(f"received encrypted payload from {device_id}")
         phrase = CryptoHelper.decrypt(data, token)
         phrase_obj = json.loads(phrase)
         command = phrase_obj.get("phrase", "").strip()
     except Exception as e:
-        print(f"[CRYPTO] Decrypt failed: {e}")
+        log_event("✗", RED, "decrypt failed", str(e))
         return jsonify({"error": f"Decryption failed: {str(e)}"}), 400
 
     if not command:
         return jsonify({"error": "No command"}), 400
-    print(f"[API] Command from {device_id}: '{command}'")
+    log_event("→", CYAN, "command (HTTP)", f"{device_id}: {command!r}")
     response_msg = process_command(command)
     notify_all_clients(response_msg)
     return jsonify({"ok": True}), 200
@@ -690,16 +732,14 @@ def handle_hello():
     force_pair = data.get("force_pair", False)
 
     if is_device_trusted(device_id) and not force_pair:
-        print(f"[SECURITY] Known device reconnected: {device_id}")
+        log_event("↩", CYAN, "device reconnected", device_id)
         return jsonify({"status": "trusted"}), 200
 
     # New device or force_pair — generate PIN
     pin = "".join([str(secrets.randbelow(10)) for _ in range(8)])
     pending_pairings[device_id] = pin
-    if force_pair:
-        print(f"\n[SECURITY] Device {device_id} requested RE-PAIRING. PIN: {pin}\n")
-    else:
-        print(f"\n[SECURITY] New device detected! Pairing PIN: {pin}\n")
+    label = "RE-PAIRING PIN" if force_pair else "NEW DEVICE — PAIRING PIN"
+    print_pin_box(pin, label)
     return jsonify({"status": "pin_required"}), 200
 
 
@@ -713,7 +753,7 @@ def handle_verify_pin():
 
     expected_pin = pending_pairings.get(device_id)
     if not expected_pin or expected_pin != pin:
-        print(f"[SECURITY] PIN verification FAILED for device: {device_id}")
+        log_event("✗", RED, "PIN rejected", device_id)
         return jsonify({"error": "Invalid PIN"}), 401
 
     # Determine TTL based on client type
@@ -726,7 +766,7 @@ def handle_verify_pin():
     token = secrets.token_hex(32)  # 256-bit secure token
     save_trusted_device(device_id, token, client_type, expires_at)
     pending_pairings.pop(device_id, None)
-    print(f"[SECURITY] Device paired successfully: {device_id} (type={client_type}, expires_at={expires_at})")
+    log_event("✓", GREEN, "device paired", f"{device_id}  type={client_type}")
     return jsonify({"status": "paired", "token": token}), 200
 
 
@@ -739,24 +779,24 @@ def handle_connect():
     device_id = request.args.get('device_id')
     token = request.args.get('token')
     if not device_id or not token or not is_device_trusted(device_id):
-        print(f"[SECURITY] Socket connection rejected for device_id={device_id}")
+        log_event("✗", RED, "connection rejected", f"device_id={device_id}")
         # Disconnect the client immediately
         return False
     # Verify token matches stored token
     trusted = load_trusted_devices()
     entry = trusted.get(device_id, {})
     if entry.get('token') != token:
-        print(f"[SECURITY] Socket token mismatch for device_id={device_id}")
+        log_event("✗", RED, "token mismatch", f"device_id={device_id}")
         return False
     connected_clients[request.sid] = device_id
-    print(f"[+] Connected    sid={request.sid}  total={len(connected_clients)} (device_id={device_id})")
+    log_event("↑", GREEN, "connected", f"{device_id}  ({len(connected_clients)} online)")
     send_private_message(request.sid, "Connection established. GuGu online.")
 
 
 @socketio.on("disconnect")
 def handle_disconnect():
     connected_clients.pop(request.sid, None)
-    print(f"[-] Disconnected  sid={request.sid}  total={len(connected_clients)}")
+    log_event("↓", DIM, "disconnected", f"({len(connected_clients)} online)")
 
 
 @socketio.on("command")
@@ -766,34 +806,31 @@ def handle_command(data):
     trusted = load_trusted_devices()
 
     if device_id not in trusted:
-        print(f"[SECURITY] Untrusted command from device: {device_id}")
+        log_event("✗", RED, "untrusted command", device_id)
         emit("error", {"message": "Untrusted device"})
         return
 
     try:
-        print(f"[WS] Incoming payload: {data}")
+        log_debug(f"incoming WS payload from {device_id}")
         token = trusted[device_id].get("token")
         client_type = trusted[device_id].get("type", "app")
         
-        # Determine if we should attempt decryption
         if "iv" in data and "ciphertext" in data and token:
-            print(f"[CRYPTO] Decrypting payload with token: {token[:8]}...")
             phrase_json = CryptoHelper.decrypt(data, token)
             phrase_obj = json.loads(phrase_json)
             command = phrase_obj.get("phrase", "").strip()
         elif client_type == "browser":
-            # Allow plaintext for browsers
-            print(f"[SECURITY] Allowing plaintext command for browser device: {device_id}")
+            log_debug(f"plaintext command for browser device: {device_id}")
             command = data.get("phrase", "").strip()
         else:
             raise ValueError("Encrypted payload required for app clients")
             
     except Exception as e:
-        print(f"[CRYPTO] Process failed for {device_id}: {e}")
+        log_event("✗", RED, "processing error", str(e))
         emit("error", {"message": f"Processing error: {str(e)}"})
         return
 
-    print(f"[WS] Command from {device_id}: '{command}'")
+    log_event("→", CYAN, "command", f"{device_id}: {command!r}")
     response_text = process_command(command)
     notify_all_clients(response_text)
 
@@ -823,16 +860,14 @@ def notify_all_clients(message: str, title: str = None) -> None:
             token = device_info.get("token")
 
             if client_type == "browser" or device_id.startswith("browser-") or not token:
-                # Send plaintext for browsers
-                print(f"[WS] Sending PLAIN to {sid} ({device_id})")
+                log_debug(f"sending plain to {sid} ({device_id})")
                 socketio.emit("guga_response", payload_data, room=sid)
             else:
-                # Encrypt for apps
-                print(f"[WS] Sending ENCRYPTED to {sid} ({device_id})")
+                log_debug(f"sending encrypted to {sid} ({device_id})")
                 encrypted = CryptoHelper.encrypt(payload_json, token)
                 socketio.emit("guga_response", encrypted, room=sid)
         except Exception as e:
-            print(f"[CRYPTO] Failed to send to {sid} ({device_id}): {e}")
+            log_event("✗", RED, "send failed", f"{sid} ({device_id}): {e}")
 
 
 def send_private_message(session_id: str, message: str) -> bool:
@@ -855,7 +890,7 @@ def send_private_message(session_id: str, message: str) -> bool:
             socketio.emit("guga_response", encrypted, room=session_id)
         return True
     except Exception as e:
-        print(f"[CRYPTO] Private send failed for {session_id}: {e}")
+        log_event("✗", RED, "private send failed", f"{session_id}: {e}")
         return False
 
 
@@ -873,7 +908,7 @@ def get_local_ip() -> str:
 
 def start_cloudflare_tunnel(port: int) -> str:
     """Start an ephemeral Cloudflare tunnel and capture the URL."""
-    print(f"[NETWORK] Spawning Cloudflare Tunnel for port {port}...")
+    log(f"  {DIM}spawning Cloudflare tunnel…{RESET}")
     
     # Determine local binary path
     filename = "cloudflared.exe" if platform.system().lower() == "windows" else "./cloudflared"
@@ -914,26 +949,20 @@ alerter_proc = None
 def start_alerter():
     global alerter_proc
     val = os.getenv("ENABLE_OS_NOTIFICATIONS", "False")
-    print(f"[DEBUG] ENABLE_OS_NOTIFICATIONS value: '{val}'")
+    log_debug(f"ENABLE_OS_NOTIFICATIONS={val!r}")
     if val.lower() == "true":
-        print("[OS ADAPTER] Starting OS Notification Alerter...")
-        # Use the local venv python if available
         venv_python = os.path.join(os.path.dirname(os.path.abspath(__file__)), "venv", "bin", "python3")
         if not os.path.exists(venv_python):
-            venv_python = "python3" # Fallback
-            
+            venv_python = "python3"
         alerter_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "os_notification_alerter.py")
         try:
-            # We use a new session to ensure it doesn't immediately die if the shell is closed, 
-            # though here it's managed by the server proc.
             alerter_proc = subprocess.Popen([venv_python, alerter_script])
         except Exception as e:
-            print(f"[OS ADAPTER] Failed to start alerter binary: {e}")
+            log_event("✗", RED, "OS notif alerter failed to start", str(e))
 
 def stop_alerter():
     global alerter_proc
     if alerter_proc:
-        print("[OS ADAPTER] Stopping OS Notification Alerter...")
         alerter_proc.terminate()
         try:
             alerter_proc.wait(timeout=5)
@@ -943,35 +972,50 @@ def stop_alerter():
 atexit.register(stop_alerter)
 
 if __name__ == "__main__":
+    os_notif_enabled = os.getenv("ENABLE_OS_NOTIFICATIONS", "False").lower() == "true"
     start_alerter()
+
     mode = os.getenv("MODE", "lan").lower()
     port = int(os.getenv("PORT", 6769))
-    
+
     if mode == "public":
         public_url = start_cloudflare_tunnel(port)
         if public_url:
             base_url = public_url
-            print(f"\n[NETWORK] Cloudflare Tunnel Active: {base_url}\n")
         else:
-            print("\n[ERROR] Failed to start Cloudflare Tunnel. Falling back to LAN.\n")
+            log_event("⚠", YELLOW, "Cloudflare tunnel failed — falling back to LAN")
             local_ip = get_local_ip()
             base_url = f"http://{local_ip}:{port}"
     else:
         local_ip = get_local_ip()
         base_url = f"http://{local_ip}:{port}"
 
-    print(f"🚀 GuGa Backend — {base_url}\n")
-    print(f"  GET  /ping                — health check")
-    print(f"  GET  /clients             — list connected session IDs")
-    print(f"  POST /send                — broadcast to ALL clients")
-    print(f"  POST /send/<session_id>   — message ONE client")
-    print(f"  POST /api/command         — HTTP fallback command")
-    print(f"  POST /api/hello           — device handshake")
-    print(f"  POST /api/verify_pin      — PIN verification\n")
+    # ── Startup banner ────────────────────────────────────────────────────────
+    width = 40
+    print()
+    print(f"  {BOLD}{'─' * width}{RESET}")
+    print(f"  {BOLD}  GuGa Nexus{RESET}  {DIM}backend server{RESET}")
+    print(f"  {BOLD}{'─' * width}{RESET}")
+    print()
+    print(f"  {DIM}address{RESET}   {BOLD}{base_url}{RESET}")
+    print(f"  {DIM}mode{RESET}      {BOLD}{mode.upper()}{RESET}")
+    os_status = f"{GREEN}enabled{RESET}" if os_notif_enabled else f"{DIM}disabled{RESET}"
+    print(f"  {DIM}os notif{RESET}  {os_status}")
+    print()
+    print(f"  {DIM}routes{RESET}")
+    print(f"    {DIM}GET{RESET}   /ping               health check")
+    print(f"    {DIM}GET{RESET}   /clients            list connected devices")
+    print(f"    {DIM}POST{RESET}  /send               broadcast to all  {DIM}(localhost only){RESET}")
+    print(f"    {DIM}POST{RESET}  /send/<session_id>  message one device")
+    print()
+    print(f"  {BOLD}{'─' * width}{RESET}")
+    print()
 
+    # ── QR code ───────────────────────────────────────────────────────────────
     generate_qr(base_url, inverted=QR_INVERTED, show_gui=QR_SHOW_GUI)
 
-    print(f"\n📱 Manual address: {base_url}")
-    print("   Press Ctrl+C to stop.\n")
+    print(f"  {DIM}manual address →{RESET}  {BOLD}{base_url}{RESET}")
+    print(f"  {DIM}press Ctrl+C to stop{RESET}")
+    print()
 
     socketio.run(app, host="0.0.0.0", port=port, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)

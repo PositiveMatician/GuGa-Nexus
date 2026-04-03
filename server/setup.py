@@ -179,13 +179,49 @@ def setup_guga_tool():
         print(f"To do this manually, run: sudo ln -sf {script_path} {link_path}")
 
 def ensure_env_exists():
-    env_file = ".env"
+    """Ensure the .env file exists and contains all required variables."""
+    env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    
+    # Define the 'right' defaults for the GuGa environment
+    defaults = {
+        "ENABLE_OS_NOTIFICATIONS": "False",
+        "MODE": "public",
+        "PORT": "6769",
+        "ALERTER_SERVER_URL": "http://localhost:6769/send"
+    }
+    
     if not os.path.exists(env_file):
         print("[SETUP] Creating default .env file...")
-        default_content = "ENABLE_OS_NOTIFICATIONS=True\nMODE=lan\nPORT=6769\n"
-        with open(env_file, "w") as f:
-            f.write(default_content)
-        print("[SETUP] .env file created.")
+        try:
+            with open(env_file, "w") as f:
+                for k, v in defaults.items():
+                    f.write(f"{k}={v}\n")
+            print("[SETUP] .env file created successfully.")
+        except Exception as e:
+            print(f"[ERROR] Failed to create .env file: {e}")
+    else:
+        # Check for missing keys in the existing .env
+        print(f"[SETUP] Checking existing .env for missing configuration...")
+        try:
+            with open(env_file, "r") as f:
+                lines = f.readlines()
+            
+            existing_content = "".join(lines)
+            current_keys = [line.split('=')[0].strip() for line in lines if '=' in line]
+            missing_keys = [k for k in defaults if k not in current_keys]
+            
+            if missing_keys:
+                print(f"[SETUP] Adding missing keys: {', '.join(missing_keys)}")
+                # Ensure the file ends with a newline before appending
+                with open(env_file, "a") as f:
+                    if not existing_content.endswith("\n") and existing_content != "":
+                        f.write("\n")
+                    for k in missing_keys:
+                        f.write(f"{k}={defaults[k]}\n")
+            else:
+                print("[SETUP] Existing .env is up to date.")
+        except Exception as e:
+            print(f"[WARNING] Could not audit .env file: {e}")
 
 if __name__ == "__main__":
     print("\n" + "="*40)
