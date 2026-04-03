@@ -363,6 +363,29 @@ def print_qr(mode: str):
         warn(f"Could not generate QR: {e}")
 
 
+def get_pin():
+    try:
+        import subprocess, re
+        log = subprocess.check_output(
+            ["journalctl", "-u", "guga", "-n", "300", "--no-pager"],
+            text=True, 
+            stderr=subprocess.DEVNULL
+        )
+        matches = re.findall(r"\[GUGA_PIN\]\s*([0-9]+)", log)
+        return matches[-1] if matches else None
+    except Exception:
+        return None
+
+def show_pin():
+    step("Retrieving latest pairing PIN…")
+    pin = get_pin()
+    if not pin:
+        warn("No pending PIN found in recent logs.")
+    else:
+        pin_spaced = "  ".join(pin)
+        print(f"\n  {DIM}LATEST PAIRING PIN:{RESET}")
+        print(f"  {BOLD}{GREEN}{pin_spaced}{RESET}\n")
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Interactive questions
 # ─────────────────────────────────────────────────────────────────────────────
@@ -398,6 +421,11 @@ if __name__ == "__main__":
     # ── Questions (skip if --reconfigure not passed and .env already exists) ──
     env_path = os.path.join(HERE, ".env")
     qr_only  = "--qr" in sys.argv
+    pin_only = "--show-pin" in sys.argv
+
+    if pin_only:
+        show_pin()
+        sys.exit(0)
 
     if qr_only:
         # Just reprint the QR for an already-running server

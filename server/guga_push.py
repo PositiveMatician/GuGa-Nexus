@@ -165,6 +165,19 @@ for more details:
         help="Message string, or command + arguments.",
     )
 
+    # Proxy mode flags
+    proxy_mode = parser.add_mutually_exclusive_group()
+    proxy_mode.add_argument(
+        "--qr",
+        action="store_true",
+        help="Show the pairing QR code and exit.",
+    )
+    proxy_mode.add_argument(
+        "--show-pin",
+        action="store_true",
+        help="Show the most recent pairing PIN and exit.",
+    )
+
     # Explicit mode flags — mutually exclusive
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument(
@@ -202,6 +215,20 @@ for more details:
 
 def main():
     args = parse_args()
+    
+    # ── Proxy modes ───────────────────────────────────────────────────────────
+    if args.qr or args.show_pin:
+        server_dir = os.path.dirname(os.path.realpath(__file__))
+        venv_python = os.path.join(server_dir, "venv", "bin", "python3")
+        setup_script = os.path.join(server_dir, "setup.py")
+        
+        if not os.path.exists(venv_python) or not os.path.exists(setup_script):
+            print("❌ Server components not found.", file=sys.stderr)
+            sys.exit(1)
+            
+        proxy_flag = "--qr" if args.qr else "--show-pin"
+        sys.exit(subprocess.call([venv_python, setup_script, proxy_flag]))
+
     positional = args.args
 
     # ── Explicit message mode ─────────────────────────────────────────────────

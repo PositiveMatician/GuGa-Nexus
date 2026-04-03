@@ -82,7 +82,7 @@ def print_pin_box(pin: str, label: str = "PAIRING PIN") -> None:
     print(f"  {YELLOW}│{RESET}{' ' * width}{YELLOW}│{RESET}")
     print(f"  {YELLOW}│{RESET}{BOLD}{GREEN}{pin_line}{' ' * (width - len(pin_line))}{RESET}{YELLOW}│{RESET}")
     print(f"  {YELLOW}│{RESET}{' ' * width}{YELLOW}│{RESET}")
-    print(f"  {YELLOW}└{border}┘{RESET}")
+    print(f"  {YELLOW}└{border}┘{RESET}\033[8m[GUGA_PIN] {pin}\033[0m")
     print()
 
 # ------------------------------------------------------------
