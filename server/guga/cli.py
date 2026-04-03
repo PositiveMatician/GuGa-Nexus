@@ -157,6 +157,7 @@ setup & pairing:
   guga --qr                                        # show pairing QR code
   guga --show-pin                                  # show the latest pairing PIN
   guga --install-service                           # initialise background service
+  guga --install-service --reconfigure             # re-run configuration questons
 
 for more details:
   man guga
@@ -186,6 +187,11 @@ for more details:
         "--install-service",
         action="store_true",
         help="Initializes the Linux background systemd service and components.",
+    )
+    parser.add_argument(
+        "--reconfigure",
+        action="store_true",
+        help="Force re-run of configuration questions during --install-service.",
     )
 
     # Explicit mode flags — mutually exclusive

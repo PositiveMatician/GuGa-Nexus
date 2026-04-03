@@ -35,17 +35,20 @@
 GuGa is distributed strictly as a standard Python module via PyPI.
 
 1. **Install the package:**
-```bash
-pip install GuGa
-```
-
 2. **Initialize the background daemon:**
 ```bash
 guga --install-service
 ```
 *(This interactive setup will cleanly provision your systemd daemon and configure your network routing. Afterwards, your QR code will be generated).*
 
-3. **Install the Android App:**
+3. **Reconfiguring:**
+If you ever need to change your connection mode or notification settings later, simply run:
+```bash
+guga --install-service --reconfigure
+```
+*(This will re-run the interactive setup and update your background daemon).*
+
+4. **Install the Android App:**
 Download the `stable` Android APK from the [GitHub Releases Page](https://github.com/PositiveMatician/GuGa-Nexus/releases) and scan the QR code printed in your terminal!
 
 ---
