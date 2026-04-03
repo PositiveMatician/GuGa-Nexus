@@ -5,6 +5,11 @@ import aiohttp
 import os
 import platform
 import sys
+from dotenv import load_dotenv
+
+# Load .env file
+env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+load_dotenv(dotenv_path=env_path)
 
 # Enforce Linux-only restriction
 if platform.system() != "Linux":
@@ -15,7 +20,7 @@ if platform.system() != "Linux":
 # ------------------------------------------------------------
 # Configuration
 # ------------------------------------------------------------
-SERVER_URL = "http://localhost:6769/send"
+SERVER_URL = os.getenv("ALERTER_SERVER_URL", "http://localhost:6769/send")
 LOG_FILE = "alerter.log"
 
 # ------------------------------------------------------------

@@ -1,64 +1,58 @@
-# Android
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+# ==========================================
+# GuGa-Nexus Root GitIgnore
+# ==========================================
+
+# --- Android / App Projects ---
+# Standard Android build artifacts (covers app-stable/ app-dev/)
+**/build/
+**/out/
+**/captures/
+**/*.iml
+.gradle/
+.externalNativeBuild/
+.cxx/
 local.properties
 
-# Python artifacts
-__pycache__/
-*.py[cod]
-*$py.class
+# --- Python / GuGa Server ---
+# Global Python artifacts
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+**/*.egg-info/
+
+# Virtual Environments
 venv/
 ENV/
 env/
-.env
-.venv
+.venv/
 .python-version
-.pytest_cache/
-.ipynb_checkpoints/
-*.egg-info/
-dist/
-target/
 
-# GuGa Server Specifics
-/server/log
+# Server Secrets & Config
+/server/.env
 /server/trusted_devices.json
-/server/cloudflared
-/server/cloudflared.exe
-/server/nohup.out
-/server/*.out
-/*.log
-/*/log
-/server/*.log
+
+# Server Logs & Runtime Data
+/server/log/
+/server/log
 /server/alerter.log
 /server/raw_dbus.log
 /server/server.log
-
-# IDE and build artifacts
-/.idea/
-**/.idea/
-**/build/
-**/out/
-**/__pycache__/
-**/*.iml
+/server/nohup.out
+/server/*.out
 **/*.log
 
-# Project-specific directories
-/alpha-model/.idea/
-/beta-model/.idea/
-/alpha-model/build/
-/beta-model/build/
-/server/__pycache__/
-/server/log
-/.vscode/
+# Server Binaries
+/server/cloudflared
+/server/cloudflared.exe
+
+# --- Tooling & IDE ---
+.idea/
+**/.idea/
+.vscode/
+.DS_Store
+.pytest_cache/
+.ipynb_checkpoints/
+
+# --- Artifacts & Distributions ---
+dist/
+target/
