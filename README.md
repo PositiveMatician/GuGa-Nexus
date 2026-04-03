@@ -175,11 +175,37 @@ echo "Deploy done" | guga
 guga -m "python train.py"
 
 # Add a label (useful when SSHed into multiple machines)
-guga "Job done" --title "GPU Server"
+guga "Job done" --from "GPU Server"
 
 # Suppress guga's own output in scripts and Makefiles
 guga "Done" --silent
 ```
+
+---
+
+## ⚙️ Configuration & Polish
+
+GuGa is designed with a premium developer experience in mind.
+
+### 1. Persistent Configuration
+Power users can set default flags in `~/.config/guga/config` so they don't have to pass them every time.
+
+**Example `~/.config/guga/config`:**
+```ini
+[default]
+title = GPU Server
+port = 6769
+silent = false
+```
+
+### 2. Shell Completion
+GuGa supports full shell autocompletion for flags like `--install-service`, `--qr`, `--show-pin`, etc.
+
+To activate it for your user, run:
+```bash
+activate-global-python-argcomplete --user
+```
+Then restart your shell or run `eval "$(register-python-argcomplete guga)"`.
 
 ---
 
@@ -197,7 +223,7 @@ guga calc maintenance.cobol
 guga -r "sleep 5"
 
 # Watch + label + silent (clean Makefile usage)
-guga -r ./job.sh --title "GPU Server" --silent
+guga -r ./job.sh --from "GPU Server" --silent
 ```
 
 The notification you receive on your phone looks like:

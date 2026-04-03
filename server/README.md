@@ -79,8 +79,34 @@ guga python train_model.py --epochs 100
 guga make build-project
 
 # Add custom labels to your notifications for clarity
-guga -r ./deploy.sh --title "Production Server"
+guga -r ./deploy.sh --from "Production Server"
 ```
+
+---
+
+## ⚙️ Configuration & Polish
+
+GuGa is designed with a premium developer experience in mind.
+
+### 1. Persistent Configuration
+Power users can set default flags in `~/.config/guga/config` so they don't have to pass them every time.
+
+**Example `~/.config/guga/config`:**
+```ini
+[default]
+title = GPU Server
+port = 6769
+silent = false
+```
+
+### 2. Shell Completion
+GuGa supports full shell autocompletion for flags like `--install-service`, `--qr`, `--show-pin`, etc.
+
+To activate it for your user, run:
+```bash
+activate-global-python-argcomplete --user
+```
+Then restart your shell or run `eval "$(register-python-argcomplete guga)"`.
 
 ---
 

@@ -187,9 +187,16 @@ examples:
   guga -m "build done"                             # explicit: message
   guga -m "python train.py"                        # sends the literal string, does not run
   guga -r "sleep 5"                                # explicit: run (splits into tokens)
-  guga -r ./deploy.sh --title "Prod Server"        # explicit: run + title
+  guga -r ./deploy.sh --from "Prod Server"         # explicit: run + title alias
 
-  guga -r python train.py --silent --title "GPU"   # run silently, labelled notification
+  guga -r python train.py --silent -f "GPU"        # run silently, short title alias
+
+configuration:
+  ~/.config/guga/config                            # set default title, port, silent
+
+shell completion:
+  guga <tab>                                       # autocompletes all flags
+  (requires: `activate-global-python-argcomplete --user` or similar initialization)
 
 setup & pairing:
   guga --qr                                        # show pairing QR code
