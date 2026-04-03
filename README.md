@@ -232,6 +232,8 @@ The tunnel URL changes each time the service restarts. After a restart, run `gug
 guga --qr                             # Show the pairing QR code
 guga --show-pin                       # Show the secure Zero-Trust PIN
 guga --install-service --reconfigure  # Re-run the interactive setup
+guga --status                         # Show service status and connections
+guga --url                            # Show raw pairing URL (scriptable)
 guga --version                        # Show the current version
 guga --uninstall                      # Remove all GuGa system components
 

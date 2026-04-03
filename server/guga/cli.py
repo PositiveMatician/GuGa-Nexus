@@ -159,6 +159,8 @@ setup & pairing:
   guga --show-pin                                  # show the latest pairing PIN
   guga --install-service                           # initialise background service
   guga --install-service --reconfigure             # re-run configuration questions
+  guga --status                                    # show service status and connections
+  guga --url                                       # show raw pairing URL
   guga --version                                   # show current version
   guga --uninstall                                 # remove all GuGa system components
 
@@ -195,6 +197,16 @@ for more details:
         "--uninstall",
         action="store_true",
         help="Safely remove all GuGa system components (service, man pages, config).",
+    )
+    proxy_mode.add_argument(
+        "--status",
+        action="store_true",
+        help="Show the current service status and connected devices.",
+    )
+    proxy_mode.add_argument(
+        "--url",
+        action="store_true",
+        help="Output the raw pairing URL (scriptable).",
     )
     parser.add_argument(
         "--reconfigure",
@@ -247,10 +259,16 @@ def main():
     args = parse_args()
     
     # ── Proxy modes ───────────────────────────────────────────────────────────
-    if args.install_service or args.qr or args.show_pin or args.uninstall:
-        from guga.installer import run_system_installer, run_system_uninstaller
+    if args.install_service or args.qr or args.show_pin or args.uninstall or args.status or args.url:
+        from guga.installer import run_system_installer, run_system_uninstaller, run_status, run_url
         if args.uninstall:
             run_system_uninstaller()
+            return
+        if args.status:
+            run_status()
+            return
+        if args.url:
+            run_url()
             return
         run_system_installer(qr_only=args.qr, pin_only=args.show_pin, setup_only=args.install_service)
         return

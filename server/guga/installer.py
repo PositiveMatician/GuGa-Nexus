@@ -311,26 +311,40 @@ def get_cloudflare_url(timeout=15):
         
     return None
 
+def get_current_url():
+    """Determine the current pairing URL based on configuration."""
+    # Read mode from .env
+    env_path = os.path.join(CONFIG_DIR, ".env")
+    mode = "lan"
+    if os.path.exists(env_path):
+        with open(env_path, "r") as f:
+            for line in f:
+                if line.startswith("MODE="):
+                    mode = line.split("=", 1)[1].strip()
+                    break
+
+    if mode == "public":
+        return get_cloudflare_url()
+    else:
+        import socket
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                s.connect(("8.8.8.8", 80))
+                local_ip = s.getsockname()[0]
+            return f"http://{local_ip}:6769"
+        except Exception:
+            return "http://localhost:6769"
+
 def print_qr(mode: str):
     step("Generating pairing QR code…")
     print()
     try:
-        import socket, time
         import qrcode as qrc
+        url = get_current_url()
 
-        port = "6769"
-
-        if mode == "public":
-            url = get_cloudflare_url()
-
-            if not url:
-                warn("Tunnel URL not ready yet. Re-run: guga --qr")
-                return
-        else:
-            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-                s.connect(("8.8.8.8", 80))
-                local_ip = s.getsockname()[0]
-            url = f"http://{local_ip}:{port}"
+        if not url:
+            warn("Tunnel URL not ready yet or service is not running. Wait a moment and re-run: guga --qr")
+            return
 
         print(f"  {DIM}address →{RESET}  {BOLD}{url}{RESET}\n")
         qr = qrc.QRCode(version=None,
@@ -517,3 +531,59 @@ def run_system_uninstaller():
     print(f"  To completely remove the Python package, run:")
     print(f"  {BOLD}pip uninstall GuGa{RESET}")
     print()
+
+def run_status():
+    """Display a consolidated report of the GuGa service status."""
+    print()
+    print(f"  {BOLD}{'─' * 40}{RESET}")
+    print(f"  {BOLD}  GuGa Nexus  —  Status{RESET}")
+    print(f"  {BOLD}{'─' * 40}{RESET}")
+    print()
+
+    # 1. Service Status
+    is_active = False
+    try:
+        # Check if systemctl exists
+        if shutil.which("systemctl"):
+            result = subprocess.run(["systemctl", "is-active", "guga"], capture_output=True, text=True)
+            is_active = (result.stdout.strip() == "active")
+        else:
+            # Fallback if no systemd
+            is_active = False
+    except Exception:
+        pass
+
+    status_str = f"{GREEN}Active{RESET}" if is_active else f"{RED}Inactive{RESET}"
+    print(f"  {DIM}service{RESET}   {BOLD}{status_str}{RESET}")
+
+    if is_active:
+        # 2. URL
+        url = get_current_url()
+        print(f"  {DIM}address{RESET}   {BOLD}{url if url else 'Detecting...'}{RESET}")
+
+        # 3. Clients (query server)
+        clients_count = "?"
+        try:
+            import urllib.request, json
+            with urllib.request.urlopen("http://localhost:6769/ping", timeout=2) as r:
+                data = json.load(r)
+                clients_count = data.get("clients", 0)
+        except Exception:
+            pass
+        print(f"  {DIM}clients{RESET}   {BOLD}{clients_count} connected{RESET}")
+    else:
+        print(f"  {DIM}info{RESET}      {DIM}Service is stopped. Start with: {RESET}{BOLD}guga --install-service{RESET}")
+
+    print()
+    print(f"  {BOLD}{'─' * 40}{RESET}")
+    print()
+
+def run_url():
+    """Output only the raw pairing URL."""
+    url = get_current_url()
+    if url:
+        print(url)
+    else:
+        # If tunnel not ready, don't print anything or print error to stderr
+        print("Error: Tunnel URL not ready", file=sys.stderr)
+        sys.exit(1)
