@@ -10,8 +10,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/PositiveMatician/GuGa-Nexus/releases/tag/v1.0.1">
-    <img src="https://img.shields.io/badge/stable-v1.0.1-blue" alt="Stable Release" />
+  <a href="https://github.com/PositiveMatician/GuGa-Nexus/releases/latest">
+    <img src="https://img.shields.io/github/v/release/PositiveMatician/GuGa-Nexus?label=stable&color=blue" alt="Stable Release" />
   </a>
   <a href="https://github.com/PositiveMatician/GuGa-Nexus/releases/tag/nightly">
     <img src="https://img.shields.io/badge/nightly-beta-orange" alt="Nightly Build" />
@@ -135,7 +135,7 @@ It then sets up a background systemd daemon in your OS and prints the pairing QR
 
 Sideload the APK onto your Android device:
 
-- **[Stable (v1.0.1)](https://github.com/PositiveMatician/GuGa-Nexus/releases/tag/v1.0.1)** — recommended for daily use
+- **[Stable (Download latest APK)](https://github.com/PositiveMatician/GuGa-Nexus/releases/latest/download/guga-stable.apk)** — recommended for daily use
 - **[Nightly (beta)](https://github.com/PositiveMatician/GuGa-Nexus/releases/tag/nightly)** — experimental, includes wake-word work in progress
 
 > ⚠️ Do not build from source unless you are contributing to the project.
