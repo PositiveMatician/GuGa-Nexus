@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "guga"
+version = "1.0.1"
+description = "Linux to Android notification bridge."
+readme = "README.md"
+requires-python = ">=3.7"
+dependencies = [
+    "flask",
+    "flask-socketio",
+    "eventlet",
+    "gunicorn",
+    "python-dotenv",
+    "qrcode",
+    "cryptography",
+    "aiohttp"
+]
+
+[project.scripts]
+guga = "guga.cli:main"

@@ -16,7 +16,15 @@ import time
 from typing import Set
 
 from dotenv import load_dotenv
-env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+
+CONFIG_DIR = os.path.expanduser("~/.guga")
+if not os.path.exists(CONFIG_DIR):
+    try:
+        os.makedirs(CONFIG_DIR, exist_ok=True)
+    except Exception:
+        pass
+
+env_path = os.path.join(CONFIG_DIR, '.env')
 load_dotenv(dotenv_path=env_path)
 
 # Enforce Linux-only restriction
@@ -126,7 +134,7 @@ socketio = SocketIO(
 
 connected_clients: dict[str, str] = {}  # session_id -> device_id
 pending_pairings: dict = {}  # device_id -> PIN string
-TRUSTED_DEVICES_FILE = "trusted_devices.json"
+TRUSTED_DEVICES_FILE = os.path.join(CONFIG_DIR, "trusted_devices.json")
 
 
 # ------------------------------------------------------------
@@ -900,7 +908,7 @@ def start_cloudflare_tunnel(port: int) -> str:
     log_event("⚙", CYAN, f"spawning tunnel on port {port}...")
     
     filename = "cloudflared.exe" if platform.system().lower() == "windows" else "./cloudflared"
-    cloudflare_cmd = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
+    cloudflare_cmd = os.path.join(CONFIG_DIR, filename)
     
     if not os.path.exists(cloudflare_cmd):
         cloudflare_cmd = "cloudflared"
@@ -932,11 +940,9 @@ def start_alerter():
     val = os.getenv("ENABLE_OS_NOTIFICATIONS", "False")
     log_debug(f"ENABLE_OS_NOTIFICATIONS={val!r}")
     if val.lower() == "true":
-        # Use sys.executable if venv python not found
-        venv_python = os.path.join(os.path.dirname(os.path.abspath(__file__)), "venv", "bin", "python3")
-        if not os.path.exists(venv_python):
-            venv_python = sys.executable
-        alerter_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "os_notification_alerter.py")
+        # Use sys.executable directly since pip manages packages globally or in an activated virtualenv
+        venv_python = sys.executable
+        alerter_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "alerter.py")
         try:
             log_event("⚙", CYAN, "starting OS alerter…")
             alerter_proc = subprocess.Popen([venv_python, alerter_script])

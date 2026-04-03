@@ -153,6 +153,11 @@ examples:
 
   guga -r python train.py --silent --title "GPU"   # run silently, labelled notification
 
+setup & pairing:
+  guga --qr                                        # show pairing QR code
+  guga --show-pin                                  # show the latest pairing PIN
+  guga --install-service                           # initialise background service
+
 for more details:
   man guga
   tldr guga
@@ -176,6 +181,11 @@ for more details:
         "--show-pin",
         action="store_true",
         help="Show the most recent pairing PIN and exit.",
+    )
+    proxy_mode.add_argument(
+        "--install-service",
+        action="store_true",
+        help="Initializes the Linux background systemd service and components.",
     )
 
     # Explicit mode flags — mutually exclusive
@@ -217,17 +227,10 @@ def main():
     args = parse_args()
     
     # ── Proxy modes ───────────────────────────────────────────────────────────
-    if args.qr or args.show_pin:
-        server_dir = os.path.dirname(os.path.realpath(__file__))
-        venv_python = os.path.join(server_dir, "venv", "bin", "python3")
-        setup_script = os.path.join(server_dir, "setup.py")
-        
-        if not os.path.exists(venv_python) or not os.path.exists(setup_script):
-            print("❌ Server components not found.", file=sys.stderr)
-            sys.exit(1)
-            
-        proxy_flag = "--qr" if args.qr else "--show-pin"
-        sys.exit(subprocess.call([venv_python, setup_script, proxy_flag]))
+    if args.install_service or args.qr or args.show_pin:
+        from guga.installer import run_system_installer
+        run_system_installer(qr_only=args.qr, pin_only=args.show_pin, setup_only=args.install_service)
+        return
 
     positional = args.args
 

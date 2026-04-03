@@ -1,0 +1,2 @@
+recursive-include guga/man *
+recursive-include guga *

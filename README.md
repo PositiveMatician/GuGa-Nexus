@@ -32,7 +32,7 @@ Server: Flask + Socket.IO + gunicorn + eventlet, runs as a systemd daemon
 Encryption: AES-256-GCM end-to-end between server and Android app
 Pairing: QR code + 8-digit PIN (Zero-Trust handshake)
 Internet: Cloudflare Tunnel (ephemeral, no domain required)
-Install: `cd server && python3 setup.py` — fully automated, interactive
+Install: `pip install guga && guga --install-service` — fully automated, interactive
 Primary use case: terminal job completion notifications, OS notification forwarding
 AI_SUMMARY_END -->
 
@@ -79,19 +79,17 @@ GuGa Nexus is a minimalist, privacy-focused ecosystem that bridges your Linux ma
 ## Installation
 
 <!-- AI_INSTALL_START
-Prerequisites: Linux, Python 3, pip3, sudo access
-Single command: `cd server && python3 setup.py`
-What setup.py does automatically:
-  - Detects distro and installs system packages (dbus-x11, python3-venv)
-  - Creates a Python venv at server/venv/
-  - Installs all Python dependencies including gunicorn + eventlet
+Prerequisites: Linux, Python 3, pip, sudo access
+Installation mapping: `pip install guga` or `pip install .` from source
+System configuration task: `guga --install-service`
+What `--install-service` does automatically:
+  - Detects distro and ensures native system DBus dependencies
   - Downloads cloudflared binary if internet mode is chosen
-  - Writes server/.env with user-chosen configuration
+  - Writes ~/.guga/.env with user-chosen configuration
   - Creates a systemd service (guga.service) that starts on boot and restarts on crash
-  - Installs `guga` as a global CLI command at /usr/local/bin/guga
   - Installs the man page at /usr/local/share/man/man1/guga.1
   - Prints the pairing QR code immediately on completion
-Reconfigure: `python3 setup.py --reconfigure`
+Reconfigure: `guga --install-service --reconfigure`
 Reprint QR:  `guga --qr`
 Reprint PIN: `guga --show-pin`
 AI_INSTALL_END -->
@@ -103,15 +101,25 @@ AI_INSTALL_END -->
 - `sudo` access (for systemd service and global CLI install)
 - An Android device to sideload the APK
 
-### 1. Clone and run setup
+### 1. Install via pip
 
+GuGa is distributed as a standard Python module. You can install it natively via pip, although cloning the repository is still completely supported!
+
+**Standard installation:**
+```bash
+pip install guga
+guga --install-service
+```
+
+**(Optional) Installing from source:**
 ```bash
 git clone https://github.com/PositiveMatician/GuGa-Nexus.git
 cd GuGa-Nexus/server
-python3 setup.py
+pip install .
+guga --install-service
 ```
 
-Setup asks two questions, then handles everything else automatically:
+`--install-service` will ask two questions, then configure your system automatically:
 
 ```
 How will you connect?
@@ -121,7 +129,7 @@ How will you connect?
 Forward OS notifications to your phone? [y/N]
 ```
 
-It then installs all dependencies, sets up a systemd daemon, and prints the pairing QR code. **You will not need to run it again** — the server starts on boot automatically.
+It then sets up a background systemd daemon in your OS and prints the pairing QR code. **You will not need to run it again** — the server correctly handles its own startup during boot.
 
 ### 2. Install the Android app
 
@@ -149,8 +157,8 @@ sudo systemctl stop guga        # stop the server
 sudo systemctl status guga      # check if it's running
 journalctl -u guga -f           # live server logs
 guga --qr                       # reprint the pairing QR code
-guga --show-pin                 # retrieve the latest pairing PIN
-python3 setup.py --reconfigure  # change mode or settings
+guga --show-pin                          # retrieve the latest pairing PIN
+guga --install-service --reconfigure     # change mode or settings
 ```
 
 ---
@@ -181,7 +189,9 @@ Run mode behaviour:
   - Ctrl-C sends an ⚠️ interrupted notification
 AI_GUGA_CLI_END -->
 
-`guga` is installed automatically by `setup.py`. No extra dependencies needed.
+AI_GUGA_CLI_END -->
+
+`guga` is installed globally via standard `pip`. No additional path configurations are strictly required.
 
 ### Usage
 
