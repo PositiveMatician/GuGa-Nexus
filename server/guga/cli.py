@@ -22,6 +22,11 @@ import subprocess
 import time
 import urllib.request
 import urllib.error
+import configparser
+try:
+    import argcomplete
+except ImportError:
+    argcomplete = None
 from guga import __version__
 
 
@@ -124,9 +129,41 @@ def run_command(cmd_args, port, silent, title):
     sys.exit(exit_code)
 
 
+# ── Configuration ─────────────────────────────────────────────────────────────
+
+def load_config():
+    """Loads default values from ~/.config/guga/config"""
+    config = configparser.ConfigParser()
+    config_path = os.path.expanduser("~/.config/guga/config")
+    
+    defaults = {
+        "title": None,
+        "port": 6769,
+        "silent": False
+    }
+    
+    if os.path.exists(config_path):
+        try:
+            config.read(config_path)
+            if "default" in config:
+                section = config["default"]
+                if "title" in section:
+                    defaults["title"] = section["title"]
+                if "port" in section:
+                    defaults["port"] = int(section["port"])
+                if "silent" in section:
+                    defaults["silent"] = section.getboolean("silent")
+        except Exception:
+            pass # Ignore invalid config files
+            
+    return defaults
+
+
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def parse_args():
+    defaults = load_config()
+
     parser = argparse.ArgumentParser(
         prog="guga",
         description="Send notifications to Android, or watch a command and notify on completion.",
@@ -236,21 +273,26 @@ for more details:
     parser.add_argument(
         "--server",
         type=int,
-        default=6769,
+        default=defaults["port"],
         metavar="PORT",
-        help="GuGa server port (default: 6769).",
+        help=f"GuGa server port (default: {defaults['port']}).",
     )
     parser.add_argument(
         "--silent",
         action="store_true",
+        default=defaults["silent"],
         help="Suppress guga's own output.",
     )
     parser.add_argument(
-        "--title",
-        default=None,
+        "-f", "--from", "--title",
+        dest="title",
+        default=defaults["title"],
         metavar="LABEL",
         help='Label shown in the notification, e.g. "GPU Server".',
     )
+
+    if argcomplete:
+        argcomplete.autocomplete(parser)
 
     return parser.parse_args()
 
