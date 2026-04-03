@@ -1,4 +1,4 @@
-package com.example.myapplication;
+package com.positive.guga;
 
 import android.content.Context;
 import android.util.Log;

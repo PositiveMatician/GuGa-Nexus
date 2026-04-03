@@ -1,0 +1,33 @@
+Categories:
+  - Utility
+License: MIT
+AuthorName: PositiveMatician
+SourceCode: https://github.com/PositiveMatician/GuGa-Nexus
+IssueTracker: https://github.com/PositiveMatician/GuGa-Nexus/issues
+
+AutoName: GuGa Nexus
+Description: |-
+    GuGa (Alpha Model) is a powerful Android application that communicates with a dedicated Python server using WebSockets. It enables remote command execution, real-time feedback, and secure data handling, making it a robust platform for remote-controlled utilities.
+
+    Key Features:
+    - Real-time WebSocket communication
+    - Secure authentication and token handling
+    - Foreground service for reliable background tasks
+    - Voice feedback with Text-To-Speech
+    - QR-based IP configuration
+
+RepoType: git
+Repo: https://github.com/PositiveMatician/GuGa-Nexus
+
+Builds:
+  - versionName: 1.1.0
+    versionCode: 3
+    commit: v1.1.0
+    subdir: app-stable/app
+    gradle:
+      - yes
+
+AutoUpdateMode: Version v%v
+UpdateCheckMode: Tags
+CurrentVersion: 1.1.0
+CurrentVersionCode: 3

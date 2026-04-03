@@ -1,0 +1,9 @@
+GuGa (Alpha Model) is a powerful Android application that communicates with a dedicated Python server using WebSockets. It enables remote command execution, real-time feedback, and secure data handling, making it a robust platform for remote-controlled utilities.
+
+Key Features:
+- Real-time WebSocket communication
+- Secure authentication and token handling
+- Seamless interaction with the GuGa backend
+- Foreground service for reliable background tasks
+- Voice feedback with Text-To-Speech
+- QR-based IP configuration

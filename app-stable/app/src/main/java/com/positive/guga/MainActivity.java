@@ -1,4 +1,4 @@
-package com.example.myapplication;
+package com.positive.guga;
 
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
@@ -63,17 +63,17 @@ public class MainActivity extends AppCompatActivity {
     private static final String PREF_BACKEND_IP = "backend_ip";
     private static final String PREF_TTS_ENABLED = "tts_enabled";
 
-    private static final String ACTION_PING_RESULT       = "com.example.myapplication.PING_RESULT";
-    private static final String ACTION_GUGA_RESPONSE     = "com.example.myapplication.GUGA_RESPONSE";
-    private static final String ACTION_SOCKET_CONNECTED  = "com.example.myapplication.SOCKET_CONNECTED";
-    private static final String ACTION_SOCKET_DISCONNECTED = "com.example.myapplication.SOCKET_DISCONNECTED";
-    private static final String ACTION_UPDATE_IP         = "com.example.myapplication.UPDATE_IP";
-    private static final String ACTION_PING_BACKEND      = "com.example.myapplication.PING_BACKEND";
-    private static final String ACTION_CONNECT_SOCKET    = "com.example.myapplication.CONNECT_SOCKET";
-    private static final String ACTION_SEND_MANUAL_COMMAND = "com.example.myapplication.SEND_MANUAL_COMMAND";
-    private static final String ACTION_SET_TTS_ENABLED   = "com.example.myapplication.SET_TTS_ENABLED";
-    private static final String ACTION_SAVE_AUTH_TOKEN   = "com.example.myapplication.SAVE_AUTH_TOKEN";
-    private static final String ACTION_SET_FOREGROUND    = "com.example.myapplication.SET_FOREGROUND";
+    private static final String ACTION_PING_RESULT       = "com.positive.guga.PING_RESULT";
+    private static final String ACTION_GUGA_RESPONSE     = "com.positive.guga.GUGA_RESPONSE";
+    private static final String ACTION_SOCKET_CONNECTED  = "com.positive.guga.SOCKET_CONNECTED";
+    private static final String ACTION_SOCKET_DISCONNECTED = "com.positive.guga.SOCKET_DISCONNECTED";
+    private static final String ACTION_UPDATE_IP         = "com.positive.guga.UPDATE_IP";
+    private static final String ACTION_PING_BACKEND      = "com.positive.guga.PING_BACKEND";
+    private static final String ACTION_CONNECT_SOCKET    = "com.positive.guga.CONNECT_SOCKET";
+    private static final String ACTION_SEND_MANUAL_COMMAND = "com.positive.guga.SEND_MANUAL_COMMAND";
+    private static final String ACTION_SET_TTS_ENABLED   = "com.positive.guga.SET_TTS_ENABLED";
+    private static final String ACTION_SAVE_AUTH_TOKEN   = "com.positive.guga.SAVE_AUTH_TOKEN";
+    private static final String ACTION_SET_FOREGROUND    = "com.positive.guga.SET_FOREGROUND";
 
     private TextView statusText;
     private RecyclerView chatRecyclerView;

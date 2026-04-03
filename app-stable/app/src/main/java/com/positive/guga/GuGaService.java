@@ -1,4 +1,4 @@
-package com.example.myapplication;
+package com.positive.guga;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -77,26 +77,26 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
             if (action == null) return;
 
             switch (action) {
-                case "com.example.myapplication.UPDATE_IP":
+                case "com.positive.guga.UPDATE_IP":
                     backendAddress = intent.getStringExtra("ip");
                     break;
-                case "com.example.myapplication.PING_BACKEND":
+                case "com.positive.guga.PING_BACKEND":
                     pingBackend();
                     break;
-                case "com.example.myapplication.CONNECT_SOCKET":
+                case "com.positive.guga.CONNECT_SOCKET":
                     connectWebSocket();
                     break;
-                case "com.example.myapplication.SEND_MANUAL_COMMAND":
+                case "com.positive.guga.SEND_MANUAL_COMMAND":
                     sendCommandToBackend(intent.getStringExtra("command"));
                     break;
-                case "com.example.myapplication.SET_TTS_ENABLED":
+                case "com.positive.guga.SET_TTS_ENABLED":
                     ttsEnabled = intent.getBooleanExtra("enabled", true);
                     break;
-                case "com.example.myapplication.SAVE_AUTH_TOKEN":
+                case "com.positive.guga.SAVE_AUTH_TOKEN":
                     String token = intent.getStringExtra("token");
                     if (token != null) saveAuthToken(token);
                     break;
-                case "com.example.myapplication.SET_FOREGROUND":
+                case "com.positive.guga.SET_FOREGROUND":
                     isAppInForeground = intent.getBooleanExtra("isForeground", false);
                     Log.d(TAG, "App foreground state: " + isAppInForeground);
                     break;
@@ -123,13 +123,13 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
         ttsEnabled = getSharedPreferences("AlphaPrefs", MODE_PRIVATE).getBoolean("tts_enabled", true);
 
         IntentFilter filter = new IntentFilter();
-        filter.addAction("com.example.myapplication.UPDATE_IP");
-        filter.addAction("com.example.myapplication.PING_BACKEND");
-        filter.addAction("com.example.myapplication.CONNECT_SOCKET");
-        filter.addAction("com.example.myapplication.SEND_MANUAL_COMMAND");
-        filter.addAction("com.example.myapplication.SET_TTS_ENABLED");
-        filter.addAction("com.example.myapplication.SAVE_AUTH_TOKEN");
-        filter.addAction("com.example.myapplication.SET_FOREGROUND");
+        filter.addAction("com.positive.guga.UPDATE_IP");
+        filter.addAction("com.positive.guga.PING_BACKEND");
+        filter.addAction("com.positive.guga.CONNECT_SOCKET");
+        filter.addAction("com.positive.guga.SEND_MANUAL_COMMAND");
+        filter.addAction("com.positive.guga.SET_TTS_ENABLED");
+        filter.addAction("com.positive.guga.SAVE_AUTH_TOKEN");
+        filter.addAction("com.positive.guga.SET_FOREGROUND");
         ContextCompat.registerReceiver(this, activityReceiver, filter, ContextCompat.RECEIVER_EXPORTED);
 
         String storedToken = getAuthToken();
@@ -165,7 +165,7 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
     }
 
     private void broadcastPing(boolean success) {
-        Intent intent = new Intent("com.example.myapplication.PING_RESULT");
+        Intent intent = new Intent("com.positive.guga.PING_RESULT");
         intent.putExtra("success", success);
         sendBroadcast(intent);
     }
@@ -216,8 +216,8 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
             opts.query = "device_id=" + deviceId + (authToken != null ? "&token=" + authToken : "");
 
             mSocket = IO.socket(backendAddress, opts);
-            mSocket.on(Socket.EVENT_CONNECT, args -> sendBroadcast(new Intent("com.example.myapplication.SOCKET_CONNECTED")));
-            mSocket.on(Socket.EVENT_DISCONNECT, args -> sendBroadcast(new Intent("com.example.myapplication.SOCKET_DISCONNECTED")));
+            mSocket.on(Socket.EVENT_CONNECT, args -> sendBroadcast(new Intent("com.positive.guga.SOCKET_CONNECTED")));
+            mSocket.on(Socket.EVENT_DISCONNECT, args -> sendBroadcast(new Intent("com.positive.guga.SOCKET_DISCONNECTED")));
             mSocket.on("guga_response", args -> {
                 if (args.length > 0 && args[0] instanceof JSONObject) {
                     try {
@@ -240,7 +240,7 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
                             }
                         }
 
-                        Intent intent = new Intent("com.example.myapplication.GUGA_RESPONSE");
+                        Intent intent = new Intent("com.positive.guga.GUGA_RESPONSE");
                         intent.putExtra("message", message);
                         if (title != null) intent.putExtra("title", title);
                         sendBroadcast(intent);

@@ -1,4 +1,4 @@
-package com.example.myapplication;
+package com.positive.guga;
 
 import android.util.Base64;
 import android.util.Log;

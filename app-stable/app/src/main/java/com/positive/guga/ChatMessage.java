@@ -1,4 +1,4 @@
-package com.example.myapplication;
+package com.positive.guga;
 
 public class ChatMessage {
     private String text;

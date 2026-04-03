@@ -1,4 +1,4 @@
-package com.example.myapplication;
+package com.positive.guga;
 
 import android.view.LayoutInflater;
 import android.view.View;

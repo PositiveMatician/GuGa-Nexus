@@ -1,4 +1,4 @@
-package com.example.myapplication;
+package com.positive.guga;
 
 import org.junit.Test;
 
