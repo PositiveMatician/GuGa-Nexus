@@ -40,12 +40,13 @@ AI_SUMMARY_END -->
 
 | I want to… | Go to |
 |---|---|
-| Install everything and get running | [Installation](#installation) |
-| Just send a terminal notification | [guga CLI](#guga--terminal-notifications-cli) |
-| Understand what this does | [What is GuGa Nexus?](#what-is-guga-nexus) |
-| See what features exist | [Features](#features) |
-| Connect over the internet (not just LAN) | [Cloudflare Tunnel](#internet-access-via-cloudflare-tunnel) |
-| Contribute or report a bug | [Contributing](#contributing) |
+| Install everything and get running | [Setup](#setup) |
+| Connect via browser | [Connecting via Browser](#connecting-via-browser) |
+| Connect via Android App | [Connecting via the Android App](#connecting-via-the-android-app) |
+| Just send a terminal notification | [Using guga](#using-guga) |
+| Watch a command finish | [Watching Commands](#watching-commands) |
+| Connect over the internet | [Internet Access](#internet-access-via-cloudflare-tunnel) |
+| Understand security | [Security](#security) |
 
 ---
 
@@ -76,221 +77,163 @@ GuGa Nexus is a minimalist, privacy-focused ecosystem that bridges your Linux ma
 
 ---
 
-## Installation
+## Setup
 
 <!-- AI_INSTALL_START
-Prerequisites: Linux, Python 3, pip, sudo access
-Installation mapping: `pip install guga` or `pip install .` from source
-System configuration task: `guga --install-service`
-What `--install-service` does automatically:
-  - Detects distro and ensures native system DBus dependencies
-  - Downloads cloudflared binary if internet mode is chosen
-  - Writes ~/.guga/.env with user-chosen configuration
-  - Creates a systemd service (guga.service) that starts on boot and restarts on crash
-  - Installs the man page at /usr/local/share/man/man1/guga.1
-  - Prints the pairing QR code immediately on completion
-Reconfigure: `guga --install-service --reconfigure`
-Reprint QR:  `guga --qr`
-Reprint PIN: `guga --show-pin`
+Step 1: pip install guga
+Step 2: guga --install-service
+  - asks: LAN or internet (Cloudflare Tunnel)
+  - asks: forward OS notifications yes/no
+  - installs system packages (dbus-x11, python3-venv)
+  - creates venv, installs Python deps including gunicorn + eventlet
+  - downloads cloudflared if internet mode chosen
+  - writes .env
+  - creates and enables guga.service systemd unit (starts on boot, restarts on crash)
+Step 3: guga --qr
+  - prints QR code and URL once the service is running
+  - use URL in browser OR scan with Android app
+Step 4: enter PIN from guga --show-pin when prompted during pairing
+Reconfigure: guga --install-service (re-run)
 AI_INSTALL_END -->
 
-### Requirements
+**Requirements:** Linux with systemd · Python 3.7+ · sudo access
 
-- Linux (any distro with systemd)
-- Python 3.7+
-- `sudo` access (for systemd service and global CLI install)
-- An Android device to sideload the APK
-
-### 1. Install via pip
-
-GuGa is distributed as a standard Python module. You can install it natively via pip, although cloning the repository is still completely supported!
-
-**Standard installation:**
 ```bash
+# 1. Install
 pip install guga
+
+# 2. Set up and start the background service
 guga --install-service
 ```
 
-**(Optional) Installing from source:**
-```bash
-git clone https://github.com/PositiveMatician/GuGa-Nexus.git
-cd GuGa-Nexus/server
-pip install .
-guga --install-service
-```
-
-`--install-service` will ask two questions, then configure your system automatically:
-
-```
-How will you connect?
-  1)  LAN only   — phone must be on the same Wi-Fi
-  2)  Internet   — anywhere, via Cloudflare Tunnel (no domain needed)
-
-Forward OS notifications to your phone? [y/N]
-```
-
-It then sets up a background systemd daemon in your OS and prints the pairing QR code. **You will not need to run it again** — the server correctly handles its own startup during boot.
-
-### 2. Install the Android app
-
-Sideload the APK onto your Android device:
-
-- **[Stable (Download latest APK)](https://github.com/PositiveMatician/GuGa-Nexus/releases/latest/download/guga-stable.apk)** — recommended for daily use
-- **[Nightly (beta)](https://github.com/PositiveMatician/GuGa-Nexus/releases/tag/nightly)** — experimental, includes wake-word work in progress
-
-> ⚠️ Do not build from source unless you are contributing to the project.
-
-### 3. Pair
-
-1. Open the GuGa app → tap the **Settings arrow** (`>`)
-2. Tap **SCAN QR** and scan the code printed in your terminal
-3. Enter the **8-digit PIN** shown on screen to complete pairing
-4. Status changes to **LIVE SYNC ACTIVE** — you're connected
-
-> Enable **LIVE PERSISTENCE** in app settings to keep the connection alive in the background.
-
-### Post-install commands
+`--install-service` asks two questions, then handles everything automatically — dependencies, the background daemon, and optional OS notification forwarding. You won't need to run it again; the service starts on boot and restarts itself if it crashes.
 
 ```bash
-sudo systemctl start guga       # start the server
-sudo systemctl stop guga        # stop the server
-sudo systemctl status guga      # check if it's running
-journalctl -u guga -f           # live server logs
-guga --qr                       # reprint the pairing QR code
-guga --show-pin                          # retrieve the latest pairing PIN
-guga --install-service --reconfigure     # change mode or settings
+# 3. Get your connection URL
+guga --qr
 ```
+
+Wait a moment after install for the service to start, then run `guga --qr`. This prints the QR code and URL you'll use to connect — either in a browser or with the Android app.
+
+```bash
+# 4. Get your pairing PIN
+guga --show-pin
+```
+
+You'll need this PIN when connecting for the first time.
 
 ---
 
-## `guga` — Terminal Notifications CLI
+## Connecting via Browser
 
-<!-- AI_GUGA_CLI_START
-Binary: /usr/local/bin/guga (symlink → server/guga_push.py)
-Language: Python 3, stdlib only — no pip install needed
-Server endpoint: POST http://localhost:6769/send
-Payload: {"message": "string", "title": "optional string"}
-Mode detection (automatic):
-  - stdin piped, no args       → message mode
-  - single non-executable arg  → message mode
-  - first arg is in PATH or is a file → run mode
-Explicit flags:
-  -m / --message  force message mode (joins all args as a string, never executes)
-  -r / --run      force run mode (shlex.splits single quoted string into tokens)
-  --server PORT   custom server port (default: 6769)
-  --silent        suppress guga's own stdout/stderr
-  --title LABEL   label prepended to the Android notification
-  --qr            show the pairing QR code natively from anywhere
-  --show-pin      retrieve the most recent PIN from daemon logs
-Run mode behaviour:
-  - streams command stdout+stderr to terminal normally
-  - on exit: sends notification with status (✅/❌), elapsed time, last output line
-  - exit code mirrors the watched command (transparent in scripts/Makefiles)
-  - Ctrl-C sends an ⚠️ interrupted notification
-AI_GUGA_CLI_END -->
+No app needed. Once the service is running:
 
-AI_GUGA_CLI_END -->
+1.  Run `guga --qr` to get your server URL
+2.  Open the URL in any browser on your phone or computer
+3.  You'll be prompted for a PIN — run `guga --show-pin` to get it
+4.  Enter the PIN and you're connected — notifications will appear in the browser tab in real time
 
-`guga` is installed globally via standard `pip`. No additional path configurations are strictly required.
+The browser session stays active as long as the tab is open. For phone use, the Android app keeps the connection alive in the background.
 
-### Usage
+---
+
+## Connecting via the Android App
+
+Download and sideload the APK:
+
+-   **[Stable (v1.0.1)](https://github.com/PositiveMatician/GuGa-Nexus/releases/latest/download/guga-stable.apk)** — recommended
+-   **[Nightly (beta)](https://github.com/PositiveMatician/GuGa-Nexus/releases/tag/nightly)** — experimental, wake-word in progress
+
+> ⚠️ Do not build from source unless you are contributing.
+
+Once installed:
+
+1.  Open the app — tap the arrow (→) in the top-left corner to open Settings
+2.  Tap **Scan QR** to scan the code from `guga --qr`, or paste the URL manually into the address field
+3.  Tap **Save**
+4.  Tap **Live Persistence** to keep the connection alive in the background
+5.  When prompted for a PIN, run `guga --show-pin` on your Linux machine and enter it
+6.  Status shows **LIVE SYNC ACTIVE** — you're connected both ways
+
+---
+
+## Using guga
+
+Once the service is running, use `guga` from any terminal on the same machine:
 
 ```bash
 # Send a plain message
 guga "Build finished ✅"
 
-# Pipe from any command
+# Pipe output from any command
 echo "Deploy done" | guga
 
-# Watch a command — notifies on completion with exit status, elapsed time, and last output line
-guga python train.py --epochs 100
-guga ./deploy.sh --prod
-guga make build
-
-# Force message mode (never executes, even if the string looks like a command)
+# Force message mode — never executes, even if it looks like a command
 guga -m "python train.py"
 
-# Force run mode with a quoted string
-guga -r "sleep 5"
-
-# Label the notification by machine — useful when SSHed into multiple servers
-guga -r ./job.sh --title "GPU Server"
+# Add a label (useful when SSHed into multiple machines)
+guga "Job done" --title "GPU Server"
 
 # Suppress guga's own output in scripts and Makefiles
-guga python train.py --silent
-
-# Access pairing utilities from anywhere
-guga --qr
-guga --show-pin
-```
-
-When watching a command, your Android notification looks like:
-
-```
-✅ python train.py done — 2h 14m
-Epoch 100/100 — accuracy: 0.9431
-```
-
-### Help
-
-```bash
-guga --help
-man guga
+guga "Done" --silent
 ```
 
 ---
 
-## Project Structure
+## Watching Commands
 
-<!-- AI_STRUCTURE_START
-GuGa-Nexus/
-  app-stable/                       Android app source — stable (Java)
-  app-dev/                          Android app source — beta, wake-word in progress
-  server/
-    server.py                       Main Flask/SocketIO server entry point
-    setup.py                        Automated installer — run this first
-    guga_push.py                    CLI tool, installed globally as `guga`
-    guga.1                          Man page for guga
-    os_notification_alerter.py      D-Bus listener — forwards OS notifications to server
-    requirements.txt                Python dependencies
-    .env                            Runtime config (auto-created by setup.py)
-    cloudflared                     Cloudflare tunnel binary (downloaded by setup.py if needed)
-    venv/                           Python venv (created by setup.py)
-    trusted_devices.json            Paired device tokens (auto-created at runtime)
-AI_STRUCTURE_END -->
+The most useful feature for developers and researchers: prefix any command with `guga` and you'll get a notification when it finishes — including exit status, elapsed time, and the last line of output.
 
+```bash
+guga python train.py --epochs 100
+guga ./deploy.sh --prod
+guga make build
+guga calc maintenance.cobol
+
+# Force run mode with a quoted string
+guga -r "sleep 5"
+
+# Watch + label + silent (clean Makefile usage)
+guga -r ./job.sh --title "GPU Server" --silent
 ```
-GuGa-Nexus/
-├── app-stable/    # Stable Android app
-├── app-dev/       # Dev build — wake-word and experimental features
-└── server/
-    ├── server.py                    # Flask + Socket.IO backend
-    ├── setup.py                     # Automated installer — run this first
-    ├── guga_push.py                 # CLI tool, installed globally as `guga`
-    ├── guga.1                       # Man page
-    └── os_notification_alerter.py   # D-Bus listener for OS notifications
-```
+
+The notification you receive on your phone looks like:
+> ✅ python train.py done — 2h 14m
+> Epoch 100/100 — accuracy: 0.9431
+
+Or on failure:
+> ❌ ./deploy.sh failed (exit 1) — 43s
+> Error: connection refused on port 5432
 
 ---
 
 ## OS Notification Forwarding
 
-GuGa listens to your Linux desktop's D-Bus notification bus and forwards system notifications to your Android in real time — app alerts, calendar reminders, build system popups, anything your OS surfaces.
+If you enabled OS notifications during `guga --install-service`, GuGa listens to your Linux desktop's D-Bus notification bus and forwards every system notification to your connected device in real time — app alerts, calendar reminders, build system popups, anything your OS surfaces.
 
-Enable it by answering `y` during `setup.py`. No further configuration needed.
-
-> **Coming:** Urgency-based filtering — critical alerts instant, low-priority bundled into a 20-second digest.
+**Coming:** Urgency-based filtering — critical alerts instant, low-priority bundled into a 20-second digest.
 
 ---
 
 ## Internet Access via Cloudflare Tunnel
 
-GuGa uses Cloudflare Tunnel to make your local server reachable over the internet with no infrastructure required.
+Choose internet mode during `guga --install-service` and GuGa sets up a Cloudflare Tunnel automatically — no domain, no port forwarding, no VPS. Your server becomes reachable from anywhere.
 
-**No domain. No port forwarding. No VPS.** Choose internet mode during `setup.py` and it handles the rest. The only caveat: if the server restarts, the tunnel gets a new URL and you'll need to re-scan the QR code.
+The tunnel URL changes each time the service restarts. After a restart, run `guga --qr` to get the new URL and re-scan or re-enter it in your app or browser.
+
+---
+
+## Managing the Service
 
 ```bash
-guga --qr   # reprint the current pairing QR
+guga --qr                      # print current connection QR and URL
+guga --show-pin                # print latest pairing PIN
+guga --install-service         # reconfigure (change mode, toggle OS notifications)
+
+sudo systemctl start guga      # start the server
+sudo systemctl stop guga       # stop the server
+sudo systemctl status guga     # check if it's running
+journalctl -u guga -f          # live server logs
 ```
 
 ---
@@ -299,17 +242,39 @@ guga --qr   # reprint the current pairing QR
 
 <!-- AI_SECURITY_START
 Transport: AES-256-GCM on all WebSocket messages
-Pairing: Zero-Trust QR + 8-digit PIN handshake
-Token storage: trusted_devices.json (hashed, never plaintext)
-Token TTL: 30 days (app), 1 hour (browser)
-/send route: restricted to 127.0.0.1 and ::1 — not callable remotely
-/api/hello and /api/verify_pin: open but require matching PIN from pending_pairings
+Pairing (current): Zero-Trust handshake — server generates 8-digit PIN, user retrieves via guga --show-pin
+Pairing (planned): client-generated PIN — connecting device generates and displays its own PIN,
+  server receives and holds it, user confirms the PIN they see on their own device.
+  Server never generates PINs, so concurrent connection attempts from other devices
+  do not interfere — each device owns its own PIN and only the legitimate user
+  knows which one to confirm.
+Token TTL: 30 days (app clients), 1 hour (browser clients)
+/send route: restricted to 127.0.0.1 and ::1 — cannot be reached remotely
+Current --show-pin limitation: reads the most recently generated server-side PIN.
+  Under concurrent /api/hello requests the wrong PIN may be shown.
+  Mitigation until client-PIN lands: pair over LAN, use internet mode after.
 AI_SECURITY_END -->
 
 - All communication encrypted with **AES-256-GCM**
-- Initial pairing uses a **Zero-Trust QR + PIN handshake** — no credentials stored in plaintext
-- The `/send` route only accepts **localhost connections** — cannot be reached remotely
+- Pairing uses a **Zero-Trust QR + PIN handshake** — no credentials in plaintext
+- `/send` only accepts **localhost connections** — not reachable remotely
 - Session tokens expire after **30 days** (app) or **1 hour** (browser)
+
+### `guga --show-pin` — current limitation
+Right now the server generates the pairing PIN. `--show-pin` returns the most recently generated one, which assumes only one device is pairing at a time. If many devices hit `/api/hello` simultaneously, multiple PINs are generated in quick succession and `--show-pin` may return the wrong one.
+
+**Recommended practice until this is resolved:** Pair new devices over LAN first. Once trusted, devices reconnect automatically without re-pairing even when in internet mode.
+
+### Planned fix — client-generated PIN 🗓️
+The pairing model is being inverted. Instead of the server generating a PIN and the user having to retrieve it:
+
+1. The connecting device (app or browser) generates its own PIN and displays it to the user
+2. The device sends that PIN to the server along with the pairing request
+3. The server holds it and waits
+4. The user confirms the PIN they see on their own screen
+
+This completely eliminates the DDoS problem. Even if a thousand devices attempt to pair simultaneously, each owns its own PIN — the server isn't generating anything, and only the legitimate user knows which PIN belongs to their actual device. The server simply accepts the one the user confirms.
+
 
 ---
 
