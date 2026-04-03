@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/PositiveMatician/GuGa-Nexus/main/app-stable/app/src/main/assets/logo.png" width="128" height="128" />
+  <img src="https://raw.githubusercontent.com/PositiveMatician/GuGa-Nexus/latest/app-stable/app/src/main/assets/logo.png" width="128" height="128" />
 </p>
 
 <h1 align="center">GuGa Nexus</h1>
