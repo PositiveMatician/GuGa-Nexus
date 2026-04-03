@@ -1,111 +1,108 @@
-# GuGa Server — Technical Deep Dive
+<p align="center">
+  <img src="https://raw.githubusercontent.com/PositiveMatician/GuGa-Nexus/main/app-stable/app/src/main/assets/logo.png" width="128" height="128" />
+</p>
 
-This document provides a comprehensive technical overview of the GuGa-Nexus backend. It is intended for developers, maintainers, or anyone looking to understand the inner workings of the system.
+<h1 align="center">GuGa Nexus</h1>
+
+<p align="center">
+  Send your Linux terminal and OS notifications straight to your Android.<br/>
+  No cloud. No subscription. No port forwarding.
+</p>
+
+<p align="center">
+  <a href="https://pypi.org/project/GuGa/">
+    <img src="https://img.shields.io/pypi/v/GuGa.svg" alt="PyPI Version" />
+  </a>
+  <img src="https://img.shields.io/badge/platform-Linux-lightgrey" alt="Platform" />
+  <img src="https://img.shields.io/badge/encryption-AES--256--GCM-green" alt="Encryption" />
+  <img src="https://img.shields.io/badge/license-MIT-yellow" alt="License" />
+</p>
+
+🔗 [View the full Open Source Repository on GitHub](https://github.com/PositiveMatician/GuGa-Nexus)
 
 ---
 
-## 🏗️ System Architecture
+**GuGa Nexus** is a minimalist, privacy-focused ecosystem that bridges your Linux machine and your Android device. It uses end-to-end AES-256-GCM encryption and works strictly over your own local network or a direct Cloudflare Tunnel—never storing your data on a third-party server.
 
-GuGa is a distributed notification relay system. The architecture consists of three main local components interacting with a remote Android client:
+- **Waiting for a long script to finish?** Get notified the moment it's done.
+- **Training a model overnight?** Wake up to the final accuracy line in your notification.
+- **SSHed into a remote server?** GuGa reaches your phone over the internet seamlessly.
 
-1.  **Core Server (`server.py`)**: The central hub. It manages client sessions (browsers and Android apps), handles authentication (pairing), and provides a private REST/SocketIO interface for message ingestion.
-2.  **OS Alerter (`os_notification_alerter.py`)**: A passive listener that monitors the Linux D-Bus for `org.freedesktop.Notifications`. When an OS notification is detected, it cleans the text and forwards it to the Core Server via a local POST request.
-3.  **CLI Tool (`guga_push.py`)**: An active pusher. It allows users or scripts to manually trigger notifications. It handles both simple messages and "command watching" (monitoring a subprocess and notifying on completion).
+---
 
-```mermaid
-graph TD
-    A[OS Notifications] -->|D-Bus| B(OS Alerter)
-    C[User/Scripts] -->|CLI| D(guga CLI)
-    B -->|Local POST| E[Core Server]
-    D -->|Local POST| E
-    E -->|SocketIO / AES-GCM| F{Network}
-    F -->|Local/Cloudflare| G[Android App]
-    F -->|HTTPS| H[Web Dashboard]
+## Installation
+
+GuGa is distributed strictly as a standard Python module via PyPI.
+
+1. **Install the package:**
+```bash
+pip install GuGa
 ```
 
----
+2. **Initialize the background daemon:**
+```bash
+guga --install-service
+```
+*(This interactive setup will cleanly provision your systemd daemon and configure your network routing. Afterwards, your QR code will be generated).*
 
-## 📂 Project Structure (Technical)
-
-| File / Directory | Purpose |
-| :--- | :--- |
-| `server.py` | Main application entry point. Handles Flask routes, SocketIO events, and device pairing logic. |
-| `setup.py` | Environment initialization script. Detects package managers, installs system deps (dbus), and downloads `cloudflared`. |
-| `os_notification_alerter.py` | Subprocess-based D-Bus monitor. Forwards desktop alerts to the server. |
-| `guga_push.py` | The logic for the `guga` CLI tool. Uses only Python standard library where possible for maximum portability. |
-| `trusted_devices.json` | Persistent store for paired device IDs, encryption tokens, and expiry timestamps. |
-| `requirements.txt` | Python dependency list (Flask, SocketIO, Cryptography, python-dotenv). |
-| `cloudflared` | (Generated) The Cloudflare Tunnel binary used for zero-config remote access. |
-| `man/` | Contains the manual pages for the `guga` tool. |
+3. **Install the Android App:**
+Download the `stable` Android APK from the [GitHub Releases Page](https://github.com/PositiveMatician/GuGa-Nexus/releases) and scan the QR code printed in your terminal!
 
 ---
 
-## 🔐 Security Implementation
+## 🚀 Examples & Usage
 
-### End-to-End Encryption (AES-256-GCM)
-Except for the initial pairing handshake, all data sent to Android apps is encrypted locally using **AES-256-GCM**.
-- **Key Generation**: During pairing, a unique 256-bit hex token is generated via `secrets.token_hex(32)`.
-- **Persistence**: This token is stored on the server in `trusted_devices.json` and on the phone in secure storage.
-- **Payload**: Each message includes a random 12-byte IV and the base64-encoded ciphertext.
+Once deployed, the `guga` command-line utility is globally available on your terminal. It's designed to automatically detect whether you want to send a plain text notification, or if you want it to execute and watch a long-running process on your behalf.
 
-### Zero-Trust Handshake
-Pairing follows a strict 8-digit PIN protocol:
-1.  Device sends a `hello` with a unique ID.
-2.  Server generates a random 8-digit PIN and prints it to the *physical terminal*.
-3.  User enters the PIN on the device.
-4.  If the PIN matches, the server issues a long-lived hex token.
-
-### Network Isolation
-- The `/send` route (used by the Alerter and CLI) only accepts requests from `127.0.0.1` or `::1`.
-- This ensures that only local processes can "push" notifications to your phone.
-
----
-
-## 📡 D-Bus Alerter Logic
-
-The `os_notification_alerter.py` script spawns `dbus-monitor` as an asynchronous subprocess. It filters specifically for:
-`interface='org.freedesktop.Notifications', member='Notify'`
-
-It uses a state-machine parser to extract the **App Name**, **Summary (Title)**, and **Body** from the multi-line D-Bus output. It also includes a `clean_text` utility to strip HTML tags and Markdown formatting that some Linux desktop environments include in notifications.
-
----
-
-## ⚙️ Environment Configuration (`.env`)
-
-The server and its adapters read configuration from `server/.env`.
-
-| Key | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `PORT` | `int` | `6769` | The port the Flask/SocketIO server listens on. |
-| `MODE` | `str` | `public` | `lan` for local network only, or `public` to spawn a Cloudflare Tunnel. |
-| `ENABLE_OS_NOTIFICATIONS` | `bool` | `False` | Whether `server.py` should automatically spawn the Alerter subprocess. |
-| `ALERTER_SERVER_URL` | `url` | `http://localhost:6769/send` | The endpoint the Alerter targets. |
-| `GUGA_VERBOSE` | `bool` | `false` | Enable detailed debug logging (encryption/decryption traces). |
-
----
-
-## 🛠️ Development & Maintenance
-
-### 🔍 Logging & Debugging
-The server uses a structured event logging system. To see more detailed information, including raw SocketIO traffic and encryption/decryption traces, set the `GUGA_VERBOSE` environment variable:
+### 1. Plain Notifications (Message Mode)
+Send simple text updates directly to your Android device.
 
 ```bash
-GUGA_VERBOSE=true python server.py
+# Push a simple message
+guga "Build finished successfully ✅"
+
+# You can also stream output into it via stdin!
+echo "Database migration complete" | guga
 ```
 
-#### Event Symbols
-| Symbol | Meaning |
-| :--- | :--- |
-| `✓` | Success (e.g., device paired) |
-| `✗` | Error / Failure (e.g., PIN rejected, decrypt failed) |
-| `↑` | Connected (New session established) |
-| `↓` | Disconnected (Session ended) |
-| `→` | Command (Received phrase to process) |
-| `↩` | Reconnected (Known device identified) |
-| `⚠` | Warning (e.g., token expired, tunnel fallback) |
+### 2. Process Watching (Run Mode)
+Put `guga` in front of any command. It will execute the command natively while streaming the output to your terminal just as normal. Once the command finishes, it will instantly notify your phone with the **Elapsed Time**, **Exit Status**, and the **Last Console Line**.
 
-### Resetting All Trust
-To revoke access for all devices, simply delete `trusted_devices.json` and restart the server.
+```bash
+# Get notified when training finishes
+guga python train_model.py --epochs 100
 
-### Adding New Commands
-The `process_command` function in `server.py` is the hook for adding remote execution capabilities. Currently, it acts as a placeholder for future feature expansion.
+# Compile code and get notified if it succeeded or crashed
+guga make build-project
+
+# Add custom labels to your notifications for clarity
+guga -r ./deploy.sh --title "Production Server"
+```
+
+---
+
+## Post-Install Utilities
+
+If you need to view your pairing credentials or manage your background daemon after installation, GuGa provides several utility commands:
+
+```bash
+guga --qr                             # Show the pairing QR code
+guga --show-pin                       # Show the secure Zero-Trust PIN
+guga --install-service --reconfigure  # Re-run the interactive setup
+```
+
+To control the Linux backend server explicitly:
+```bash
+sudo systemctl start guga       # Start the server daemon
+sudo systemctl stop guga        # Stop the server daemon
+journalctl -u guga -f           # View live server connection logs
+```
+
+---
+
+## Core Features & Architecture
+
+* **Terminal Tracking:** Push notifications to Android via the `guga` global CLI.
+* **System OS Monitoring:** Automatically intercepts DBus to forward your native Linux desktop notifications straight to your phone.
+* **Zero-Trust Coupling:** Cryptographically secure pairing logic relying strictly on visual QR transmission + 8-Digit PINs (No OAuth or cloud-accounts required).
+* **Network Versatility:** Operates flawlessly in **LAN-only mode** strictly over local WiFi, or seamlessly hooks into Cloudflared to grant you **Internet-anywhere access** without needing to own a domain or configure port-forwarding.
