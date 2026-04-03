@@ -13,6 +13,9 @@
   <a href="https://github.com/PositiveMatician/GuGa-Nexus/releases/latest">
     <img src="https://img.shields.io/github/v/release/PositiveMatician/GuGa-Nexus?label=stable&color=blue" alt="Stable Release" />
   </a>
+  <a href="https://pypi.org/project/GuGa/">
+    <img src="https://img.shields.io/pypi/v/GuGa.svg" alt="PyPI Version" />
+  </a>
   <a href="https://github.com/PositiveMatician/GuGa-Nexus/releases/tag/nightly">
     <img src="https://img.shields.io/badge/nightly-beta-orange" alt="Nightly Build" />
   </a>
