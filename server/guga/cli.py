@@ -129,6 +129,109 @@ def run_command(cmd_args, port, silent, title):
     sys.exit(exit_code)
 
 
+def guga_approve(port, watch=False):
+    """Interactive loop to approve pending pairings."""
+    base_url = f"http://localhost:{port}/api"
+    
+    # ANSI Colors
+    RESET = "\033[0m"; BOLD = "\033[1m"; DIM = "\033[2m"
+    GREEN = "\033[32m"; YELLOW = "\033[33m"; RED = "\033[31m"; CYAN = "\033[36m"
+    
+    def get_pending():
+        try:
+            req = urllib.request.Request(f"{base_url}/pending")
+            with urllib.request.urlopen(req, timeout=2) as r:
+                return json.load(r).get("pending", [])
+        except Exception as e:
+            print(f"  {RED}✗{RESET} Error reaching server: {e}")
+            return []
+
+    def format_time(ts):
+        diff = int(time.time() - ts)
+        if diff < 10: return "just now"
+        if diff < 60: return f"{diff}s ago"
+        return f"{diff // 60} min ago"
+
+    def print_list(pending):
+        print(f"\n  {DIM}{'─' * 42}{RESET}")
+        print(f"   {BOLD}Pending pairing requests{RESET}")
+        print(f"  {DIM}{'─' * 42}{RESET}")
+        for i, p in enumerate(pending):
+            name = p['device_name'][:14].ljust(14)
+            did  = p['device_id'][:8]
+            pin  = " ".join(p['pin'])
+            ago  = format_time(p['requested_at'])
+            print(f"  {i+1})  {BOLD}{name}{RESET}  {DIM}{did}{RESET}   {CYAN}{pin}{RESET}   {ago}")
+        print(f"  {DIM}{'─' * 42}{RESET}")
+
+    if watch:
+        print(f"\n  Watching for pairing requests... {DIM}(Ctrl+C to stop){RESET}")
+        seen_ids = set()
+        try:
+            while True:
+                pending = get_pending()
+                new_entries = [p for p in pending if p['device_id'] not in seen_ids]
+                if new_entries:
+                    for p in new_entries:
+                        print(f"\n  {BOLD}{YELLOW}New request:{RESET}")
+                        print(f"  1)  {BOLD}{p['device_name'][:14].ljust(14)}{RESET}  {DIM}{p['device_id'][:8]}{RESET}   {CYAN}{' '.join(p['pin'])}{RESET}   just now")
+                        print(f"  {DIM}{'─' * 42}{RESET}")
+                        
+                        choice = input(f"  {BOLD}[A] approve   [R] reject   [S] skip{RESET}\n\n  Your choice: ").strip().lower()
+                        if choice == 'a':
+                            action_url = f"{base_url}/approve"
+                            payload = json.dumps({"device_id": p['device_id'], "action": "approve"}).encode()
+                            req = urllib.request.Request(action_url, data=payload, headers={"Content-Type": "application/json"}, method="POST")
+                            urllib.request.urlopen(req)
+                            print(f"  {GREEN}✓ Approved{RESET}")
+                        elif choice == 'r':
+                            action_url = f"{base_url}/approve"
+                            payload = json.dumps({"device_id": p['device_id'], "action": "reject"}).encode()
+                            req = urllib.request.Request(action_url, data=payload, headers={"Content-Type": "application/json"}, method="POST")
+                            urllib.request.urlopen(req)
+                            print(f"  {RED}✗ Rejected{RESET}")
+                        
+                        seen_ids.add(p['device_id'])
+                time.sleep(2)
+        except KeyboardInterrupt:
+            print("\n  Stopped watching.")
+            return
+
+    pending = get_pending()
+    if not pending:
+        print(f"\n  {DIM}No pending pairing requests.{RESET}\n")
+        return
+
+    print_list(pending)
+    print(f"  {BOLD}[A] approve all   [R] reject all   [1,2,...] choose{RESET}")
+    choice = input(f"\n  Your choice: ").strip().lower()
+
+    if choice == 'a':
+        for p in pending:
+            payload = json.dumps({"device_id": p['device_id'], "action": "approve"}).encode()
+            req = urllib.request.Request(f"{base_url}/approve", data=payload, headers={"Content-Type": "application/json"}, method="POST")
+            urllib.request.urlopen(req)
+        print(f"  {GREEN}✓ All approved{RESET}")
+    elif choice == 'r':
+        for p in pending:
+            payload = json.dumps({"device_id": p['device_id'], "action": "reject"}).encode()
+            req = urllib.request.Request(f"{base_url}/approve", data=payload, headers={"Content-Type": "application/json"}, method="POST")
+            urllib.request.urlopen(req)
+        print(f"  {RED}✗ All rejected{RESET}")
+    else:
+        try:
+            indices = [int(x.strip()) - 1 for x in choice.replace(',', ' ').split() if x.strip().isdigit()]
+            for i, p in enumerate(pending):
+                action = "approve" if i in indices else "reject"
+                payload = json.dumps({"device_id": p['device_id'], "action": action}).encode()
+                req = urllib.request.Request(f"{base_url}/approve", data=payload, headers={"Content-Type": "application/json"}, method="POST")
+                urllib.request.urlopen(req)
+                status = f"{GREEN}Approved{RESET}" if action == "approve" else f"{RED}Rejected{RESET}"
+                print(f"  {status}: {p['device_name']}")
+        except Exception:
+            print(f"  {RED}Invalid input.{RESET}")
+
+
 # ── Configuration ─────────────────────────────────────────────────────────────
 
 def load_config():
@@ -200,7 +303,7 @@ shell completion:
 
 setup & pairing:
   guga --qr                                        # show pairing QR code
-  guga --show-pin                                  # show the latest pairing PIN
+  guga --approve                                   # list and approve pairing requests
   guga --install-service                           # initialise background service
   guga --install-service --reconfigure             # re-run configuration questions
   guga --status                                    # show service status and connections
@@ -228,9 +331,9 @@ for more details:
         help="Show the pairing QR code and exit.",
     )
     proxy_mode.add_argument(
-        "--show-pin",
+        "--approve",
         action="store_true",
-        help="Show the most recent pairing PIN and exit.",
+        help="List and approve pending pairing requests.",
     )
     proxy_mode.add_argument(
         "--install-service",
@@ -251,6 +354,11 @@ for more details:
         "--url",
         action="store_true",
         help="Output the raw pairing URL (scriptable).",
+    )
+    parser.add_argument(
+        "--watch",
+        action="store_true",
+        help="Stay open and watch for pairing requests (used with --approve).",
     )
     parser.add_argument(
         "--reconfigure",
@@ -308,7 +416,7 @@ def main():
     args = parse_args()
     
     # ── Proxy modes ───────────────────────────────────────────────────────────
-    if args.install_service or args.qr or args.show_pin or args.uninstall or args.status or args.url:
+    if args.install_service or args.qr or args.approve or args.uninstall or args.status or args.url:
         from guga.installer import run_system_installer, run_system_uninstaller, run_status, run_url
         if args.uninstall:
             run_system_uninstaller()
@@ -319,7 +427,10 @@ def main():
         if args.url:
             run_url()
             return
-        run_system_installer(qr_only=args.qr, pin_only=args.show_pin, setup_only=args.install_service)
+        if args.approve:
+            guga_approve(args.server, watch=args.watch)
+            return
+        run_system_installer(qr_only=args.qr, setup_only=args.install_service)
         return
 
     positional = args.args

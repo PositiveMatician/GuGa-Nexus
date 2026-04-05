@@ -45,8 +45,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -91,8 +93,14 @@ public class MainActivity extends AppCompatActivity {
 
     private SharedPreferences prefs;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-    private final OkHttpClient httpClient = new OkHttpClient();
+    private final OkHttpClient httpClient = new OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .build();
     private ToneGenerator toneGenerator;
+    
+    private String currentGeneratedPin = "";
+    private boolean isPollingForApproval = false;
 
     // ----------------------------------------------------------------
     // QR Scanner
@@ -355,10 +363,14 @@ public class MainActivity extends AppCompatActivity {
         }
         String url = cleanIp(ipBase) + "/api/hello";
         String deviceId = fetchAndroidId();
+        String pin = generateRandomPin();
+        String deviceName = Build.MODEL != null ? Build.MODEL : "Android Device";
         
         try {
             JSONObject payload = new JSONObject();
             payload.put("device_id", deviceId);
+            payload.put("pin", pin);
+            payload.put("device_name", deviceName);
             payload.put("force_pair", forcePair);
             
             RequestBody body = RequestBody.create(payload.toString(), MediaType.parse("application/json"));
@@ -388,7 +400,7 @@ public class MainActivity extends AppCompatActivity {
                                 });
                             }
                         } else if ("pin_required".equals(status)) {
-                            mainHandler.post(() -> showPinDialog(ipBase, deviceId));
+                            mainHandler.post(() -> showPinDialog(ipBase, deviceId, pin));
                         }
                     } catch (Exception e) {
                         Log.e(TAG, "Handshake response error", e);
@@ -402,33 +414,80 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void showPinDialog(String ip, String deviceId) {
-        EditText pinInput = new EditText(this);
-        pinInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD);
-        pinInput.setHint("8-digit PIN");
-        pinInput.setTextColor(Color.WHITE);
-        pinInput.setHintTextColor(Color.GRAY);
+    private String generateRandomPin() {
+        SecureRandom random = new SecureRandom();
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 8; i++) {
+            sb.append(random.nextInt(10));
+        }
+        return sb.toString();
+    }
+
+    private void showPinDialog(String ip, String deviceId, String pin) {
+        currentGeneratedPin = pin;
+        isPollingForApproval = true;
+
+        TextView pinDisplay = new TextView(this);
+        // Format PIN with spaces: "1 2 3 4 5 6 7 8"
+        String spacedPin = pin.replace("", " ").trim();
+        pinDisplay.setText(spacedPin);
+        pinDisplay.setTextSize(32);
+        pinDisplay.setGravity(android.view.Gravity.CENTER);
+        pinDisplay.setPadding(0, 40, 0, 40);
+        pinDisplay.setTextColor(Color.WHITE);
+        pinDisplay.setTypeface(null, android.graphics.Typeface.BOLD);
 
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(64, 32, 64, 0);
-        layout.addView(pinInput);
+        layout.addView(pinDisplay);
 
-        new AlertDialog.Builder(this)
-                .setTitle("Pair Device")
-                .setMessage("Enter the PIN shown on your GuGu dashboard:")
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Pairing Request Sent")
+                .setMessage("Show this PIN to your Linux machine and run 'guga --approve' to authorize this device.")
                 .setView(layout)
-                .setPositiveButton("VERIFY", (dialog, which) -> {
-                    String pin = pinInput.getText().toString().trim();
-                    if (!pin.isEmpty()) verifyPin(ip, deviceId, pin);
-                })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton("Cancel", (d, w) -> isPollingForApproval = false)
+                .setCancelable(false)
                 .show();
+
+        // Start polling loop
+        pollForApproval(dialog, ip, deviceId, pin, 0);
     }
 
-    private void verifyPin(String ip, String deviceId, String pin) {
+    private void pollForApproval(AlertDialog dialog, String ip, String deviceId, String pin, int attempt) {
+        if (!isPollingForApproval || dialog == null || !dialog.isShowing()) return;
+
+        if (attempt > 60) { // 5 minutes timeout (5s * 60)
+            dialog.dismiss();
+            Toast.makeText(this, "Pairing timed out", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        verifyPin(ip, deviceId, pin, new PinVerificationCallback() {
+            @Override
+            public void onResult(boolean success, String error) {
+                if (success) {
+                    dialog.dismiss();
+                    isPollingForApproval = false;
+                } else if ("too many attempts".equals(error)) {
+                    dialog.dismiss();
+                    isPollingForApproval = false;
+                    Toast.makeText(MainActivity.this, "Too many failed attempts. Device blocked.", Toast.LENGTH_LONG).show();
+                } else {
+                    // Still waiting or failed, try again in 5 seconds
+                    mainHandler.postDelayed(() -> pollForApproval(dialog, ip, deviceId, pin, attempt + 1), 5000);
+                }
+            }
+        });
+    }
+
+    interface PinVerificationCallback {
+        void onResult(boolean success, String error);
+    }
+
+    private void verifyPin(String ip, String deviceId, String pin, PinVerificationCallback callback) {
         if (!isNetworkAvailable()) {
-            statusText.setText("⚠️ Hint: Turn on Wi-Fi or Cellular Data to connect.");
+            if (callback != null) callback.onResult(false, "No network");
             return;
         }
         String url = cleanIp(ip) + "/api/verify_pin";
@@ -444,7 +503,7 @@ public class MainActivity extends AppCompatActivity {
             httpClient.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
-                    mainHandler.post(() -> statusText.setText("VERIFICATION FAILED"));
+                    if (callback != null) callback.onResult(false, e.getMessage());
                 }
 
                 @Override
@@ -465,18 +524,21 @@ public class MainActivity extends AppCompatActivity {
                                 statusText.setText("PAIRED SUCCESSFULLY");
                                 sendBroadcast(new Intent(ACTION_CONNECT_SOCKET));
                             });
+                            if (callback != null) callback.onResult(true, null);
                         } else {
-                            mainHandler.post(() -> Toast.makeText(MainActivity.this, "Invalid PIN", Toast.LENGTH_SHORT).show());
+                            JSONObject json = new JSONObject(responseBody);
+                            String error = json.optString("error", "Failed");
+                            if (callback != null) callback.onResult(false, error);
                         }
                     } catch (Exception e) {
-                        Log.e(TAG, "PIN verification error", e);
+                        if (callback != null) callback.onResult(false, e.getMessage());
                     } finally {
                         response.close();
                     }
                 }
             });
         } catch (Exception e) {
-            Log.e(TAG, "PIN verification build error", e);
+            if (callback != null) callback.onResult(false, e.getMessage());
         }
     }
 

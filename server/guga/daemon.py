@@ -133,8 +133,29 @@ socketio = SocketIO(
 )
 
 connected_clients: dict[str, str] = {}  # session_id -> device_id
-pending_pairings: dict = {}  # device_id -> PIN string
+pending_pairings: dict = {}
+# Structure per entry:
+# {
+#   "pin": "47291835",
+#   "device_name": "Pixel 7",
+#   "requested_at": 1712345678.0,
+#   "attempts": 0,
+#   "approved": False
+# }
+
+blocked_devices: dict = {}
+# Structure per entry: { device_id: unblock_timestamp }
+
 TRUSTED_DEVICES_FILE = os.path.join(CONFIG_DIR, "trusted_devices.json")
+
+
+def clean_expired_pairings():
+    """Remove pending entries older than 5 minutes."""
+    now = time.time()
+    expired = [d for d, e in pending_pairings.items()
+               if now - e["requested_at"] > 300]
+    for d in expired:
+        del pending_pairings[d]
 
 
 # ------------------------------------------------------------
@@ -550,31 +571,60 @@ HTML_PAGE = """
     async function initAuth() {
         setStatus('connecting...', 'waiting');
         try {
+            // Generate a random 8-digit PIN locally
+            const pin = Array.from({length: 8}, () => Math.floor(Math.random() * 10)).join('');
+            
             const helloRes = await fetch('/api/hello', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ device_id: deviceId })
+                body: JSON.stringify({ 
+                    device_id: deviceId, 
+                    pin: pin,
+                    device_name: navigator.userAgent.includes("Firefox") ? "Firefox" : 
+                                 navigator.userAgent.includes("Chrome") ? "Chrome" : "Browser"
+                })
             });
             const helloData = await helloRes.json();
 
             if (helloData.status === 'pin_required') {
-                const pin = prompt('enter pairing pin:');
-                if (!pin) { setStatus('cancelled', 'error'); return; }
-                const verifyRes = await fetch('/api/verify_pin', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ device_id: deviceId, pin: pin, client_type: 'browser' })
-                });
-                const verifyData = await verifyRes.json();
-                if (verifyData.status === 'paired') {
-                    token = verifyData.token;
-                    localStorage.setItem('guga_token', token);
-                    addBubble('sys', 'paired ✓');
-                } else {
-                    setStatus('auth failed', 'error');
-                    addBubble('sys', verifyData.error || 'invalid pin');
-                    return;
-                }
+                addBubble('sys', 'Your PIN: ' + pin.split('').join(' '));
+                addBubble('sys', 'Run `guga --approve` on your Linux machine');
+                
+                // Poll for approval
+                let attempts = 0;
+                const pollInterval = setInterval(async () => {
+                    attempts++;
+                    if (attempts > 60) { // 5 minutes (5s * 60)
+                        clearInterval(pollInterval);
+                        setStatus('expired', 'error');
+                        addBubble('sys', 'Pairing request expired.');
+                        return;
+                    }
+                    
+                    try {
+                        const verifyRes = await fetch('/api/verify_pin', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ device_id: deviceId, pin: pin, client_type: 'browser' })
+                        });
+                        const verifyData = await verifyRes.json();
+                        
+                        if (verifyData.status === 'paired') {
+                            clearInterval(pollInterval);
+                            token = verifyData.token;
+                            localStorage.setItem('guga_token', token);
+                            addBubble('sys', 'paired ✓');
+                            connectSocket();
+                        } else if (verifyRes.status === 401 && verifyData.error === "too many attempts") {
+                            clearInterval(pollInterval);
+                            setStatus('blocked', 'error');
+                            addBubble('sys', 'Too many failed attempts.');
+                        }
+                    } catch (e) {}
+                }, 5000);
+                
+                setStatus('waiting for approval...', 'waiting');
+                return;
             }
             connectSocket();
         } catch (e) {
@@ -729,48 +779,128 @@ def handle_hello():
     """Device introduces itself. Returns 'trusted' or 'pin_required'."""
     data = request.get_json(silent=True) or {}
     device_id = data.get("device_id", "").strip()
+    pin = data.get("pin", "").strip()
+    device_name = data.get("device_name", "Unknown Device").strip()
+
     if not device_id:
         return jsonify({"error": "device_id required"}), 400
 
+    # New device or force_pair logic
     force_pair = data.get("force_pair", False)
 
     if is_device_trusted(device_id) and not force_pair:
         log_event("↩", CYAN, "device reconnected", device_id)
         return jsonify({"status": "trusted"}), 200
 
-    # New device or force_pair — generate PIN
-    pin = "".join([str(secrets.randbelow(10)) for _ in range(8)])
-    pending_pairings[device_id] = pin
-    label = "RE-PAIRING PIN" if force_pair else "NEW DEVICE — PAIRING PIN"
-    print_pin_box(pin, label)
+    # From Phase 20.1: Client-generated PIN is required for pairing
+    if not pin:
+        return jsonify({"error": "pin required for pairing"}), 400
+    if not pin.isdigit() or len(pin) != 8:
+        return jsonify({"error": "pin must be 8 digits"}), 400
+
+    # Check blocklist
+    if device_id in blocked_devices:
+        if time.time() < blocked_devices[device_id]:
+            return jsonify({"error": "too many failed attempts"}), 429
+        else:
+            del blocked_devices[device_id]
+
+    clean_expired_pairings()
+
+    # Store pending pairing
+    pending_pairings[device_id] = {
+        "pin": pin,
+        "device_name": device_name,
+        "requested_at": time.time(),
+        "attempts": 0,
+        "approved": False
+    }
+
+    log_event("?", YELLOW, "pairing request", f"{device_name} ({device_id[:8]}...) - PIN: {pin}")
     return jsonify({"status": "pin_required"}), 200
 
 
 @app.route("/api/verify_pin", methods=["POST"])
 def handle_verify_pin():
-    """Verify the PIN entered by the user. Returns token on success."""
+    """Wait for authorization. Returns token on success."""
     data = request.get_json(silent=True) or {}
     device_id = data.get("device_id", "").strip()
     pin = data.get("pin", "").strip()
-    client_type = data.get("client_type", "app").strip()  # default to app
+    client_type = data.get("client_type", "app").strip()
 
-    expected_pin = pending_pairings.get(device_id)
-    if not expected_pin or expected_pin != pin:
-        log_event("✗", RED, "PIN rejected", device_id)
+    entry = pending_pairings.get(device_id)
+    if not entry:
+        return jsonify({"error": "No pending pairing for this device"}), 404
+
+    # The client must provide the same PIN it sent in /api/hello
+    if entry["pin"] != pin:
+        entry["attempts"] += 1
+        if entry["attempts"] >= 5:
+            del pending_pairings[device_id]
+            blocked_devices[device_id] = time.time() + 600  # 10 min
+            return jsonify({"error": "too many attempts"}), 401
         return jsonify({"error": "Invalid PIN"}), 401
 
-    # Determine TTL based on client type
-    if client_type == "app":
-        ttl_seconds = 30 * 24 * 3600  # 30 days
-    else:
-        ttl_seconds = 3600  # 1 hour for browser
+    if not entry["approved"]:
+        return jsonify({"status": "waiting_for_approval"}), 202
+
+    # Approved! Determine TTL based on client type
+    ttl_seconds = (30 * 24 * 3600) if client_type == "app" else 3600
     expires_at = time.time() + ttl_seconds
 
-    token = secrets.token_hex(32)  # 256-bit secure token
+    token = secrets.token_hex(32)
     save_trusted_device(device_id, token, client_type, expires_at)
     pending_pairings.pop(device_id, None)
+
     log_event("✓", GREEN, "device paired", f"{device_id}  type={client_type}")
     return jsonify({"status": "paired", "token": token}), 200
+
+
+@app.route("/api/pending", methods=["GET"])
+def get_pending():
+    """List pending pairing requests (localhost only)."""
+    if request.remote_addr not in ["127.0.0.1", "::1"]:
+        return jsonify({"error": "Forbidden"}), 403
+    clean_expired_pairings()
+    result = [
+        {
+            "device_id": did,
+            "device_name": entry["device_name"],
+            "pin": entry["pin"],
+            "requested_at": entry["requested_at"],
+            "attempts": entry["attempts"],
+        }
+        for did, entry in pending_pairings.items() if not entry["approved"]
+    ]
+    # Sort newest first
+    result.sort(key=lambda x: x["requested_at"], reverse=True)
+    return jsonify({"pending": result[:5]}), 200
+
+
+@app.route("/api/approve", methods=["POST"])
+def approve_device():
+    """Approve or reject a specific device (localhost only)."""
+    if request.remote_addr not in ["127.0.0.1", "::1"]:
+        return jsonify({"error": "Forbidden"}), 403
+    data = request.get_json(silent=True) or {}
+    device_id = data.get("device_id", "").strip()
+    action = data.get("action", "").strip()  # "approve" or "reject"
+
+    if action == "approve":
+        entry = pending_pairings.get(device_id)
+        if not entry:
+            return jsonify({"error": "No pending pairing for this device"}), 404
+        entry["approved"] = True
+        log_event("✓", GREEN, "pairing approved", f"{entry['device_name']} ({device_id[:8]}...)")
+        return jsonify({"status": "approved"}), 200
+
+    elif action == "reject":
+        pending_pairings.pop(device_id, None)
+        blocked_devices[device_id] = time.time() + 600
+        log_event("✗", RED, "pairing rejected", device_id)
+        return jsonify({"status": "rejected"}), 200
+
+    return jsonify({"error": "action must be approve or reject"}), 400
 
 
 # ------------------------------------------------------------

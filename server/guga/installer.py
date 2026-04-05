@@ -359,27 +359,6 @@ def print_qr(mode: str):
     except Exception as e:
         warn(f"Could not generate QR: {e}")
 
-def get_pin():
-    try:
-        import subprocess, re
-        log = subprocess.check_output(
-            ["journalctl", "-u", "guga", "-n", "300", "--no-pager"],
-            text=True, 
-            stderr=subprocess.DEVNULL
-        )
-        matches = re.findall(r"\[GUGA_PIN\]\s*([0-9]+)", log)
-        return matches[-1] if matches else None
-    except Exception:
-        return None
-
-def show_pin():
-    step("Retrieving latest pairing PIN…")
-    pin = get_pin()
-    if not pin:
-        warn("No pending PIN found in recent logs.")
-    else:
-        print(f"\n  {DIM}LATEST PAIRING PIN:{RESET}")
-        print(f"  {BOLD}{GREEN}{pin}{RESET}\n")
 
 def ask_mode() -> str:
     print()
@@ -404,10 +383,10 @@ def ask_os_notif() -> str:
 # Proxy Logic Extracted from script
 # ─────────────────────────────────────────────────────────────────────────────
 
-def run_system_installer(qr_only=False, pin_only=False, setup_only=False):
+def run_system_installer(qr_only=False, setup_only=False):
     env_path = os.path.join(CONFIG_DIR, ".env")
     
-    if pin_only or qr_only:
+    if qr_only:
         import subprocess
         try:
             result = subprocess.run(["systemctl", "is-active", "guga"], capture_output=True, text=True)
@@ -417,10 +396,6 @@ def run_system_installer(qr_only=False, pin_only=False, setup_only=False):
                 sys.exit(1)
         except Exception:
             pass
-
-    if pin_only:
-        show_pin()
-        sys.exit(0)
 
     if qr_only:
         existing_mode = "lan"
