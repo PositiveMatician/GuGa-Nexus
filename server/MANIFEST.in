@@ -1,2 +1,5 @@
 recursive-include guga/man *
 recursive-include guga *
+
+global-exclude __pycache__
+global-exclude *.py[co]

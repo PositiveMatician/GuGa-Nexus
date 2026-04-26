@@ -6,11 +6,7 @@ import shutil
 import platform
 import textwrap
 
-# ── Linux guard ───────────────────────────────────────────────────────────────
-if platform.system() != "Linux":
-    print("❌  This setup only runs on Linux.")
-    print(f"    Current OS: {platform.system()}")
-    sys.exit(1)
+
 
 # ── Colour helpers ────────────────────────────────────────────────────────────
 RESET  = "\033[0m"; BOLD = "\033[1m"; DIM = "\033[2m"
@@ -384,6 +380,11 @@ def ask_os_notif() -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def run_system_installer(qr_only=False, setup_only=False):
+    # ── Linux guard ───────────────────────────────────────────────────────────────
+    if platform.system() != "Linux":
+        print("❌  This setup only runs on Linux.")
+        print(f"    Current OS: {platform.system()}")
+        sys.exit(1)
     env_path = os.path.join(CONFIG_DIR, ".env")
     
     if qr_only:

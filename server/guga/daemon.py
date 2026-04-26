@@ -231,8 +231,11 @@ def is_device_trusted(device_id: str) -> bool:
     return True
 
 
-# ------------------------------------------------------------
-# HTML Dashboard
+# region
+ 
+
+#------------------------------------------------------------
+# region HTML Dashboard
 # ------------------------------------------------------------
 HTML_PAGE = """
 <!DOCTYPE html>
@@ -695,10 +698,10 @@ HTML_PAGE = """
 </html>
 """
 
-
+# endregion
 
 # ------------------------------------------------------------
-# HTTP Routes
+# region HTTP Routes
 # ------------------------------------------------------------
 @app.route("/")
 def web_interface():
@@ -902,6 +905,7 @@ def approve_device():
 
     return jsonify({"error": "action must be approve or reject"}), 400
 
+# endregion
 
 # ------------------------------------------------------------
 # Socket.IO Events

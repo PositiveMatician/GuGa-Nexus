@@ -50,6 +50,8 @@ test-env/
 .idea/
 **/.idea/
 .vscode/
+.obsidian/
+**/.obsidian/
 .DS_Store
 .pytest_cache/
 .ipynb_checkpoints/
