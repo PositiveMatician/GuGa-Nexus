@@ -791,7 +791,8 @@ def handle_command_api():
         return jsonify({"error": "No command"}), 400
     log_event("→", CYAN, "command (HTTP)", f"{device_id}: {command!r}")
     response_msg = process_command(command)
-    notify_all_clients(response_msg)
+    for sid in get_sids_by_device(device_id):
+        send_private_message(sid, response_msg["message"], response_msg["title"])
     return jsonify({"ok": True}), 200
 
 
@@ -984,16 +985,19 @@ def handle_command(data):
         return
 
     log_event("→", CYAN, "command", f"{device_id}: {command!r}")
-    response_text = process_command(command)
-    notify_all_clients(response_text)
+    response_msg = process_command(command)
+    send_private_message(request.sid, response_msg["message"], response_msg["title"])
 
 
 # ------------------------------------------------------------
 # Core Logic
 # ------------------------------------------------------------
-def process_command(command: str) -> str:
+def process_command(command: str) -> dict:
     """Take the command and return a temporary not found message."""
-    return f"Command '{command}' not found. Please wait for the admin to update the command list."
+    return {
+        "title": "System",
+        "message": f"Command '{command}' not found. Please wait for the admin to update the command list."
+    }
 
 
 def notify_all_clients(message: str, title: str = None) -> None:

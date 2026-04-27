@@ -1,4 +1,21 @@
-Work on send private mesages , send_private_message(session_id: str, message: str) this needs to have a title section. 
+Yes, that is exactly how it works. 
+
+If you pair the GuGa web interface in one browser tab, **all other tabs and windows in that same browser will be trusted automatically.**
+
+Here is the technical reason why:
+
+1.  **Shared Storage**: When you pair a browser, the server sends back a unique `token`. The web interface saves both your `device_id` and that `token` into the browser's `localStorage`.
+2.  **Origin Scoping**: Browser `localStorage` is shared across all tabs and windows that have the same "Origin" (the same IP address and Port, e.g., `http://192.168.1.5:6769`).
+3.  **Automatic Auth**: When you open a second tab:
+    *   The JavaScript code immediately finds the `device_id` and `token` already sitting in `localStorage`.
+    *   It bypasses the "Pairing/PIN" phase and sends that data to the server during the initial connection request.
+    *   The server sees the matching credentials in its `trusted_devices.json` and allows the connection immediately.
+
+This effectively makes the "Device" your **entire browser installation**, while each tab acts as a separate **Session** (`sid`) belonging to that device.
+
+This is a vulnerability , every new session id should be paired and trusted before matching it with a device id
+
+
 
 Good — I've read all four source files completely. Here's a thorough analysis of where the project actually stands versus the roadmap.
 
