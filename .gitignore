@@ -53,8 +53,12 @@ test-env/
 .obsidian/
 **/.obsidian/
 .DS_Store
+# --- Testing ---
 .pytest_cache/
-.ipynb_checkpoints/
+.tox/
+.coverage
+htmlcov/
+**/.pytest_cache/
 
 # --- Artifacts & Distributions ---
 dist/

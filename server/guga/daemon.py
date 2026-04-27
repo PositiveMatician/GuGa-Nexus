@@ -734,16 +734,34 @@ def send_to_all():
     return jsonify({"ok": True, "sent_to": len(connected_clients)}), 200
 
 
-@app.route("/send/<session_id>", methods=["POST"])
-def send_to_one(session_id: str):
-    """Send a message to ONE specific client by session ID."""
+def get_sids_by_device(device_id: str) -> list[str]:
+    """Return all active session IDs for a given device_id."""
+    return [sid for sid, did in connected_clients.items() if did == device_id]
+
+
+@app.route("/send/<target_id>", methods=["POST"])
+def send_to_one(target_id: str):
+    """Send a message to a specific device_id or session_id."""
     data = request.get_json(silent=True) or {}
     message = data.get("message", "").strip()
+    title = data.get("title", "").strip()
     if not message:
         return jsonify({"error": "No message provided"}), 400
-    if send_private_message(session_id, message):
-        return jsonify({"ok": True, "session_id": session_id}), 200
-    return jsonify({"error": f"No client with session_id '{session_id}'"}), 404
+
+    # Try mapping device_id to session first
+    target_sids = get_sids_by_device(target_id)
+    
+    # Fallback to direct session_id if not found as device_id
+    if not target_sids and target_id in connected_clients:
+        target_sids = [target_id]
+
+    if not target_sids:
+        return jsonify({"error": f"No active client found for '{target_id}'"}), 404
+
+    for sid in target_sids:
+        send_private_message(sid, message, title)
+
+    return jsonify({"ok": True, "sent_to_sessions": len(target_sids)}), 200
 
 
 @app.route("/api/command", methods=["POST"])
@@ -924,7 +942,7 @@ def handle_connect():
         log_event("✗", RED, "token mismatch", f"device_id={device_id}")
         return False
     connected_clients[request.sid] = device_id
-    log_event("↑", GREEN, "connected", f"{device_id}  ({len(connected_clients)} online)")
+    log_event("↑", GREEN, "connected", f"{device_id} (SID: {request.sid}) ({len(connected_clients)} online)")
     send_private_message(request.sid, "Connection established. GuGu online.")
 
 
@@ -1001,7 +1019,7 @@ def notify_all_clients(message: str, title: str = None) -> None:
             log_event("✗", RED, "send failed", f"{sid} ({device_id}): {e}")
 
 
-def send_private_message(session_id: str, message: str) -> bool:
+def send_private_message(session_id: str, message: str , title:str = None) -> bool:
     """Send a private message to a specific session."""
     if session_id not in connected_clients:
         return False
@@ -1011,11 +1029,14 @@ def send_private_message(session_id: str, message: str) -> bool:
     device_info = trusted.get(device_id, {})
     client_type = device_info.get("type", "app")
     token = device_info.get("token")
-    payload_json = json.dumps({"message": message})
+    payload_data = {"message": message}
+    if title:
+        payload_data["title"] = title
+    payload_json = json.dumps(payload_data) 
 
     try:
         if client_type == "browser" or not token:
-            socketio.emit("guga_response", {"message": message}, room=session_id)
+            socketio.emit("guga_response", payload_data, room=session_id)
         else:
             encrypted = CryptoHelper.encrypt(payload_json, token)
             socketio.emit("guga_response", encrypted, room=session_id)
