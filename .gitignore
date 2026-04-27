@@ -63,3 +63,5 @@ htmlcov/
 # --- Artifacts & Distributions ---
 dist/
 target/
+# --- Project Notes ---
+Guga/
