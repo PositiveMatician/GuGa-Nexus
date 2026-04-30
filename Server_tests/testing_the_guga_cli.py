@@ -245,6 +245,9 @@ class TestGuGaCLI(unittest.TestCase):
         code, stdout, stderr = self.run_cli([])
         self.assertEqual(code, 1)
         self.assertIn("--send-to DEVICE_ID", stderr)
+        self.assertIn("--start-server", stderr)
+        self.assertIn("--reload-server", stderr)
+        self.assertIn("--install-service", stderr)
 
     def test_reload_server_help(self):
         """Check if --reload-server is in help."""

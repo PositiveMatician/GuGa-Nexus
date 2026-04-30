@@ -551,7 +551,12 @@ def show_help(error: Optional[str] = None) -> None:
     print('  -t, --title LABEL             Set notification title (e.g. "GPU Server")', file=sys.stderr)
     print('  --send-to DEVICE_ID           Send to a specific device', file=sys.stderr)
     print('  --silent                      Suppress internal output', file=sys.stderr)
+    
+    print("\nSetup & Background:", file=sys.stderr)
+    print('  --install-service             Set up GuGa system components', file=sys.stderr)
     print('  --qr                          Show pairing QR code', file=sys.stderr)
+    print('  --start-server                Start server in foreground', file=sys.stderr)
+    print('  --reload-server               Restart background service', file=sys.stderr)
     
     print("\nFor more detail, check 'man guga'.", file=sys.stderr)
 
