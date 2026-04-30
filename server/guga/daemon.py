@@ -148,6 +148,8 @@ blocked_devices: dict = {}
 
 pending_asks: dict[str, eventlet.event.Event] = {} # device_id -> Event
 
+command_queue = eventlet.queue.Queue()
+
 TRUSTED_DEVICES_FILE = os.path.join(CONFIG_DIR, "trusted_devices.json")
 
 
@@ -1037,15 +1039,13 @@ def handle_command(data):
         emit("error", {"message": f"Processing error: {str(e)}"})
         return
 
-    log_event("→", CYAN, "command", f"{device_id}: {command!r}")
+    log_event("→", CYAN, "command queued", f"{device_id}: {command!r}")
     
-    if device_id in pending_asks:
-        log_event("←", GREEN, "intercepted as reply", f"{device_id}: {command!r}")
-        pending_asks[device_id].send(command)
-        return
-
-    response_msg = process_command(command)
-    send_private_message(request.sid, response_msg["message"], response_msg["title"])
+    command_queue.put({
+        "device_id": device_id,
+        "sid": request.sid,
+        "command": command
+    })
 
 
 @socketio.on("reply")
@@ -1065,6 +1065,31 @@ def handle_reply(data):
 # ------------------------------------------------------------
 # Core Logic
 # ------------------------------------------------------------
+def command_worker():
+    """Background worker to process commands sequentially from the queue."""
+    log_event("⚙", CYAN, "command worker started")
+    while True:
+        item = command_queue.get()
+        try:
+            device_id = item["device_id"]
+            sid = item["sid"]
+            command = item["command"]
+            
+            # Check if this command should be intercepted as a reply to a pending ask
+            if device_id in pending_asks:
+                log_event("←", GREEN, "intercepted as reply", f"{device_id}: {command!r}")
+                pending_asks[device_id].send(command)
+                continue
+
+            # Process as normal command
+            log_event("⚙", CYAN, "processing command", f"{device_id}: {command!r}")
+            response_msg = process_command(command)
+            send_private_message(sid, response_msg["message"], response_msg["title"])
+        except Exception as e:
+            log_event("✗", RED, "worker error", str(e))
+        finally:
+            eventlet.sleep(0) # Yield
+
 def process_command(command: str) -> dict:
     """Take the command and return a temporary not found message."""
     return {
@@ -1220,6 +1245,8 @@ if not os.environ.get("GUGA_INITIALIZED"):
     initialize_system()
 
 def run_server():
+    # Start background workers
+    eventlet.spawn(command_worker)
     os_notif_enabled = os.getenv("ENABLE_OS_NOTIFICATIONS", "False").lower() == "true"
     mode = os.getenv("MODE", "lan").lower()
     port = int(os.getenv("PORT", 6769))

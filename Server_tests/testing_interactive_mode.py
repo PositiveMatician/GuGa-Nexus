@@ -24,8 +24,9 @@ class TestInteractiveModeExtended(unittest.TestCase):
         os.environ["ENABLE_OS_NOTIFICATIONS"] = "False"
         
         def run_server():
-            # Set allow_unsafe_werkzeug to True for testing
-            server_socketio.run(app, host="127.0.0.1", port=cls.server_port, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
+            # Ensure the server uses the test port
+            os.environ["PORT"] = str(cls.server_port)
+            daemon.run_server()
 
         cls.server_thread = threading.Thread(target=run_server, daemon=True)
         cls.server_thread.start()
@@ -124,6 +125,24 @@ class TestInteractiveModeExtended(unittest.TestCase):
         time.sleep(1)
         
         self.assertTrue(any("Normal Command" in r['message'] for r in server_responses))
+
+    def test_command_queuing(self):
+        """Verify that multiple commands sent rapidly are all processed."""
+        server_responses = []
+        @self.sio.on('guga_response')
+        def on_msg(data):
+            server_responses.append(data)
+
+        # Send 5 commands rapidly
+        for i in range(5):
+            self.sio.emit('command', {'device_id': 'test-device', 'phrase': f'Command {i}'})
+        
+        time.sleep(2)
+        
+        # Verify all 5 responses received
+        self.assertEqual(len(server_responses), 5)
+        for i in range(5):
+            self.assertTrue(any(f"Command {i}" in r['message'] for r in server_responses))
 
 if __name__ == '__main__':
     unittest.main()
