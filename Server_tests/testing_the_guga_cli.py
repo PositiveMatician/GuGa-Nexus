@@ -68,11 +68,17 @@ class TestGuGaCLI(unittest.TestCase):
         cls.server_url = f"http://127.0.0.1:{cls.server_port}"
         
         def run_server():
-            server_socketio.run(app, host="127.0.0.1", port=cls.server_port, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
+            # Force the port for the worker to pick up correctly via environment
+            os.environ["PORT"] = str(cls.server_port)
+            daemon.run_server()
 
         cls.server_thread = threading.Thread(target=run_server, daemon=True)
         cls.server_thread.start()
         time.sleep(2)
+
+        # Inject trusted device for tests
+        from guga.daemon import save_trusted_device
+        save_trusted_device("browser-cli", "cli-token", "browser", time.time() + 3600)
 
     def setUp(self):
         self.browser = VirtualBrowser("browser-cli", "cli-token")

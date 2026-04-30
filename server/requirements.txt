@@ -8,3 +8,4 @@ gunicorn==23.0.0
 eventlet==0.40.4
 aiohttp==3.10.11
 requests==2.32.3
+pexpect==4.9.0

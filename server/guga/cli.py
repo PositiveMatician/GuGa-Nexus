@@ -253,8 +253,10 @@ def run_interactive_command(cmd_args: List[str], port: int, silent: bool, title:
     captured_lines = []
 
     try:
-        # Spawn the process
-        child = pexpect.spawn(cmd_args[0], cmd_args[1:], encoding='utf-8', timeout=None)
+        # Spawn the process. shlex.join ensures the command is a single string for spawn
+        # which is often more reliable than passing a list to spawn on Linux.
+        full_cmd = shlex.join(cmd_args)
+        child = pexpect.spawn(full_cmd, encoding='utf-8', timeout=None)
         
         while child.isalive():
             # Wait for a prompt or end of process

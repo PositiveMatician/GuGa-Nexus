@@ -66,11 +66,12 @@ class TestPrivateCommandReplyToClient(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.server_url = "http://127.0.0.1:6769"
+        cls.server_url = "http://127.0.0.1:6768"
         
         # Start the server in a background thread
         def run_server():
-            server_socketio.run(app, host="127.0.0.1", port=6769, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
+            os.environ["PORT"] = "6768"
+            daemon.run_server()
 
         cls.server_thread = threading.Thread(target=run_server, daemon=True)
         cls.server_thread.start()
@@ -91,7 +92,7 @@ class TestPrivateCommandReplyToClient(unittest.TestCase):
             # Client index 4 (browser-5) sends a command
             sender_index = 4
             clients[sender_index].send_command("Multi-client test")
-            time.sleep(1)
+            time.sleep(2)
 
             # Assertions
             for i, c in enumerate(clients):

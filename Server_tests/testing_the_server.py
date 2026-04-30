@@ -69,7 +69,8 @@ class TestPrivateMessagesToClient(unittest.TestCase):
         
         # Start the server in a background thread
         def run_server():
-            server_socketio.run(app, host="127.0.0.1", port=6769, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
+            os.environ["PORT"] = "6769"
+            daemon.run_server()
 
         cls.server_thread = threading.Thread(target=run_server, daemon=True)
         cls.server_thread.start()
