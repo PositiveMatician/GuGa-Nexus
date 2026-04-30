@@ -427,7 +427,7 @@ for more details:
         help="Suppress guga's own output.",
     )
     parser.add_argument(
-        "-f", "--from", "--title",
+        "-t", "-f", "--from", "--title",
         dest="title",
         default=defaults["title"],
         metavar="LABEL",
@@ -437,7 +437,10 @@ for more details:
     if argcomplete:
         argcomplete.autocomplete(parser)
 
-    return parser.parse_args()
+    args, unknown = parser.parse_known_args()
+    if unknown:
+        args.args.extend(unknown)
+    return args
 
 
 def show_help(error: Optional[str] = None) -> None:
