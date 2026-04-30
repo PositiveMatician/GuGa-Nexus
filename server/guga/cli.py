@@ -2,14 +2,19 @@
 """
 guga - Send notifications to your Android via the GuGa server.
 
-Auto-detected mode:
-  echo "msg" | guga
-  guga "Build finished"
-  guga python train.py
+Usage:
+  guga [options] "message"           Send a notification
+  guga [options] command args        Run a command and notify when finished
+  guga --ask-user "Question"         Ask a question to your phone and wait for reply
+  guga --run --interactive python    Run interactively (forwards prompts to phone)
 
-Explicit mode (overrides auto-detection):
-  guga --message "build done"
-  guga --run calc maintenance.cobol
+Options:
+  -m, --message                      Force message mode
+  -r, --run                          Force run mode
+  -i, --interactive                  Remote interactive mode (PTY wrapping)
+  --ask-user PROMPT                  Synchronous request-reply loop
+  --delay DURATION                   Timeout for replies (e.g. 5m, 1200s, never)
+  --send-to DEVICE_ID                Target a specific device
 """
 
 import argparse
@@ -185,7 +190,22 @@ def send_message_to(target_id: str, message: str, port: int, silent: bool, title
         sys.exit(1)
 
 def guga_ask_user(prompt: str, port: int, device_id: str, title: Optional[str] = None, timeout: Optional[int] = None, quiet: bool = False) -> str:
-    """Sends a prompt to a device and waits for a reply. Returns the reply string."""
+    """
+    Sends a synchronous request-reply prompt to a specific device.
+    Blocks the local CLI until the user replies from the Android app
+    or the request times out.
+    
+    Args:
+        prompt (str): The question to show the user.
+        port (int): GuGa server port.
+        device_id (str): Target device identifier.
+        title (str, optional): Label for the notification.
+        timeout (int, optional): Seconds to wait before expiring.
+        quiet (bool): If True, suppresses printing the reply to stdout.
+        
+    Returns:
+        str: The user's reply.
+    """
     url = f"http://localhost:{port}/api/ask"
     payload = {"message": prompt, "device_id": device_id, "timeout": timeout}
     if title:
@@ -233,8 +253,10 @@ def guga_ask_user(prompt: str, port: int, device_id: str, title: Optional[str] =
 
 def run_interactive_command(cmd_args: List[str], port: int, silent: bool, title: str, target_id: Optional[str] = None):
     """
-    Spawns a command using pexpect to detect interactive prompts and forwards 
-    them to the user's phone for remote interaction.
+    Spawns a command in a pseudo-terminal (PTY) using pexpect.
+    Monitors stdout for common terminal prompts (ends with :, ?, or >).
+    When a prompt is detected, it is forwarded to the user's phone.
+    The process blocks until a reply is received and fed back into the PTY.
     """
     try:
         import pexpect
@@ -727,12 +749,15 @@ def show_help(error: Optional[str] = None) -> None:
     print("\nCommon Options:", file=sys.stderr)
     print('  -m, --message                 Force message mode', file=sys.stderr)
     print('  -r, --run                     Force run mode', file=sys.stderr)
-    print('  -s, --status                  Show service status', file=sys.stderr)
+    print('  -i, --interactive             Remote interaction (PTY) for --run mode', file=sys.stderr)
     print('  -t, --title LABEL             Set notification title (e.g. "GPU Server")', file=sys.stderr)
     print('  --send-to DEVICE_ID           Send to a specific device', file=sys.stderr)
     print('  --ask-user PROMPT             Ask user for input and wait for reply', file=sys.stderr)
     print('  --delay DURATION              Timeout for reply (e.g. 1200s, 10m, never)', file=sys.stderr)
     print('  --silent                      Suppress internal output', file=sys.stderr)
+
+    print("\nAdvanced Mode:", file=sys.stderr)
+    print('  guga -r -i python train.py    Automatically forwards stdin prompts to phone', file=sys.stderr)
     
     print("\nSetup & Background:", file=sys.stderr)
     print('  --install-service             Set up GuGa system components', file=sys.stderr)
