@@ -144,5 +144,30 @@ class TestInteractiveModeExtended(unittest.TestCase):
         for i in range(5):
             self.assertTrue(any(f"Command {i}" in r['message'] for r in server_responses))
 
+    def test_remote_interactive_execution(self):
+        """Test guga -r -i logic: detects prompt, forwards to phone, feeds back reply."""
+        from guga import cli
+        
+        script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'server', 'scratch', 'prompt_script.py'))
+        
+        @self.sio.on('guga_ask')
+        def on_ask(data):
+            # Verify we got the prompt
+            if "Enter your name" in data['message']:
+                self.sio.emit('reply', {'message': 'GuGaUser'})
+
+        # Run interactive command
+        # We'll capture output to verify the script finished with the reply
+        with patch('sys.stdout.write') as mock_write:
+            # We must use a real thread because run_interactive_command is blocking
+            # and it will wait for guga_ask_user which will wait for our mock client
+            try:
+                cli.run_interactive_command([sys.executable, script_path], self.server_port, False, "Test Title", "test-device")
+            except SystemExit as e:
+                self.assertEqual(e.code, 0)
+            
+            output = "".join(call.args[0] for call in mock_write.call_args_list)
+            self.assertIn("Hello, GuGaUser!", output)
+
 if __name__ == '__main__':
     unittest.main()

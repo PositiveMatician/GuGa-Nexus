@@ -184,8 +184,8 @@ def send_message_to(target_id: str, message: str, port: int, silent: bool, title
             print(f"❌ Unexpected error: {e}", file=sys.stderr)
         sys.exit(1)
 
-def guga_ask_user(prompt: str, port: int, device_id: str, title: Optional[str] = None, timeout: Optional[int] = None):
-    """Sends a prompt to a device and waits for a reply."""
+def guga_ask_user(prompt: str, port: int, device_id: str, title: Optional[str] = None, timeout: Optional[int] = None, quiet: bool = False) -> str:
+    """Sends a prompt to a device and waits for a reply. Returns the reply string."""
     url = f"http://localhost:{port}/api/ask"
     payload = {"message": prompt, "device_id": device_id, "timeout": timeout}
     if title:
@@ -205,7 +205,10 @@ def guga_ask_user(prompt: str, port: int, device_id: str, title: Optional[str] =
         with urllib.request.urlopen(req, timeout=req_timeout) as response:
             res_data = json.load(response)
             if "reply" in res_data:
-                print(res_data["reply"])
+                reply = res_data["reply"]
+                if not quiet:
+                    print(reply)
+                return reply
             elif "error" in res_data:
                 print(f"❌ Error: {res_data['error']}", file=sys.stderr)
                 sys.exit(1)
@@ -228,7 +231,103 @@ def guga_ask_user(prompt: str, port: int, device_id: str, title: Optional[str] =
         sys.exit(1)
 
 
-def run_command(cmd_args: List[str], port: int, silent: bool, title: str, target_id: Optional[str] = None):
+def run_interactive_command(cmd_args: List[str], port: int, silent: bool, title: str, target_id: Optional[str] = None):
+    """
+    Spawns a command using pexpect to detect interactive prompts and forwards 
+    them to the user's phone for remote interaction.
+    """
+    try:
+        import pexpect
+    except ImportError:
+        print(f"\n  {RED}✗  ERROR:{RESET} 'pexpect' package is required for interactive mode.")
+        print(f"  {DIM}Install it with: {RESET}{BOLD}pip install pexpect{RESET}\n")
+        sys.exit(1)
+
+    cmd_label = " ".join(cmd_args)
+    start = time.time()
+    if not silent:
+        print(f"▶ guga interactive: {cmd_label}\n")
+
+    # This regex matches any line that ends with :, ?, or >, plus optional spaces.
+    generic_prompt_regex = r'[:?>]\s*$'
+    captured_lines = []
+
+    try:
+        # Spawn the process
+        child = pexpect.spawn(cmd_args[0], cmd_args[1:], encoding='utf-8', timeout=None)
+        
+        while child.isalive():
+            # Wait for a prompt or end of process
+            try:
+                # We use a 1s timeout loop to keep checking isalive and avoid blocking forever
+                index = child.expect([generic_prompt_regex, pexpect.EOF], timeout=1)
+                
+                # Print and capture what happened
+                output = child.before
+                if output:
+                    print(output, end="", flush=True)
+                    captured_lines.append(output)
+
+                if index == 0: # Prompt detected!
+                    prompt = child.after
+                    print(prompt, end="", flush=True)
+                    captured_lines.append(prompt)
+
+                    if not silent:
+                        print(f"\n{YELLOW}🔔 [REMOTE ASK]{RESET} Forwarding prompt to {target_id or 'devices'}...")
+                    
+                    # Forward the prompt context (last line of before + after)
+                    context = (output.splitlines()[-1] if "\n" in output else output) + prompt
+                    
+                    # Blocking call to get reply from phone
+                    # We pass quiet=True because we'll feed the reply into the PTY which will echo it anyway
+                    reply = guga_ask_user(context.strip(), port, target_id, title="Interactive Prompt", quiet=True)
+                    
+                    # Feed reply back to the process
+                    child.sendline(reply)
+                
+                elif index == 1: # EOF
+                    break
+
+            except pexpect.TIMEOUT:
+                # Still running, just no prompt yet. Print any intermediate output.
+                output = child.before
+                if output:
+                    print(output, end="", flush=True)
+                    captured_lines.append(output)
+                continue
+            except pexpect.EOF:
+                break
+
+        child.wait()
+        exit_code = child.exitstatus if child.exitstatus is not None else 0
+
+    except Exception as e:
+        print(f"❌ Error during interactive execution: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    elapsed = format_duration(time.time() - start)
+    last_line = last_meaningful_line("".join(captured_lines))
+
+    status, verb = ("✅", "done") if exit_code == 0 else ("❌", f"failed (exit {exit_code})")
+    parts = [f"{status} {cmd_label} {verb} — {elapsed}"]
+    if last_line:
+        parts.append(last_line)
+
+    msg = "\n".join(parts)
+    if target_id:
+        send_message_to(target_id, msg, port, silent, title)
+    else:
+        broadcast_message(msg, port, silent, title)
+    
+    # Final cleanup print
+    if not silent:
+        print(f"\n{parts[0]}")
+    
+    sys.exit(exit_code)
+
+
+def run_command(cmd_args: List[str], port: int, silent: bool, title: str, target_id: Optional[str] = None, interactive: bool = False):
     """
     Executes a shell command, streams its output to the console, and sends a 
     notification via GuGa when the command completes or is interrupted.
@@ -247,6 +346,9 @@ def run_command(cmd_args: List[str], port: int, silent: bool, title: str, target
         print(f"▶ guga watching: {cmd_label}\n")
 
     captured_lines = []
+    if interactive:
+        return run_interactive_command(cmd_args, port, silent, title, target_id)
+
     try:
         process = subprocess.Popen(
             cmd_args,
@@ -551,6 +653,11 @@ for more details:
         action="store_true",
         help="Force run mode. Executes positional args as a command.",
     )
+    parser.add_argument(
+        "-i", "--interactive",
+        action="store_true",
+        help="Enable remote interaction for --run mode (forwards prompts to phone).",
+    )
 
     parser.add_argument(
         "--server",
@@ -706,11 +813,16 @@ def main():
         if not positional:
             print("❌ --run requires a command to execute.", file=sys.stderr)
             sys.exit(1)
+            
+        if args.interactive and not args.send_to:
+            print("❌ Error: --send-to DEVICE_ID is mandatory when using --interactive.", file=sys.stderr)
+            sys.exit(1)
+
         # If the user passed a single quoted string like "sleep 1" or "python train.py --lr 0.01",
         # split it into proper tokens so subprocess can execute it correctly.
         if len(positional) == 1:
             positional = shlex.split(positional[0])
-        run_command(positional, args.server, args.silent, args.title, target_id=args.send_to)
+        run_command(positional, args.server, args.silent, args.title, target_id=args.send_to, interactive=args.interactive)
         return
 
     # ── Auto-detection ────────────────────────────────────────────────────────
@@ -742,7 +854,7 @@ def main():
         return
 
     # 4. Otherwise → run mode
-    run_command(positional, args.server, args.silent, args.title, target_id=args.send_to)
+    run_command(positional, args.server, args.silent, args.title, target_id=args.send_to, interactive=args.interactive)
 
 
 if __name__ == "__main__":
