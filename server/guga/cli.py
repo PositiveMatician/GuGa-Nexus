@@ -19,6 +19,7 @@ import json
 import os
 import shlex
 import shutil
+import re
 import subprocess
 import time
 import urllib.request
@@ -45,6 +46,22 @@ def load_capabilities():
         except Exception:
             pass
     return {"installed_stages": [], "capabilities": {}}
+
+def parse_duration(duration: str) -> Optional[int]:
+    """Parses duration strings like 1200s, 10m, 1h, or 'never' into seconds."""
+    if not duration: return None
+    duration = duration.lower().strip()
+    if duration == "never": return None
+    
+    match = re.match(r"^(\d+)([smh]?)$", duration)
+    if not match:
+        raise ValueError(f"Invalid duration format: {duration} (use e.g. 120s, 5m, 1h, or never)")
+    
+    val, unit = match.groups()
+    val = int(val)
+    if unit == 'm': val *= 60
+    elif unit == 'h': val *= 3600
+    return val
 
 def check_capabilities(args):
     """Checks if the system has the required capabilities for the given arguments."""
@@ -167,12 +184,10 @@ def send_message_to(target_id: str, message: str, port: int, silent: bool, title
             print(f"❌ Unexpected error: {e}", file=sys.stderr)
         sys.exit(1)
 
-def guga_ask_user(prompt: str, port: int, device_id: Optional[str] = None, title: Optional[str] = None):
+def guga_ask_user(prompt: str, port: int, device_id: str, title: Optional[str] = None, timeout: Optional[int] = None):
     """Sends a prompt to a device and waits for a reply."""
     url = f"http://localhost:{port}/api/ask"
-    payload = {"message": prompt}
-    if device_id:
-        payload["device_id"] = device_id
+    payload = {"message": prompt, "device_id": device_id, "timeout": timeout}
     if title:
         payload["title"] = title
     
@@ -185,23 +200,31 @@ def guga_ask_user(prompt: str, port: int, device_id: Optional[str] = None, title
     )
     
     try:
-        # Increase timeout as we're waiting for human input
-        with urllib.request.urlopen(req, timeout=120) as response:
+        # urlopen timeout should be slightly more than the server wait time
+        req_timeout = (timeout + 5) if timeout is not None else None
+        with urllib.request.urlopen(req, timeout=req_timeout) as response:
             res_data = json.load(response)
             if "reply" in res_data:
                 print(res_data["reply"])
             elif "error" in res_data:
                 print(f"❌ Error: {res_data['error']}", file=sys.stderr)
                 sys.exit(1)
-    except urllib.error.HTTPError as e:
+    except (urllib.error.HTTPError) as e:
+        if e.code == 408:
+            print("❌ Expired: Timed out waiting for user reply.", file=sys.stderr)
+            sys.exit(1)
         try:
-            error_data = json.load(e)
+            error_data = json.loads(e.read().decode())
             print(f"❌ Error: {error_data.get('error', e.reason)}", file=sys.stderr)
         except Exception:
             print(f"❌ Server error: {e.reason}", file=sys.stderr)
         sys.exit(1)
     except Exception as e:
-        print(f"❌ Request failed: {e}", file=sys.stderr)
+        # Check if it's a timeout error (socket.timeout or similar)
+        if "timeout" in str(e).lower() or "timed out" in str(e).lower():
+            print("❌ Expired: Timed out waiting for user reply.", file=sys.stderr)
+        else:
+            print(f"❌ Request failed: {e}", file=sys.stderr)
         sys.exit(1)
 
 
@@ -560,6 +583,12 @@ for more details:
         metavar="PROMPT",
         help="Send a prompt to the device and wait for a reply.",
     )
+    parser.add_argument(
+        "--delay",
+        metavar="DURATION",
+        default="never",
+        help="How long to wait for --ask-user reply (e.g. 120s, 5m, never). Default: never.",
+    )
 
     if argcomplete:
         argcomplete.autocomplete(parser)
@@ -593,6 +622,7 @@ def show_help(error: Optional[str] = None) -> None:
     print('  -t, --title LABEL             Set notification title (e.g. "GPU Server")', file=sys.stderr)
     print('  --send-to DEVICE_ID           Send to a specific device', file=sys.stderr)
     print('  --ask-user PROMPT             Ask user for input and wait for reply', file=sys.stderr)
+    print('  --delay DURATION              Timeout for reply (e.g. 1200s, 10m, never)', file=sys.stderr)
     print('  --silent                      Suppress internal output', file=sys.stderr)
     
     print("\nSetup & Background:", file=sys.stderr)
@@ -637,7 +667,15 @@ def main():
         return
 
     if args.ask_user:
-        guga_ask_user(args.ask_user, args.server, args.send_to, args.title)
+        if not args.send_to:
+            print("❌ Error: --send-to DEVICE_ID is mandatory when using --ask-user.", file=sys.stderr)
+            sys.exit(1)
+        try:
+            timeout_sec = parse_duration(args.delay)
+            guga_ask_user(args.ask_user, args.server, args.send_to, args.title, timeout_sec)
+        except ValueError as e:
+            print(f"❌ Error: {e}", file=sys.stderr)
+            sys.exit(1)
         return
 
     # Check capabilities for general usage

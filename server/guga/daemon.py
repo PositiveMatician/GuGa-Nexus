@@ -806,32 +806,23 @@ def handle_ask():
     message = data.get("message", "").strip()
     device_id = data.get("device_id", "").strip()
     title = data.get("title", "Question")
-    timeout = data.get("timeout", 60)
+    timeout = data.get("timeout") # Can be None for infinite
 
     if not message:
         return jsonify({"error": "message required"}), 400
+    if not device_id:
+        return jsonify({"error": "device_id is compulsory for --ask-user"}), 400
 
     # Determine target SIDs
-    target_sids = []
-    if device_id:
-        target_sids = [sid for sid, did in connected_clients.items() if did == device_id]
-        if not target_sids:
-            return jsonify({"error": f"Device {device_id} is not connected"}), 404
-    else:
-        target_sids = list(connected_clients.keys())
-        if not target_sids:
-            return jsonify({"error": "No devices connected"}), 404
-        # If multiple devices, we just pick the first one for simplicity in 'ask' mode
-        # or we could broadcast. But for a BLOCKING ask, we usually target one.
-        # If not specified, we target the most recently connected or just the first.
-        device_id = connected_clients[target_sids[0]]
-        target_sids = [target_sids[0]]
+    target_sids = [sid for sid, did in connected_clients.items() if did == device_id]
+    if not target_sids:
+        return jsonify({"error": f"Device {device_id} is not connected"}), 404
 
     # Create an event to wait for
     evt = eventlet.event.Event()
     pending_asks[device_id] = evt
 
-    log_event("?", YELLOW, "ask user", f"{device_id}: {message}")
+    log_event("?", YELLOW, "ask user", f"{device_id}: {message} (timeout: {timeout if timeout else 'never'})")
     
     # Send the ask via SocketIO
     payload = {
@@ -845,7 +836,12 @@ def handle_ask():
 
     try:
         # Wait for the reply
-        with eventlet.Timeout(timeout):
+        if timeout:
+            with eventlet.Timeout(timeout):
+                reply = evt.wait()
+                return jsonify({"reply": reply}), 200
+        else:
+            # Infinite wait
             reply = evt.wait()
             return jsonify({"reply": reply}), 200
     except eventlet.Timeout:
@@ -1042,6 +1038,12 @@ def handle_command(data):
         return
 
     log_event("→", CYAN, "command", f"{device_id}: {command!r}")
+    
+    if device_id in pending_asks:
+        log_event("←", GREEN, "intercepted as reply", f"{device_id}: {command!r}")
+        pending_asks[device_id].send(command)
+        return
+
     response_msg = process_command(command)
     send_private_message(request.sid, response_msg["message"], response_msg["title"])
 
