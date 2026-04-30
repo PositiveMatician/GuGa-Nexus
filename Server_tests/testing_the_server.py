@@ -1,7 +1,9 @@
 """
-Tests the messaging between server and clients
+Tests the messaging between server and clients.
 
-
+This file contains the following tests:
+- test_broadcast_message: Sends a broadcast message to all the clients.
+- test_private_messages: Sends a private message to a specific client and ensures others don't get it.
 """
 
 

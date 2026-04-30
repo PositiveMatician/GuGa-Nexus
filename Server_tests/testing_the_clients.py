@@ -1,6 +1,8 @@
 """
-Test if commands send their reply to the client who ran the command or not
+Test if commands send their reply to the client who ran the command or not.
 
+This file contains the following test:
+- test_commands_isolation_10_clients: Verifies command isolation by simulating 10 concurrent clients, having one client send a command, and ensuring that only the sender receives the reply while the other 9 bystander clients do not.
 """
 import time
 import unittest

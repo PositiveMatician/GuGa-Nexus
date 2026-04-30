@@ -1,31 +1,6 @@
 # Manual Testing Protocol — Phase 20.1: Client-Generated PIN & Approval
 
-This protocol covers manual verification of the new pairing system. Before starting, ensure the `guga` service is running on your Linux machine and you have access to both the Android app and a web browser.
-
----
-
-## Suite 1: Standard Pairing (Happy Path)
-
-### 1. Android App Pairing
-1.  Open the Android app.
-2.  Go to Settings → Scan QR (scan the output of `guga --qr`).
-3.  **Verify**: A large 8-digit PIN is displayed on the phone (e.g., `1 2 3 4 5 6 7 8`).
-4.  **Verify**: The app shows "Waiting for approval..."
-5.  On your Linux terminal, run `guga --approve`.
-6.  **Verify**: Your device name (e.g., `Pixel 7`) and the matching PIN appear in the list.
-7.  Select the device number and press Enter.
-8.  **Verify**: The terminal shows "✓ Approved: Pixel 7".
-9.  **Verify**: The Android app instantly transitions to "PAIRED SUCCESSFULLY" and then "LIVE SYNC ACTIVE".
-10. Send a test notification: `guga "Hello Phone"`. Verify it arrives.
-
-### 2. Browser Client Pairing
-1.  Run `guga --url` to get your server address.
-2.  Open the URL in a browser.
-3.  **Verify**: A PIN is displayed at the top of the chat area.
-4.  **Verify**: The browser shows "waiting for approval...".
-5.  On Linux, run `guga --approve`.
-6.  Enter the corresponding number for the browser request.
-7.  **Verify**: The browser instantly shows "paired ✓" and connection is established.
+This protocol covers manual verification of the new pairing system. Before starting, ensure the `guga` service is running on your Linux machine and you have access a web browser.
 
 ---
 
