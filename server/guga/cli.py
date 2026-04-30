@@ -13,6 +13,7 @@ Explicit mode (overrides auto-detection):
 """
 
 import argparse
+from typing import List, Optional, Any
 import sys
 import json
 import os
@@ -56,7 +57,20 @@ def last_meaningful_line(text):
 
 # ── Core actions ──────────────────────────────────────────────────────────────
 
-def send_notification(message, port, silent, title=None):
+def send_notification(message: str, port: int, silent: bool, title: Optional[str] = None):
+    """
+    Sends a notification message to the GuGa server.
+
+    Args:
+        message (str): The text message to send.
+        port (int): The port where the GuGa server is listening.
+        silent (bool): If True, suppresses success/error messages in the console.
+        title (str, optional): An optional title/label for the notification.
+
+    Examples:
+        >>> send_notification("Hello World", 8080, False)
+        >>> send_notification("Process complete", 8080, True, "Build Script")
+    """
     url = f"http://localhost:{port}/send"
 
     payload = {"message": message}
@@ -86,7 +100,21 @@ def send_notification(message, port, silent, title=None):
         sys.exit(1)
 
 
-def run_command(cmd_args, port, silent, title):
+def run_command(cmd_args: List[str], port: int, silent: bool, title: str):
+    """
+    Executes a shell command, streams its output to the console, and sends a 
+    notification via GuGa when the command completes or is interrupted.
+
+    Args:
+        cmd_args (list of str): The command and its arguments to execute (e.g., ["python", "train.py"]).
+        port (int): The port where the GuGa server is running.
+        silent (bool): If True, suppresses GuGa's own progress messages.
+        title (str): The label shown in the notification (e.g., "My Machine").
+
+    Examples:
+        >>> run_command(["sleep", "10"], 8080, False, "Task")
+        >>> run_command(["ls", "-lah"], 8080, True, "Files")
+    """
     cmd_label = " ".join(cmd_args)
     start = time.time()
 
@@ -129,7 +157,7 @@ def run_command(cmd_args, port, silent, title):
     sys.exit(exit_code)
 
 
-def guga_approve(port, watch=False):
+def guga_approve(port: int, watch: bool = False):
     """Interactive loop to approve pending pairings."""
     base_url = f"http://localhost:{port}/api"
     
@@ -137,7 +165,7 @@ def guga_approve(port, watch=False):
     RESET = "\033[0m"; BOLD = "\033[1m"; DIM = "\033[2m"
     GREEN = "\033[32m"; YELLOW = "\033[33m"; RED = "\033[31m"; CYAN = "\033[36m"
     
-    def get_pending():
+    def get_pending() -> List[dict]:
         try:
             req = urllib.request.Request(f"{base_url}/pending")
             with urllib.request.urlopen(req, timeout=2) as r:
@@ -146,13 +174,13 @@ def guga_approve(port, watch=False):
             print(f"  {RED}✗{RESET} Error reaching server: {e}")
             return []
 
-    def format_time(ts):
+    def format_time(ts: float) -> str:
         diff = int(time.time() - ts)
         if diff < 10: return "just now"
         if diff < 60: return f"{diff}s ago"
         return f"{diff // 60} min ago"
 
-    def print_list(pending):
+    def print_list(pending: List[dict]) -> None:
         print(f"\n  {DIM}{'─' * 42}{RESET}")
         print(f"   {BOLD}Pending pairing requests{RESET}")
         print(f"  {DIM}{'─' * 42}{RESET}")
@@ -412,6 +440,33 @@ for more details:
     return parser.parse_args()
 
 
+def show_help(error: Optional[str] = None) -> None:
+    """
+    Displays a descriptive help message for the guga CLI.
+    
+    Args:
+        error (str, optional): An optional error message to display before the help text.
+    """
+    if error:
+        print(f"❌ {error}\n", file=sys.stderr)
+
+    print("GuGa Nexus - Notification & Command Watcher\n", file=sys.stderr)
+    print("Usage:", file=sys.stderr)
+    print('  guga [options] "message"      Send a simple notification', file=sys.stderr)
+    print('  guga [options] command args   Run a command and notify when done', file=sys.stderr)
+    print('  echo "msg" | guga             Pipe message into guga', file=sys.stderr)
+    
+    print("\nCommon Options:", file=sys.stderr)
+    print('  -m, --message                 Force message mode', file=sys.stderr)
+    print('  -r, --run                     Force run mode', file=sys.stderr)
+    print('  -s, --status                  Show service status', file=sys.stderr)
+    print('  -t, --title LABEL             Set notification title (e.g. "GPU Server")', file=sys.stderr)
+    print('  --silent                      Suppress internal output', file=sys.stderr)
+    print('  --qr                          Show pairing QR code', file=sys.stderr)
+    
+    print("\nFor more detail, check 'man guga'.", file=sys.stderr)
+
+
 def main():
     args = parse_args()
     
@@ -474,13 +529,7 @@ def main():
 
     # 2. Nothing at all
     if not positional:
-        print("❌ No message or command provided.\n", file=sys.stderr)
-        print("Usage:", file=sys.stderr)
-        print('  echo "msg" | guga', file=sys.stderr)
-        print('  guga "msg"', file=sys.stderr)
-        print('  guga python train.py', file=sys.stderr)
-        print('  guga --message "msg"       # explicit message mode', file=sys.stderr)
-        print('  guga --run python train.py # explicit run mode', file=sys.stderr)
+        show_help("No message or command provided.")
         sys.exit(1)
 
     # 3. Single non-executable string → message
