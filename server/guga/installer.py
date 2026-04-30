@@ -21,11 +21,34 @@ def ask(msg):   return input(f"  {msg}").strip()
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_DIR = os.path.expanduser("~/.guga")
+CAPABILITIES_FILE = os.path.join(CONFIG_DIR, "capabilities.json")
+
+def is_root():
+    return os.geteuid() == 0
+
+def load_capabilities():
+    if os.path.exists(CAPABILITIES_FILE):
+        try:
+            with open(CAPABILITIES_FILE, "r") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"installed_stages": [], "capabilities": {}}
+
+def save_capabilities(data):
+    try:
+        with open(CAPABILITIES_FILE, "w") as f:
+            json.dump(data, f, indent=4)
+    except Exception:
+        pass
+
 if not os.path.exists(CONFIG_DIR):
     try:
         os.makedirs(CONFIG_DIR, exist_ok=True)
     except Exception:
         pass
+
+import json
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Package manager detection
@@ -379,6 +402,62 @@ def ask_os_notif() -> str:
 # Proxy Logic Extracted from script
 # ─────────────────────────────────────────────────────────────────────────────
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 7. Stage Infrastructure
+# ─────────────────────────────────────────────────────────────────────────────
+
+class Stage:
+    def __init__(self, id, name, requires_sudo, action_fn, requirements_check=None, provides_capability=None):
+        self.id = id
+        self.name = name
+        self.requires_sudo = requires_sudo
+        self.action_fn = action_fn
+        self.requirements_check = requirements_check
+        self.provides_capability = provides_capability
+
+    def run(self, state, force=False):
+        if self.id in state["installed_stages"] and not force:
+            ok(f"{self.name} already installed")
+            return True
+
+        step(f"Stage: {self.name}")
+
+        if self.requires_sudo and not is_root():
+            warn(f"Skipping {self.name} — requires sudo privileges.")
+            dim("Rerun the installer with sudo to include this stage.")
+            return False
+
+        if self.requirements_check:
+            met, reason = self.requirements_check()
+            if not met:
+                warn(f"Skipping {self.name} — requirements not met: {reason}")
+                return False
+
+        try:
+            self.action_fn()
+            state["installed_stages"].append(self.id)
+            if self.provides_capability:
+                state["capabilities"][self.provides_capability] = True
+            ok(f"{self.name} completed")
+            return True
+        except Exception as e:
+            fail(f"Stage {self.name} failed: {e}")
+            return False
+
+def check_systemd():
+    if shutil.which("systemctl"):
+        return True, ""
+    return False, "systemd not found"
+
+def check_man():
+    candidates = [
+        os.path.join(HERE, "guga.1"),
+        os.path.join(HERE, "man", "guga.1"),
+    ]
+    if any(os.path.exists(p) for p in candidates):
+        return True, ""
+    return False, "man page source (guga.1) not found"
+
 def run_system_installer(qr_only=False, setup_only=False):
     # ── Linux guard ───────────────────────────────────────────────────────────────
     if platform.system() != "Linux":
@@ -387,17 +466,6 @@ def run_system_installer(qr_only=False, setup_only=False):
         sys.exit(1)
     env_path = os.path.join(CONFIG_DIR, ".env")
     
-    if qr_only:
-        import subprocess
-        try:
-            result = subprocess.run(["systemctl", "is-active", "guga"], capture_output=True, text=True)
-            if result.stdout.strip() != "active":
-                print(f"\n  {BOLD}{RED}Error:{RESET} {DIM}The 'guga' service is not running.{RESET}")
-                print(f"  {DIM}Please start the daemon first:{RESET} {BOLD}sudo systemctl start guga{RESET}\n")
-                sys.exit(1)
-        except Exception:
-            pass
-
     if qr_only:
         existing_mode = "lan"
         if os.path.exists(env_path):
@@ -412,8 +480,11 @@ def run_system_installer(qr_only=False, setup_only=False):
     print(f"  {BOLD}  GuGa Nexus  —  Setup{RESET}")
     print(f"  {BOLD}{'─' * 40}{RESET}")
 
-    if os.path.exists(env_path) and "--reconfigure" not in sys.argv:
-        warn(".env already exists — skipping questions  (use guga --install-service --reconfigure to change)")
+    state = load_capabilities()
+    reconfigure = "--reconfigure" in sys.argv
+
+    if os.path.exists(env_path) and not reconfigure:
+        warn(".env already exists — skipping basic configuration")
         dim("Reading existing configuration…")
         mode = "lan"
         os_notif = "False"
@@ -425,23 +496,51 @@ def run_system_installer(qr_only=False, setup_only=False):
         os_notif = ask_os_notif()
         ensure_env_exists(mode, os_notif, force=True)
 
-    ok(f"Mode: {BOLD}{mode.upper()}{RESET}")
-    ok(f"OS notifications: {BOLD}{os_notif}{RESET}")
+    # Advanced Options
+    print()
+    print(f"  {BOLD}Advanced Options{RESET}")
+    print(f"    {BOLD}1){RESET}  Standard Service (Background, Systemd)")
+    print(f"    {BOLD}2){RESET}  Foreground Only  (Skip systemd setup)")
+    print()
+    adv_choice = ask("Your choice [1/2]: ")
+    foreground_only = (adv_choice.strip() == "2")
 
-    install_linux_packages()
+    stages = [
+        Stage("system_packages", "System Dependencies", True, install_linux_packages),
+        Stage("env_config", "Configuration", False, lambda: ensure_env_exists(mode, os_notif, force=reconfigure)),
+        Stage("man_page", "Manual Page", True, setup_man_page, check_man),
+    ]
+
     if mode == "public":
-        download_cloudflared()
-    ensure_env_exists(mode, os_notif, force=False)
-    setup_man_page()
-    install_systemd_service()
+        stages.insert(1, Stage("cloudflared", "Cloudflare Tunnel", False, download_cloudflared))
+
+    if not foreground_only:
+        stages.append(Stage("systemd_service", "Systemd Service", True, install_systemd_service, check_systemd, "background_service"))
+    else:
+        # Explicitly remove systemd capability if it was there
+        state["capabilities"].pop("background_service", None)
+        if "systemd_service" in state["installed_stages"]:
+            state["installed_stages"].remove("systemd_service")
+
+    for s in stages:
+        s.run(state, force=reconfigure)
+
+    save_capabilities(state)
+
+    print()
+    print(f"  {BOLD}{'─' * 40}{RESET}")
+    print(f"  {GREEN}{BOLD}  GuGa Nexus setup complete{RESET}")
+    print(f"  {BOLD}{'─' * 40}{RESET}")
+    print()
     
-    print()
-    print(f"  {BOLD}{'─' * 40}{RESET}")
-    print(f"  {GREEN}{BOLD}  GuGa Nexus is installed and running{RESET}")
-    print(f"  {BOLD}{'─' * 40}{RESET}")
-    print()
+    if foreground_only:
+        ok("Foreground mode selected: systemd service was NOT installed.")
+        print(f"  {DIM}To start the server, run:{RESET}")
+        print(f"    {BOLD}guga --start-server{RESET}\n")
+    elif "background_service" in state["capabilities"]:
+        ok("Server is running as a systemd service.")
+    
     if mode == "public":
-        print(f"  {DIM}Cloudflare Tunnel is starting up in the background...{RESET}")
         print(f"  {DIM}Run this command in a few seconds to pair your device:{RESET}")
     else:
         print(f"  {DIM}Run this command to pair your device:{RESET}")

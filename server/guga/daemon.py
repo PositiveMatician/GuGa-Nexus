@@ -1146,7 +1146,7 @@ if not os.environ.get("GUGA_INITIALIZED"):
     os.environ["GUGA_INITIALIZED"] = "true"
     initialize_system()
 
-if __name__ == "__main__":
+def run_server():
     os_notif_enabled = os.getenv("ENABLE_OS_NOTIFICATIONS", "False").lower() == "true"
     mode = os.getenv("MODE", "lan").lower()
     port = int(os.getenv("PORT", 6769))
@@ -1182,3 +1182,6 @@ if __name__ == "__main__":
     print()
 
     socketio.run(app, host="0.0.0.0", port=port, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
+
+if __name__ == "__main__":
+    run_server()

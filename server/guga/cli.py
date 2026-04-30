@@ -30,6 +30,38 @@ except ImportError:
     argcomplete = None
 from guga import __version__
 
+# ── Colour helpers ────────────────────────────────────────────────────────────
+RESET  = "\033[0m"; BOLD = "\033[1m"; DIM = "\033[2m"
+GREEN  = "\033[32m"; YELLOW = "\033[33m"; RED = "\033[31m"; CYAN = "\033[36m"
+
+CONFIG_DIR = os.path.expanduser("~/.guga")
+CAPABILITIES_FILE = os.path.join(CONFIG_DIR, "capabilities.json")
+
+def load_capabilities():
+    if os.path.exists(CAPABILITIES_FILE):
+        try:
+            with open(CAPABILITIES_FILE, "r") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"installed_stages": [], "capabilities": {}}
+
+def check_capabilities(args):
+    """Checks if the system has the required capabilities for the given arguments."""
+    state = load_capabilities()
+    caps = state.get("capabilities", {})
+    
+    # Example checks:
+    if args.status and not caps.get("background_service"):
+        # If they ask for status but no background service, it's fine, but we can warn
+        pass
+        
+    if not state.get("installed_stages"):
+        # If no stages are installed, they probably haven't run --install-service
+        if not (args.install_service or args.uninstall or args.version):
+            print(f"⚠️  {BOLD}{YELLOW}Warning:{RESET} GuGa hasn't been fully initialized.")
+            print(f"   Run {BOLD}guga --install-service{RESET} to set up the system.\n")
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -201,10 +233,6 @@ def run_command(cmd_args: List[str], port: int, silent: bool, title: str, target
 def guga_approve(port: int, watch: bool = False):
     """Interactive loop to approve pending pairings."""
     base_url = f"http://localhost:{port}/api"
-    
-    # ANSI Colors
-    RESET = "\033[0m"; BOLD = "\033[1m"; DIM = "\033[2m"
-    GREEN = "\033[32m"; YELLOW = "\033[33m"; RED = "\033[31m"; CYAN = "\033[36m"
     
     def get_pending() -> List[dict]:
         try:
@@ -434,11 +462,16 @@ for more details:
         action="store_true",
         help="Force re-run of configuration questions during --install-service.",
     )
-    parser.add_argument(
+    proxy_mode.add_argument(
         "--version",
         action="version",
         version=f"%(prog)s {__version__}",
         help="Show the current version and exit.",
+    )
+    proxy_mode.add_argument(
+        "--start-server",
+        action="store_true",
+        help="Start the GuGa server in the foreground.",
     )
 
     # Explicit mode flags — mutually exclusive
@@ -522,7 +555,7 @@ def main():
     args = parse_args()
     
     # ── Proxy modes ───────────────────────────────────────────────────────────
-    if args.install_service or args.qr or args.approve or args.uninstall or args.status or args.url:
+    if args.install_service or args.qr or args.approve or args.uninstall or args.status or args.url or args.start_server:
         from guga.installer import run_system_installer, run_system_uninstaller, run_status, run_url
         if args.uninstall:
             run_system_uninstaller()
@@ -536,8 +569,19 @@ def main():
         if args.approve:
             guga_approve(args.server, watch=args.watch)
             return
+        if args.start_server:
+            try:
+                from guga.daemon import run_server
+                run_server()
+            except ImportError:
+                # Fallback if run_server isn't defined yet
+                import guga.daemon
+            return
         run_system_installer(qr_only=args.qr, setup_only=args.install_service)
         return
+
+    # Check capabilities for general usage
+    check_capabilities(args)
 
     positional = args.args
 
