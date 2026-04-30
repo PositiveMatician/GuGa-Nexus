@@ -34,7 +34,8 @@ tmp_dir = tempfile.mkdtemp()
 tmp_trusted = os.path.join(tmp_dir, "trusted_devices.json")
 with open(tmp_trusted, "w") as f:
     json.dump({
-        "browser-cli": {"token": "cli-token", "type": "browser", "expires_at": time.time() + 3600}
+        "browser-cli": {"token": "cli-token", "type": "browser", "expires_at": time.time() + 3600},
+        "browser-cli-2": {"token": "cli-token-2", "type": "browser", "expires_at": time.time() + 3600}
     }, f)
 
 from guga import daemon
@@ -178,6 +179,71 @@ class TestGuGaCLI(unittest.TestCase):
         time.sleep(1.5)
         self.assertEqual(len(self.browser.received_messages), 1)
         self.assertIn("ls -d . done", self.browser.received_messages[0]["message"])
+
+    def test_send_to_and_broadcast(self):
+        """
+        Tests:
+        1. Targeted message via --send-to.
+        2. Broadcast message (default behavior).
+        3. Help update verification.
+        """
+        # 1. Setup second client
+        browser2 = VirtualBrowser("browser-cli-2", "cli-token-2")
+        browser2.connect(self.server_url)
+        time.sleep(1)
+        browser2.received_messages = [] # Clear welcome
+        self.browser.received_messages = [] # Clear welcome
+        
+        try:
+            # 2. Check broadcast_message (default) still works
+            code, stdout, stderr = self.run_cli(["Broadcast Test"])
+            self.assertEqual(code, 0)
+            time.sleep(1)
+            # Both should receive it
+            self.assertEqual(len(self.browser.received_messages), 1)
+            self.assertEqual(len(browser2.received_messages), 1)
+            self.assertEqual(self.browser.received_messages[0]["message"], "Broadcast Test")
+            self.assertEqual(browser2.received_messages[0]["message"], "Broadcast Test")
+            
+            # Clear for next check
+            self.browser.received_messages = []
+            browser2.received_messages = []
+            
+            # 3. Check --send-to targeted message
+            # Send specifically to browser2
+            code, stdout, stderr = self.run_cli(["--send-to", "browser-cli-2", "Targeted Test"])
+            self.assertEqual(code, 0)
+            time.sleep(1)
+            # browser1 (self.browser) should NOT receive it
+            self.assertEqual(len(self.browser.received_messages), 0)
+            # browser2 SHOULD receive it
+            self.assertEqual(len(browser2.received_messages), 1)
+            self.assertEqual(browser2.received_messages[0]["message"], "Targeted Test")
+
+            # 4. Check targeted message in run mode
+            self.browser.received_messages = []
+            browser2.received_messages = []
+            code, stdout, stderr = self.run_cli(["--send-to", "browser-cli-2", "echo", "run-targeted"])
+            self.assertEqual(code, 0)
+            time.sleep(1.5)
+            self.assertEqual(len(self.browser.received_messages), 0)
+            self.assertEqual(len(browser2.received_messages), 1)
+            self.assertIn("run-targeted done", browser2.received_messages[0]["message"])
+
+        finally:
+            browser2.disconnect()
+
+    def test_help_updated_correctly(self):
+        """Check if the help output contains the new --send-to argument."""
+        # Check argparse help (stdout)
+        code, stdout, stderr = self.run_cli(["--help"])
+        self.assertEqual(code, 0)
+        self.assertIn("--send-to DEVICE_ID", stdout)
+        
+        # Check manual help (stderr, exit 1)
+        code, stdout, stderr = self.run_cli([])
+        self.assertEqual(code, 1)
+        self.assertIn("--send-to DEVICE_ID", stderr)
 
 if __name__ == '__main__':
     unittest.main()

@@ -57,19 +57,15 @@ def last_meaningful_line(text):
 
 # ── Core actions ──────────────────────────────────────────────────────────────
 
-def send_notification(message: str, port: int, silent: bool, title: Optional[str] = None):
+def broadcast_message(message: str, port: int, silent: bool, title: Optional[str] = None):
     """
-    Sends a notification message to the GuGa server.
+    Sends a notification message to the GuGa server (broadcast).
 
     Args:
         message (str): The text message to send.
         port (int): The port where the GuGa server is listening.
         silent (bool): If True, suppresses success/error messages in the console.
         title (str, optional): An optional title/label for the notification.
-
-    Examples:
-        >>> send_notification("Hello World", 8080, False)
-        >>> send_notification("Process complete", 8080, True, "Build Script")
     """
     url = f"http://localhost:{port}/send"
 
@@ -100,20 +96,57 @@ def send_notification(message: str, port: int, silent: bool, title: Optional[str
         sys.exit(1)
 
 
-def run_command(cmd_args: List[str], port: int, silent: bool, title: str):
+def send_message_to(target_id: str, message: str, port: int, silent: bool, title: Optional[str] = None):
+    """
+    Sends a notification message to a specific device via the GuGa server.
+
+    Args:
+        target_id (str): The device_id or session_id of the recipient.
+        message (str): The text message to send.
+        port (int): The port where the GuGa server is listening.
+        silent (bool): If True, suppresses success/error messages in the console.
+        title (str, optional): An optional title/label for the notification.
+    """
+    url = f"http://localhost:{port}/send/{target_id}"
+
+    payload = {"message": message}
+    if title:
+        payload["title"] = title
+
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=5) as response:
+            if not silent:
+                print(f"✅ Sent to {target_id} ({response.status}): {message}")
+    except urllib.error.URLError as e:
+        reason = getattr(e, "reason", str(e))
+        if not silent:
+            print(f"❌ Could not reach GuGa server on port {port}: {reason}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        if not silent:
+            print(f"❌ Unexpected error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+def run_command(cmd_args: List[str], port: int, silent: bool, title: str, target_id: Optional[str] = None):
     """
     Executes a shell command, streams its output to the console, and sends a 
     notification via GuGa when the command completes or is interrupted.
 
     Args:
-        cmd_args (list of str): The command and its arguments to execute (e.g., ["python", "train.py"]).
+        cmd_args (list of str): The command and its arguments to execute.
         port (int): The port where the GuGa server is running.
         silent (bool): If True, suppresses GuGa's own progress messages.
-        title (str): The label shown in the notification (e.g., "My Machine").
-
-    Examples:
-        >>> run_command(["sleep", "10"], 8080, False, "Task")
-        >>> run_command(["ls", "-lah"], 8080, True, "Files")
+        title (str): The label shown in the notification.
+        target_id (str, optional): The device_id or session_id of the recipient.
     """
     cmd_label = " ".join(cmd_args)
     start = time.time()
@@ -142,7 +175,11 @@ def run_command(cmd_args: List[str], port: int, silent: bool, title: str):
         sys.exit(1)
     except KeyboardInterrupt:
         elapsed = format_duration(time.time() - start)
-        send_notification(f"⚠️ {cmd_label} interrupted after {elapsed}", port, silent, title)
+        msg = f"⚠️ {cmd_label} interrupted after {elapsed}"
+        if target_id:
+            send_message_to(target_id, msg, port, silent, title)
+        else:
+            broadcast_message(msg, port, silent, title)
         sys.exit(130)
 
     elapsed = format_duration(time.time() - start)
@@ -153,7 +190,11 @@ def run_command(cmd_args: List[str], port: int, silent: bool, title: str):
     if last_line:
         parts.append(last_line)
 
-    send_notification("\n".join(parts), port, silent, title)
+    msg = "\n".join(parts)
+    if target_id:
+        send_message_to(target_id, msg, port, silent, title)
+    else:
+        broadcast_message(msg, port, silent, title)
     sys.exit(exit_code)
 
 
@@ -433,6 +474,12 @@ for more details:
         metavar="LABEL",
         help='Label shown in the notification, e.g. "GPU Server".',
     )
+    parser.add_argument(
+        "--send-to",
+        dest="send_to",
+        metavar="DEVICE_ID",
+        help="Send the notification to a specific device ID or session ID.",
+    )
 
     if argcomplete:
         argcomplete.autocomplete(parser)
@@ -464,6 +511,7 @@ def show_help(error: Optional[str] = None) -> None:
     print('  -r, --run                     Force run mode', file=sys.stderr)
     print('  -s, --status                  Show service status', file=sys.stderr)
     print('  -t, --title LABEL             Set notification title (e.g. "GPU Server")', file=sys.stderr)
+    print('  --send-to DEVICE_ID           Send to a specific device', file=sys.stderr)
     print('  --silent                      Suppress internal output', file=sys.stderr)
     print('  --qr                          Show pairing QR code', file=sys.stderr)
     
@@ -504,7 +552,11 @@ def main():
                 sys.exit(1)
         else:
             message = " ".join(positional)   # join so --message hello world works too
-        send_notification(message, args.server, args.silent, args.title)
+        
+        if args.send_to:
+            send_message_to(args.send_to, message, args.server, args.silent, args.title)
+        else:
+            broadcast_message(message, args.server, args.silent, args.title)
         return
 
     # ── Explicit run mode ─────────────────────────────────────────────────────
@@ -516,7 +568,7 @@ def main():
         # split it into proper tokens so subprocess can execute it correctly.
         if len(positional) == 1:
             positional = shlex.split(positional[0])
-        run_command(positional, args.server, args.silent, args.title)
+        run_command(positional, args.server, args.silent, args.title, target_id=args.send_to)
         return
 
     # ── Auto-detection ────────────────────────────────────────────────────────
@@ -527,7 +579,11 @@ def main():
         if not message:
             print("❌ Received empty stdin.", file=sys.stderr)
             sys.exit(1)
-        send_notification(message, args.server, args.silent, args.title)
+        
+        if args.send_to:
+            send_message_to(args.send_to, message, args.server, args.silent, args.title)
+        else:
+            broadcast_message(message, args.server, args.silent, args.title)
         return
 
     # 2. Nothing at all
@@ -537,11 +593,14 @@ def main():
 
     # 3. Single non-executable string → message
     if len(positional) == 1 and not is_runnable(positional[0]):
-        send_notification(positional[0], args.server, args.silent, args.title)
+        if args.send_to:
+            send_message_to(args.send_to, positional[0], args.server, args.silent, args.title)
+        else:
+            broadcast_message(positional[0], args.server, args.silent, args.title)
         return
 
     # 4. Otherwise → run mode
-    run_command(positional, args.server, args.silent, args.title)
+    run_command(positional, args.server, args.silent, args.title, target_id=args.send_to)
 
 
 if __name__ == "__main__":
