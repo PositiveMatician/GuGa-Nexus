@@ -662,3 +662,18 @@ def run_url():
         # If tunnel not ready, don't print anything or print error to stderr
         print("Error: Tunnel URL not ready", file=sys.stderr)
         sys.exit(1)
+
+def run_reload():
+    """Reload (restart) the systemd service."""
+    state = load_capabilities()
+    if not state.get("capabilities", {}).get("background_service"):
+        print(f"\n  {RED}✗  ERROR:{RESET} No background service installed.")
+        print(f"  {DIM}Use {RESET}{BOLD}guga --install-service{RESET}{DIM} to set it up.{RESET}\n")
+        sys.exit(1)
+    
+    step("Reloading GuGa Nexus service…")
+    try:
+        subprocess.check_call(["sudo", "systemctl", "restart", "guga"])
+        ok("Service reloaded")
+    except Exception as e:
+        fail(f"Could not reload service: {e}")

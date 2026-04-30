@@ -452,6 +452,11 @@ for more details:
         action="store_true",
         help="Output the raw pairing URL (scriptable).",
     )
+    proxy_mode.add_argument(
+        "--reload-server",
+        action="store_true",
+        help="Reload (restart) the background GuGa service.",
+    )
     parser.add_argument(
         "--watch",
         action="store_true",
@@ -555,8 +560,8 @@ def main():
     args = parse_args()
     
     # ── Proxy modes ───────────────────────────────────────────────────────────
-    if args.install_service or args.qr or args.approve or args.uninstall or args.status or args.url or args.start_server:
-        from guga.installer import run_system_installer, run_system_uninstaller, run_status, run_url
+    if args.install_service or args.qr or args.approve or args.uninstall or args.status or args.url or args.start_server or args.reload_server:
+        from guga.installer import run_system_installer, run_system_uninstaller, run_status, run_url, run_reload
         if args.uninstall:
             run_system_uninstaller()
             return
@@ -565,6 +570,9 @@ def main():
             return
         if args.url:
             run_url()
+            return
+        if args.reload_server:
+            run_reload()
             return
         if args.approve:
             guga_approve(args.server, watch=args.watch)
