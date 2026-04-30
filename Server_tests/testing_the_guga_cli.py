@@ -11,6 +11,7 @@ This file verifies:
 """
 
 import unittest
+from unittest.mock import patch, MagicMock
 import threading
 import time
 import os
@@ -244,6 +245,34 @@ class TestGuGaCLI(unittest.TestCase):
         code, stdout, stderr = self.run_cli([])
         self.assertEqual(code, 1)
         self.assertIn("--send-to DEVICE_ID", stderr)
+
+    def test_reload_server_help(self):
+        """Check if --reload-server is in help."""
+        code, stdout, stderr = self.run_cli(["--help"])
+        self.assertEqual(code, 0)
+        self.assertIn("--reload-server", stdout)
+
+    @patch('guga.cli.parse_args')
+    @patch('guga.installer.run_reload')
+    def test_reload_server_calls_installer(self, mock_run_reload, mock_parse_args):
+        """Check if --reload-server correctly invokes the installer logic."""
+        from guga import cli
+        mock_args = MagicMock()
+        # Set the flag we want to test
+        mock_args.reload_server = True
+        # Ensure other flags are false
+        flags = ['install_service', 'qr', 'approve', 'uninstall', 'status', 'url', 'start_server']
+        for f in flags:
+            setattr(mock_args, f, False)
+        
+        mock_parse_args.return_value = mock_args
+        
+        try:
+            cli.main()
+        except SystemExit:
+            pass
+            
+        mock_run_reload.assert_called_once()
 
 if __name__ == '__main__':
     unittest.main()
