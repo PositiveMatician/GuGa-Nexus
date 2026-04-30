@@ -167,6 +167,43 @@ def send_message_to(target_id: str, message: str, port: int, silent: bool, title
             print(f"❌ Unexpected error: {e}", file=sys.stderr)
         sys.exit(1)
 
+def guga_ask_user(prompt: str, port: int, device_id: Optional[str] = None, title: Optional[str] = None):
+    """Sends a prompt to a device and waits for a reply."""
+    url = f"http://localhost:{port}/api/ask"
+    payload = {"message": prompt}
+    if device_id:
+        payload["device_id"] = device_id
+    if title:
+        payload["title"] = title
+    
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
+    
+    try:
+        # Increase timeout as we're waiting for human input
+        with urllib.request.urlopen(req, timeout=120) as response:
+            res_data = json.load(response)
+            if "reply" in res_data:
+                print(res_data["reply"])
+            elif "error" in res_data:
+                print(f"❌ Error: {res_data['error']}", file=sys.stderr)
+                sys.exit(1)
+    except urllib.error.HTTPError as e:
+        try:
+            error_data = json.load(e)
+            print(f"❌ Error: {error_data.get('error', e.reason)}", file=sys.stderr)
+        except Exception:
+            print(f"❌ Server error: {e.reason}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        print(f"❌ Request failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
 
 def run_command(cmd_args: List[str], port: int, silent: bool, title: str, target_id: Optional[str] = None):
     """
@@ -518,6 +555,11 @@ for more details:
         metavar="DEVICE_ID",
         help="Send the notification to a specific device ID or session ID.",
     )
+    parser.add_argument(
+        "--ask-user",
+        metavar="PROMPT",
+        help="Send a prompt to the device and wait for a reply.",
+    )
 
     if argcomplete:
         argcomplete.autocomplete(parser)
@@ -550,6 +592,7 @@ def show_help(error: Optional[str] = None) -> None:
     print('  -s, --status                  Show service status', file=sys.stderr)
     print('  -t, --title LABEL             Set notification title (e.g. "GPU Server")', file=sys.stderr)
     print('  --send-to DEVICE_ID           Send to a specific device', file=sys.stderr)
+    print('  --ask-user PROMPT             Ask user for input and wait for reply', file=sys.stderr)
     print('  --silent                      Suppress internal output', file=sys.stderr)
     
     print("\nSetup & Background:", file=sys.stderr)
@@ -591,6 +634,10 @@ def main():
                 import guga.daemon
             return
         run_system_installer(qr_only=args.qr, setup_only=args.install_service)
+        return
+
+    if args.ask_user:
+        guga_ask_user(args.ask_user, args.server, args.send_to, args.title)
         return
 
     # Check capabilities for general usage

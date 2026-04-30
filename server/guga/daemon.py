@@ -146,6 +146,8 @@ pending_pairings: dict = {}
 blocked_devices: dict = {}
 # Structure per entry: { device_id: unblock_timestamp }
 
+pending_asks: dict[str, eventlet.event.Event] = {} # device_id -> Event
+
 TRUSTED_DEVICES_FILE = os.path.join(CONFIG_DIR, "trusted_devices.json")
 
 
@@ -797,6 +799,61 @@ def handle_command_api():
 
 
 @app.route("/api/hello", methods=["POST"])
+@app.route("/api/ask", methods=["POST"])
+def handle_ask():
+    """Sends a prompt to a device and blocks until a reply is received."""
+    data = request.get_json(silent=True) or {}
+    message = data.get("message", "").strip()
+    device_id = data.get("device_id", "").strip()
+    title = data.get("title", "Question")
+    timeout = data.get("timeout", 60)
+
+    if not message:
+        return jsonify({"error": "message required"}), 400
+
+    # Determine target SIDs
+    target_sids = []
+    if device_id:
+        target_sids = [sid for sid, did in connected_clients.items() if did == device_id]
+        if not target_sids:
+            return jsonify({"error": f"Device {device_id} is not connected"}), 404
+    else:
+        target_sids = list(connected_clients.keys())
+        if not target_sids:
+            return jsonify({"error": "No devices connected"}), 404
+        # If multiple devices, we just pick the first one for simplicity in 'ask' mode
+        # or we could broadcast. But for a BLOCKING ask, we usually target one.
+        # If not specified, we target the most recently connected or just the first.
+        device_id = connected_clients[target_sids[0]]
+        target_sids = [target_sids[0]]
+
+    # Create an event to wait for
+    evt = eventlet.event.Event()
+    pending_asks[device_id] = evt
+
+    log_event("?", YELLOW, "ask user", f"{device_id}: {message}")
+    
+    # Send the ask via SocketIO
+    payload = {
+        "message": message,
+        "title": title,
+        "is_ask": True
+    }
+    
+    for sid in target_sids:
+        socketio.emit("guga_ask", payload, room=sid)
+
+    try:
+        # Wait for the reply
+        with eventlet.Timeout(timeout):
+            reply = evt.wait()
+            return jsonify({"reply": reply}), 200
+    except eventlet.Timeout:
+        return jsonify({"error": "Timed out waiting for user reply"}), 408
+    finally:
+        pending_asks.pop(device_id, None)
+
+@app.route("/api/hello", methods=["POST"])
 def handle_hello():
     """Device introduces itself. Returns 'trusted' or 'pin_required'."""
     data = request.get_json(silent=True) or {}
@@ -987,6 +1044,20 @@ def handle_command(data):
     log_event("→", CYAN, "command", f"{device_id}: {command!r}")
     response_msg = process_command(command)
     send_private_message(request.sid, response_msg["message"], response_msg["title"])
+
+
+@socketio.on("reply")
+def handle_reply(data):
+    """Receives a reply from a client for a pending 'ask'."""
+    device_id = connected_clients.get(request.sid)
+    if not device_id:
+        return
+
+    reply = data.get("message", "").strip()
+    log_event("←", GREEN, "reply", f"{device_id}: {reply!r}")
+
+    if device_id in pending_asks:
+        pending_asks[device_id].send(reply)
 
 
 # ------------------------------------------------------------
