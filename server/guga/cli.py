@@ -8,11 +8,13 @@ Usage:
   guga [options] command args        Run a command and notify when finished
   guga --ask-user "Question"         Ask a question to your phone and wait for reply
   guga --run --interactive python    Run interactively (forwards prompts to phone)
+  guga -i --expect "regex" cmd      Use custom regex for interactive prompt detection
 
 Options:
   -m, --message                      Force message mode
   -r, --run                          Force run mode
   -i, --interactive                  Remote interactive mode (PTY wrapping)
+  --expect REGEX                     Custom prompt regex for --interactive
   --ask-user PROMPT                  Synchronous request-reply loop
   --delay DURATION                   Timeout for replies (e.g. 5m, 1200s, never)
   --send-to DEVICE_ID                Target a specific device or custom tag
@@ -252,7 +254,7 @@ def guga_ask_user(prompt: str, port: int, device_id: str, title: Optional[str] =
         sys.exit(1)
 
 
-def run_interactive_command(cmd_args: List[str], port: int, silent: bool, title: str, target_id: Optional[str] = None):
+def run_interactive_command(cmd_args: List[str], port: int, silent: bool, title: str, target_id: Optional[str] = None, expect_regex: Optional[str] = None):
     """
     Spawns a command in a pseudo-terminal (PTY) using pexpect.
     Monitors stdout for common terminal prompts (ends with :, ?, or >).
@@ -271,8 +273,8 @@ def run_interactive_command(cmd_args: List[str], port: int, silent: bool, title:
     if not silent:
         print(f"▶ guga interactive: {cmd_label}\n")
 
-    # This regex matches any line that ends with :, ?, or >, plus optional spaces.
-    generic_prompt_regex = r'[:?>]\s*$'
+    # Default regex matches any line that ends with :, ?, or >, plus optional spaces.
+    prompt_regex = expect_regex if expect_regex else r'[:?>]\s*$'
     captured_lines = []
 
     try:
@@ -285,7 +287,7 @@ def run_interactive_command(cmd_args: List[str], port: int, silent: bool, title:
             # Wait for a prompt or end of process
             try:
                 # We use a 1s timeout loop to keep checking isalive and avoid blocking forever
-                index = child.expect([generic_prompt_regex, pexpect.EOF], timeout=1)
+                index = child.expect([prompt_regex, pexpect.EOF], timeout=1)
                 
                 # Print and capture what happened
                 output = child.before
@@ -352,7 +354,7 @@ def run_interactive_command(cmd_args: List[str], port: int, silent: bool, title:
     sys.exit(exit_code)
 
 
-def run_command(cmd_args: List[str], port: int, silent: bool, title: str, target_id: Optional[str] = None, interactive: bool = False):
+def run_command(cmd_args: List[str], port: int, silent: bool, title: str, target_id: Optional[str] = None, interactive: bool = False, expect_regex: Optional[str] = None):
     """
     Executes a shell command, streams its output to the console, and sends a 
     notification via GuGa when the command completes or is interrupted.
@@ -372,7 +374,7 @@ def run_command(cmd_args: List[str], port: int, silent: bool, title: str, target
 
     captured_lines = []
     if interactive:
-        return run_interactive_command(cmd_args, port, silent, title, target_id)
+        return run_interactive_command(cmd_args, port, silent, title, target_id, expect_regex=expect_regex)
 
     try:
         process = subprocess.Popen(
@@ -756,10 +758,15 @@ for more details:
         action="store_true",
         help="Force run mode. Executes positional args as a command.",
     )
-    parser.add_argument(
+    mode.add_argument(
         "-i", "--interactive",
         action="store_true",
         help="Enable remote interaction for --run mode (forwards prompts to phone).",
+    )
+    parser.add_argument(
+        "--expect",
+        metavar="REGEX",
+        help="Custom regex for prompt detection in interactive mode.",
     )
 
     parser.add_argument(
@@ -829,6 +836,7 @@ def show_help(error: Optional[str] = None) -> None:
     print('  -m, --message                 Force message mode', file=sys.stderr)
     print('  -r, --run                     Force run mode', file=sys.stderr)
     print('  -i, --interactive             Remote interaction (PTY) for --run mode', file=sys.stderr)
+    print('  --expect REGEX                Custom regex for prompt detection', file=sys.stderr)
     print('  -t, --title LABEL             Set notification title (e.g. "GPU Server")', file=sys.stderr)
     print('  --send-to DEVICE_ID           Send to a specific device', file=sys.stderr)
     print('  --ask-user PROMPT             Ask user for input and wait for reply', file=sys.stderr)
@@ -961,7 +969,7 @@ def main():
         # split it into proper tokens so subprocess can execute it correctly.
         if len(positional) == 1:
             positional = shlex.split(positional[0])
-        run_command(positional, args.server, args.silent, args.title, target_id=args.send_to, interactive=args.interactive)
+        run_command(positional, args.server, args.silent, args.title, target_id=args.send_to, interactive=args.interactive, expect_regex=args.expect)
         return
 
     # ── Auto-detection ────────────────────────────────────────────────────────
@@ -993,7 +1001,7 @@ def main():
         return
 
     # 4. Otherwise → run mode
-    run_command(positional, args.server, args.silent, args.title, target_id=args.send_to, interactive=args.interactive)
+    run_command(positional, args.server, args.silent, args.title, target_id=args.send_to, interactive=args.interactive, expect_regex=args.expect)
 
 
 if __name__ == "__main__":
