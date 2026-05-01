@@ -236,9 +236,43 @@ class TestGuGaCLI(unittest.TestCase):
             self.assertEqual(len(self.browser.received_messages), 0)
             self.assertEqual(len(browser2.received_messages), 1)
             self.assertIn("run-targeted done", browser2.received_messages[0]["message"])
+            
+            # 5. Check tagging lookup
+            # Manually inject a tag into the trusted devices
+            with open(tmp_trusted, "r") as f:
+                trusted = json.load(f)
+            trusted["browser-cli-2"]["tag"] = "my-phone"
+            with open(tmp_trusted, "w") as f:
+                json.dump(trusted, f)
+                
+            # Reload server's trusted devices (since it's in the same process)
+            from guga.daemon import load_trusted_devices
+            load_trusted_devices()
+            
+            self.browser.received_messages = []
+            browser2.received_messages = []
+            
+            # Send to tag instead of ID
+            code, stdout, stderr = self.run_cli(["--send-to", "my-phone", "Tag Test"])
+            self.assertEqual(code, 0)
+            time.sleep(1)
+            
+            self.assertEqual(len(self.browser.received_messages), 0)
+            self.assertEqual(len(browser2.received_messages), 1)
+            self.assertEqual(browser2.received_messages[0]["message"], "Tag Test")
 
         finally:
             browser2.disconnect()
+
+    def test_status_output(self):
+        """Check if guga --status shows device info and manual status."""
+        code, stdout, stderr = self.run_cli(["--status"])
+        self.assertEqual(code, 0)
+        self.assertIn("service", stdout)
+        self.assertIn("Active", stdout)
+        self.assertIn("clients", stdout)
+        # Should show our connected browser-cli (truncated to 8 chars)
+        self.assertIn("browser-", stdout)
 
     def test_help_updated_correctly(self):
         """Check if the help output contains the new --send-to argument."""

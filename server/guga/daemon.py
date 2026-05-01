@@ -208,14 +208,17 @@ def load_trusted_devices() -> dict:
         return {}
 
 
-def save_trusted_device(device_id: str, token: str, client_type: str, expires_at: float) -> None:
+def save_trusted_device(device_id: str, token: str, client_type: str, expires_at: float, name: str = "Unknown Device") -> None:
     """Persist a paired device's token, type, and expiry to JSON file."""
     devices = load_trusted_devices()
-    devices[device_id] = {
+    entry = devices.get(device_id, {})
+    entry.update({
         "token": token,
         "type": client_type,
         "expires_at": expires_at,
-    }
+        "name": name
+    })
+    devices[device_id] = entry
     with open(TRUSTED_DEVICES_FILE, "w") as f:
         json.dump(devices, f, indent=2)
 
@@ -774,9 +777,20 @@ def send_to_all():
     return jsonify({"ok": True, "sent_to": len(connected_clients)}), 200
 
 
-def get_sids_by_device(device_id: str) -> list[str]:
-    """Return all active session IDs for a given device_id."""
-    return [sid for sid, did in connected_clients.items() if did == device_id]
+def get_sids_by_device(target: str) -> list[str]:
+    """Return all active session IDs for a given device_id OR tag."""
+    # 1. Direct device_id match
+    sids = [sid for sid, did in connected_clients.items() if did == target]
+    if sids: return sids
+    
+    # 2. Tag match
+    trusted = load_trusted_devices()
+    for did, info in trusted.items():
+        if info.get("tag") == target:
+            # Found the device_id for this tag, now find its sessions
+            return [sid for sid, conn_did in connected_clients.items() if conn_did == did]
+            
+    return []
 
 
 @app.route("/send/<target_id>", methods=["POST"])
@@ -850,10 +864,13 @@ def handle_ask():
     if not device_id:
         return jsonify({"error": "device_id is compulsory for --ask-user"}), 400
 
-    # Determine target SIDs
-    target_sids = [sid for sid, did in connected_clients.items() if did == device_id]
+    # Determine target SIDs and actual device_id
+    target_sids = get_sids_by_device(device_id)
     if not target_sids:
         return jsonify({"error": f"Device {device_id} is not connected"}), 404
+    
+    # Use the real device_id for internal tracking
+    device_id = connected_clients[target_sids[0]]
 
     # Create an event to wait for
     evt = eventlet.event.Event()
@@ -977,7 +994,7 @@ def handle_verify_pin():
     expires_at = time.time() + ttl_seconds
 
     token = secrets.token_hex(32)
-    save_trusted_device(device_id, token, client_type, expires_at)
+    save_trusted_device(device_id, token, client_type, expires_at, name=entry["device_name"])
     pending_pairings.pop(device_id, None)
 
     log_event("✓", GREEN, "device paired", f"{device_id}  type={client_type}")
@@ -1030,6 +1047,60 @@ def approve_device():
 
     return jsonify({"error": "action must be approve or reject"}), 400
 
+
+@app.route("/api/devices", methods=["GET"])
+def list_active_devices():
+    """List connected devices with their names and tags (localhost only)."""
+    if request.remote_addr not in ["127.0.0.1", "::1"]:
+        return jsonify({"error": "Forbidden"}), 403
+        
+    trusted = load_trusted_devices()
+    
+    # We want to list unique devices that are currently connected
+    connected_dids = set(connected_clients.values())
+    
+    result = []
+    for did in connected_dids:
+        info = trusted.get(did, {})
+        result.append({
+            "device_id": did,
+            "device_name": info.get("name", "Unknown Device"),
+            "tag": info.get("tag"),
+            "type": info.get("type")
+        })
+        
+    return jsonify({"devices": result}), 200
+
+
+@app.route("/api/rename", methods=["POST"])
+def rename_device():
+    """Assign a tag to a device (localhost only)."""
+    if request.remote_addr not in ["127.0.0.1", "::1"]:
+        return jsonify({"error": "Forbidden"}), 403
+    data = request.get_json(silent=True) or {}
+    device_id = data.get("device_id", "").strip()
+    tag = data.get("tag", "").strip()
+    
+    if not device_id:
+        return jsonify({"error": "device_id required"}), 400
+        
+    trusted = load_trusted_devices()
+    if device_id not in trusted:
+        return jsonify({"error": "Device not found"}), 404
+        
+    # Check if tag is already used by another device
+    if tag:
+        for did, info in trusted.items():
+            if info.get("tag") == tag and did != device_id:
+                return jsonify({"error": f"Tag '{tag}' is already used by another device"}), 400
+
+    trusted[device_id]["tag"] = tag
+    with open(TRUSTED_DEVICES_FILE, "w") as f:
+        json.dump(trusted, f, indent=2)
+        
+    log_event("✎", YELLOW, "device tagged", f"{device_id} -> {tag or 'None'}")
+    return jsonify({"status": "ok"}), 200
+
 # endregion
 
 # ------------------------------------------------------------
@@ -1060,7 +1131,7 @@ def handle_connect():
             
     connected_clients[request.sid] = device_id
     log_event("↑", GREEN, "connected", f"{device_id} (SID: {request.sid}) ({len(connected_clients)} online)")
-    send_private_message(request.sid, "Connection established. GuGu online.")
+    send_private_message(request.sid, "Connection established. GuGa online.")
 
 
 @socketio.on("disconnect")

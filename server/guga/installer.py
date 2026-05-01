@@ -615,20 +615,46 @@ def run_status():
     print(f"  {BOLD}{'─' * 40}{RESET}")
     print()
 
-    # 1. Service Status
-    is_active = False
+    # 1. Determine Port
+    port = "6769"
+    env_path = os.path.join(CONFIG_DIR, ".env")
+    if os.path.exists(env_path):
+        try:
+            with open(env_path, "r") as f:
+                for line in f:
+                    if line.startswith("PORT="):
+                        port = line.split("=", 1)[1].strip()
+                        break
+        except Exception:
+            pass
+
+    # 2. Check Service Status
+    is_systemd_active = False
     try:
-        # Check if systemctl exists
         if shutil.which("systemctl"):
             result = subprocess.run(["systemctl", "is-active", "guga"], capture_output=True, text=True)
-            is_active = (result.stdout.strip() == "active")
-        else:
-            # Fallback if no systemd
-            is_active = False
+            is_systemd_active = (result.stdout.strip() == "active")
     except Exception:
         pass
 
-    status_str = f"{GREEN}Active{RESET}" if is_active else f"{RED}Inactive{RESET}"
+    # 3. Check if server is reachable
+    server_alive = False
+    try:
+        import urllib.request
+        with urllib.request.urlopen(f"http://localhost:{port}/ping", timeout=1) as r:
+            server_alive = (r.status == 200)
+    except Exception:
+        pass
+
+    is_active = server_alive or is_systemd_active
+    
+    if is_systemd_active:
+        status_str = f"{GREEN}Active{RESET}"
+    elif server_alive:
+        status_str = f"{GREEN}Active{RESET} {DIM}(manual){RESET}"
+    else:
+        status_str = f"{RED}Inactive{RESET}"
+
     print(f"  {DIM}service{RESET}   {BOLD}{status_str}{RESET}")
 
     if is_active:
@@ -637,15 +663,22 @@ def run_status():
         print(f"  {DIM}address{RESET}   {BOLD}{url if url else 'Detecting...'}{RESET}")
 
         # 3. Clients (query server)
-        clients_count = "?"
+
         try:
             import urllib.request, json
-            with urllib.request.urlopen("http://localhost:6769/ping", timeout=2) as r:
+            with urllib.request.urlopen(f"http://localhost:{port}/api/devices", timeout=2) as r:
                 data = json.load(r)
-                clients_count = data.get("clients", 0)
+                devices = data.get("devices", [])
+                print(f"  {DIM}clients{RESET}   {BOLD}{len(devices)} connected{RESET}")
+                for d in devices:
+                    name = d.get("device_name", "Unknown")
+                    tag = d.get("tag")
+                    did = d.get("device_id", "")
+                    short_id = did[:8] if did else "???"
+                    tag_str = f" {CYAN}[{tag}]{RESET}" if tag else ""
+                    print(f"            {DIM}•{RESET} {name} {DIM}({short_id}){RESET}{tag_str}")
         except Exception:
-            pass
-        print(f"  {DIM}clients{RESET}   {BOLD}{clients_count} connected{RESET}")
+            print(f"  {DIM}clients{RESET}   {BOLD}? connected{RESET}")
     else:
         print(f"  {DIM}info{RESET}      {DIM}Service is stopped. Start with: {RESET}{BOLD}guga --install-service{RESET}")
 

@@ -515,6 +515,64 @@ def guga_approve(port: int, watch: bool = False):
             print(f"  {RED}Invalid input.{RESET}")
 
 
+def guga_rename_device(port: int):
+    """Interactive loop to rename/tag connected devices."""
+    base_url = f"http://localhost:{port}/api"
+    
+    def get_devices() -> List[dict]:
+        try:
+            req = urllib.request.Request(f"{base_url}/devices")
+            with urllib.request.urlopen(req, timeout=2) as r:
+                return json.load(r).get("devices", [])
+        except Exception as e:
+            print(f"  {RED}✗{RESET} Error reaching server: {e}")
+            return []
+
+    def print_list(devices: List[dict]) -> None:
+        print(f"\n  {DIM}{'─' * 52}{RESET}")
+        print(f"   {BOLD}Connected devices{RESET}")
+        print(f"  {DIM}{'─' * 52}{RESET}")
+        for i, d in enumerate(devices):
+            name = d['device_name'][:14].ljust(14)
+            did  = d['device_id'][:8]
+            tag  = d.get('tag') or "-"
+            tag_display = f"{CYAN}{tag.ljust(12)}{RESET}"
+            print(f"  {i+1})  {BOLD}{name}{RESET}  {DIM}{did}{RESET}   Tag: {tag_display}")
+        print(f"  {DIM}{'─' * 52}{RESET}")
+
+    devices = get_devices()
+    if not devices:
+        print(f"\n  {DIM}No connected devices found.{RESET}\n")
+        return
+
+    print_list(devices)
+    choice = input(f"  {BOLD}Choose a device (1-{len(devices)}): {RESET}").strip()
+    
+    try:
+        idx = int(choice) - 1
+        if 0 <= idx < len(devices):
+            device = devices[idx]
+            print(f"\n  Renaming {BOLD}{device['device_name']}{RESET} ({DIM}{device['device_id'][:8]}{RESET})")
+            new_tag = input(f"  Enter new tag (empty to clear): ").strip()
+            
+            payload = json.dumps({"device_id": device['device_id'], "tag": new_tag}).encode()
+            req = urllib.request.Request(f"{base_url}/rename", data=payload, headers={"Content-Type": "application/json"}, method="POST")
+            
+            try:
+                with urllib.request.urlopen(req) as r:
+                    print(f"\n  {GREEN}✓ Device tagged: {BOLD}{new_tag or 'None'}{RESET}")
+            except urllib.error.HTTPError as e:
+                try:
+                    err_data = json.load(e)
+                    print(f"\n  {RED}✗ Error: {err_data.get('error', 'Unknown error')}{RESET}")
+                except Exception:
+                    print(f"\n  {RED}✗ Error: {e.reason}{RESET}")
+        else:
+            print(f"  {RED}Invalid choice.{RESET}")
+    except ValueError:
+        print(f"  {RED}Invalid input.{RESET}")
+
+
 # ── Configuration ─────────────────────────────────────────────────────────────
 
 def load_config():
@@ -617,6 +675,11 @@ for more details:
         "--approve",
         action="store_true",
         help="List and approve pending pairing requests.",
+    )
+    proxy_mode.add_argument(
+        "--rename-device",
+        action="store_true",
+        help="List connected devices and assign custom tags/names.",
     )
     proxy_mode.add_argument(
         "--install-service",
@@ -772,7 +835,7 @@ def main():
     args = parse_args()
     
     # ── Proxy modes ───────────────────────────────────────────────────────────
-    if args.install_service or args.qr or args.approve or args.uninstall or args.status or args.url or args.start_server or args.reload_server:
+    if args.install_service or args.qr or args.approve or args.rename_device or args.uninstall or args.status or args.url or args.start_server or args.reload_server:
         from guga.installer import run_system_installer, run_system_uninstaller, run_status, run_url, run_reload
         if args.uninstall:
             run_system_uninstaller()
@@ -788,6 +851,9 @@ def main():
             return
         if args.approve:
             guga_approve(args.server, watch=args.watch)
+            return
+        if args.rename_device:
+            guga_rename_device(args.server)
             return
         if args.start_server:
             try:

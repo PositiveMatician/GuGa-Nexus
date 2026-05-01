@@ -139,7 +139,7 @@ public class MainActivity extends AppCompatActivity {
                     Intent updateIntent = new Intent(ACTION_UPDATE_IP);
                     updateIntent.putExtra("ip", scannedUrl);
                     sendBroadcast(updateIntent);
-                    statusText.setText("Connecting to GuGu...");
+                    statusText.setText("Connecting to GuGa...");
                     performHandshake(scannedUrl);
                 }
             });
@@ -428,7 +428,7 @@ public class MainActivity extends AppCompatActivity {
         scanQrButton.setOnClickListener(v -> {
             ScanOptions options = new ScanOptions();
             options.setDesiredBarcodeFormats(ScanOptions.QR_CODE);
-            options.setPrompt("Scan GuGu IP");
+            options.setPrompt("Scan GuGa IP");
             options.setBeepEnabled(false);
             options.setOrientationLocked(false);
             qrCodeLauncher.launch(options);

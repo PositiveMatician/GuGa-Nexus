@@ -79,7 +79,10 @@ guga python train_model.py --epochs 100
 guga make build-project
 
 # Add custom labels to your notifications for clarity
-guga -r ./deploy.sh --from "Production Server"
+guga -r ./deploy.sh --title "Production Server"
+
+# Send to a specific tagged device (e.g. "nexus")
+guga --send-to nexus "Build complete"
 ```
 
 ---
@@ -116,7 +119,8 @@ If you need to view your pairing credentials or manage your background daemon af
 
 ```bash
 guga --qr                             # Show the pairing QR code
-guga --show-pin                       # Show the secure Zero-Trust PIN
+guga --rename-device                  # Assign a custom tag to a device
+guga --approve                        # Interactively approve pairing requests
 guga --install-service --reconfigure  # Re-run the interactive setup
 guga --status                         # Show service status and connections
 guga --url                            # Show raw pairing URL (scriptable)
