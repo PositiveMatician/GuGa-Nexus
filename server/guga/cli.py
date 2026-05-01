@@ -733,6 +733,16 @@ for more details:
         action="store_true",
         help="Start the GuGa server in the foreground.",
     )
+    proxy_mode.add_argument(
+        "--mcp",
+        action="store_true",
+        help="Start the GuGa MCP server in stdio mode for local AI tools.",
+    )
+    proxy_mode.add_argument(
+        "--mcp-token",
+        action="store_true",
+        help="Generate a JWT token for remote MCP access via Cloudflare tunnel.",
+    )
 
     # Explicit mode flags — mutually exclusive
     mode = parser.add_mutually_exclusive_group()
@@ -841,7 +851,7 @@ def main():
     args = parse_args()
     
     # ── Proxy modes ───────────────────────────────────────────────────────────
-    if args.install_service or args.qr or args.approve or args.rename_device or args.uninstall or args.status or args.url or args.start_server or args.reload_server or args.install_skills:
+    if args.install_service or args.qr or args.approve or args.rename_device or args.uninstall or args.status or args.url or args.start_server or args.reload_server or args.install_skills or args.mcp or args.mcp_token:
         from guga.installer import run_system_installer, run_system_uninstaller, run_status, run_url, run_reload
         if args.uninstall:
             run_system_uninstaller()
@@ -869,6 +879,36 @@ def main():
                 # Fallback if run_server isn't defined yet
                 import guga.daemon
             return
+            
+        if args.mcp:
+            from guga.mcp_server import GugaMcpServer
+            import asyncio
+            mcp_server = GugaMcpServer(f"http://localhost:{args.server}")
+            print(f"🚀 {BOLD}GuGa MCP Server{RESET} {DIM}started (stdio mode){RESET}", file=sys.stderr)
+            try:
+                asyncio.run(mcp_server.run_stdio())
+            except KeyboardInterrupt:
+                pass
+            return
+            
+        if args.mcp_token:
+            url = f"http://localhost:{args.server}/mcp/token"
+            try:
+                with urllib.request.urlopen(url, timeout=5) as response:
+                    data = json.load(response)
+                    token = data.get("token")
+                    print(f"\n  {BOLD}MCP Access Token:{RESET}")
+                    print(f"  {CYAN}{token}{RESET}\n")
+                    print(f"  {DIM}Use this in your remote tool's Authorization header as:{RESET}")
+                    print(f"  {BOLD}Bearer {token[:10]}...{RESET}\n")
+            except urllib.error.URLError as e:
+                print(f"❌ Could not reach GuGa server on port {args.server}. Is it running?", file=sys.stderr)
+                sys.exit(1)
+            except Exception as e:
+                print(f"❌ Error: {e}", file=sys.stderr)
+                sys.exit(1)
+            return
+
         run_system_installer(qr_only=args.qr, setup_only=args.install_service, install_skills_flag=args.install_skills)
         return
 

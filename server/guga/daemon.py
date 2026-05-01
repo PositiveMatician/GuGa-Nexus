@@ -148,6 +148,25 @@ sio = socketio.AsyncServer(
 )
 app = Quart(__name__)
 app_asgi = socketio.ASGIApp(sio, app)
+
+# ── MCP & JWT Configuration ──────────────────────────────────────────────────
+MCP_JWT_SECRET = os.getenv("MCP_JWT_SECRET")
+if not MCP_JWT_SECRET:
+    MCP_JWT_SECRET = secrets.token_hex(32)
+    # Persist it to .env
+    try:
+        with open(env_path, "a") as f:
+            f.write(f"\nMCP_JWT_SECRET={MCP_JWT_SECRET}\n")
+        log_event("⚙", YELLOW, "generated new MCP_JWT_SECRET")
+    except Exception:
+        pass
+
+import jwt
+from .mcp_server import create_mcp_app
+from mcp.server.sse import SseServerTransport
+
+mcp_handler = create_mcp_app(f"http://localhost:{PORT}")
+sse_transport = SseServerTransport("/mcp/messages")
  
 main_loop = None
 
@@ -799,6 +818,80 @@ async def send_to_all():
         return jsonify({"error": "No message provided"}), 400
     await notify_all_clients(message, title)
     return jsonify({"ok": True, "sent_to": len(connected_clients)}), 200
+
+
+# ------------------------------------------------------------
+# region MCP & Security
+# ------------------------------------------------------------
+
+def mcp_token_required(f):
+    """Decorator to enforce JWT token for MCP endpoints."""
+    from functools import wraps
+    @wraps(f)
+    async def decorated(*args, **kwargs):
+        token = request.args.get("token")
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            
+        if not token:
+            return jsonify({"error": "Unauthorized: No token provided"}), 401
+            
+        try:
+            jwt.decode(token, MCP_JWT_SECRET, algorithms=["HS256"])
+        except Exception as e:
+            return jsonify({"error": f"Unauthorized: {str(e)}"}), 401
+            
+        return await f(*args, **kwargs)
+    return decorated
+
+
+@app.route("/mcp/token", methods=["GET"])
+async def get_mcp_token():
+    """Generate an MCP access token (localhost only)."""
+    if request.remote_addr not in ["127.0.0.1", "::1"]:
+        return jsonify({"error": "Forbidden"}), 403
+        
+    payload = {
+        "iss": "guga-nexus",
+        "iat": time.time(),
+        "exp": time.time() + (365 * 24 * 3600) # 1 year
+    }
+    token = jwt.encode(payload, MCP_JWT_SECRET, algorithm="HS256")
+    return jsonify({"token": token}), 200
+
+
+@app.route("/mcp/sse", methods=["GET"])
+@mcp_token_required
+async def handle_mcp_sse():
+    """Establishes the MCP SSE stream."""
+    async def sse_handler(read_stream, write_stream):
+        await mcp_handler.app.run(
+            read_stream,
+            write_stream,
+            mcp_handler.app.create_initialization_options()
+        )
+
+    # Note: SseServerTransport.connect_sse returns an async context manager
+    # that takes (scope, receive, send)
+    async with sse_transport.connect_sse(
+        request.scope, request.receive, request._send
+    ) as (read_stream, write_stream):
+        await sse_handler(read_stream, write_stream)
+        
+    return "", 200
+
+
+@app.route("/mcp/messages", methods=["POST"])
+@mcp_token_required
+async def handle_mcp_messages():
+    """Receives JSON-RPC messages from MCP clients."""
+    await sse_transport.handle_post_message(
+        request.scope, request.receive, request._send
+    )
+    return "", 200
+
+# endregion
 
 
 def get_sids_by_device(target: str) -> list[str]:

@@ -143,6 +143,42 @@ Base URL: http://localhost:6769
 
 ---
 
+## MCP Server (Model Context Protocol)
+
+GuGa provides an MCP server for seamless integration with AI tools.
+
+### Local Access (stdio)
+Start the MCP server for local tools (e.g. Claude Desktop):
+  guga --mcp
+
+### Remote Access (SSE via Cloudflare Tunnel)
+1. Start server in public mode: `MODE=public guga --start-server`
+2. Generate an access token: `guga --mcp-token`
+3. Connect tool to: `https://<tunnel-url>/mcp/sse`
+4. Use `Authorization: Bearer <token>` header.
+
+### MCP Tools
+- `send_notification`: Push a message to devices.
+- `ask_user`: Prompt user on phone and wait for reply.
+- `list_devices`: Get status of paired clients.
+
+### Configuration Tutorial (for Antigravity)
+Edit `~/.gemini/antigravity/mcp_config.json` and add:
+```json
+{
+  "mcpServers": {
+    "GuGa": {
+      "command": "python3",
+      "args": ["-m", "guga.cli", "--mcp"],
+      "env": { "GUGA_CONFIG_DIR": "/home/positive/.guga" }
+    }
+  }
+}
+```
+*Note: Replace `python3` with absolute path to your venv python if necessary.*
+
+---
+
 ## Device Targeting
 
 Devices can be targeted by:

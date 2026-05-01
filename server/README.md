@@ -57,6 +57,7 @@ Download the `stable` Android APK from the [GitHub Releases Page](https://github
 
 Once deployed, the `guga` command-line utility is globally available on your terminal. It's designed to automatically detect whether you want to send a plain text notification, or if you want it to execute and watch a long-running process on your behalf.
 
+
 ### 1. Plain Notifications (Message Mode)
 Send simple text updates directly to your Android device.
 
@@ -127,6 +128,47 @@ guga --url                            # Show raw pairing URL (scriptable)
 guga --version                        # Show the current version
 guga --uninstall                      # Remove all GuGa system components
 ```
+
+### 🤖 AI Agent Integration (MCP)
+GuGa provides a built-in **Model Context Protocol (MCP)** server, allowing AI agents like Claude Desktop or Antigravity to send notifications and ask you questions directly on your phone.
+
+#### Local AI (Claude Desktop / Antigravity)
+Add this to your MCP configuration file (e.g., `claude_desktop_config.json`):
+```json
+{
+  "mcpServers": {
+    "guga": {
+      "command": "guga",
+      "args": ["--mcp"]
+    }
+  }
+}
+```
+
+#### Remote AI (Custom Tools / GPT Actions / SSE)
+For remote access (e.g., calling your GuGa tools from a Custom GPT or a remote server), use the **SSE Transport** with JWT security.
+
+1. **Start the server in Public Mode**:
+   Ensure your GuGa server is exposed via Cloudflare Tunnel:
+   ```bash
+   MODE=public guga --start-server
+   ```
+2. **Generate a JWT Access Token**:
+   Tokens are signed using a persistent secret in `~/.guga/.env`. Generate one for your remote tool:
+   ```bash
+   guga --mcp-token
+   ```
+3. **Configure your Remote Tool**:
+   - **SSE Endpoint**: `https://<your-tunnel-url>.trycloudflare.com/mcp/sse`
+   - **Method**: `GET` (for SSE stream) and `POST` (for sending JSON-RPC messages to `/mcp/messages`).
+   - **Authentication**: All requests must include the `Authorization` header:
+     ```http
+     Authorization: Bearer <your-generated-token>
+     ```
+   - **Note**: The token is also accepted via a query parameter `?token=<token>` for clients that struggle with headers on SSE.
+
+> [!SECURITY]
+> Your JWT secret is unique to your machine. Anyone with the token can send notifications or ask questions to your phone. Keep your Cloudflare URL and token secure.
 
 To control the Linux backend server explicitly:
 ```bash
