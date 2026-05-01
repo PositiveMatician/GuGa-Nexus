@@ -29,9 +29,15 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.animation.LayoutTransition;
+import android.media.ToneGenerator;
+import android.media.AudioManager;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.annotation.NonNull;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -64,6 +70,8 @@ public class MainActivity extends AppCompatActivity {
     private static final String PREFS_NAME = "AlphaPrefs";
     private static final String PREF_BACKEND_IP = "backend_ip";
     private static final String PREF_TTS_ENABLED = "tts_enabled";
+    private static final String PREF_HIDE_REPLY_FIELD = "hide_reply_field";
+    private static final String PREF_TITLE_FILTER_REGEX = "title_filter_regex";
 
     private static final String ACTION_PING_RESULT       = "com.positive.guga.PING_RESULT";
     private static final String ACTION_GUGA_RESPONSE     = "com.positive.guga.GUGA_RESPONSE";
@@ -82,16 +90,27 @@ public class MainActivity extends AppCompatActivity {
     private ChatAdapter chatAdapter;
     private List<ChatMessage> chatMessages = new ArrayList<>();
     
-    private EditText ipInput, manualCommandInput;
-    private Button saveIpButton, scanQrButton, pingButton, connectSocketButton, sendManualCommandButton, toggleSettingsButton, clearHistoryButton;
-    private SwitchCompat ttsToggle;
-    private android.view.View settingsOverlay, connectionOverlay, mainContent;
+    private EditText ipInput, manualCommandInput, filterInput, chatSearchInput;
+    private SwitchCompat ttsToggle, hideReplyToggle;
+    private android.view.View settingsOverlay, advancedSettingsOverlay, searchOverlay, connectionOverlay, mainContent, inputContainer, replyPreviewContainer;
+    private android.view.View selectionModeHeader, selectionModeFooter;
+    private TextView selectionCountText, replyTitleText, replyContentText;
+    private android.widget.ImageButton cancelSelectionButton, deleteSelectionButton, copySelectionButton, replySelectionButton, cancelReplyButton;
+    private Button saveIpButton, scanQrButton, pingButton, connectSocketButton, sendManualCommandButton, toggleSettingsButton, clearHistoryButton, openAdvancedButton, closeAdvancedButton, bypassToggleButton, applyFilterButton, searchChatsButton, closeSearchButton;
+    private RecyclerView searchRecyclerView;
+    private ChatAdapter searchResultAdapter;
+    private List<ChatMessage> searchResults = new ArrayList<>();
+
+    private String pendingReplyRequestId = null;
+    private String pendingReplyMessageId = null;
+    private boolean isBypassActive = false;
 
     private boolean isSettingsOpen = false;
     private boolean isBackendOnline = false;
     private boolean isSocketConnected = false;
 
     private SharedPreferences prefs;
+    private boolean isReviewMode = false;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final OkHttpClient httpClient = new OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
@@ -160,8 +179,14 @@ public class MainActivity extends AppCompatActivity {
                 case ACTION_GUGA_RESPONSE:
                     String msg = intent.getStringExtra("message");
                     String title = intent.getStringExtra("title");
+                    String msgId = intent.getStringExtra("message_id");
+                    String reqId = intent.getStringExtra("request_id");
+                    
                     if (msg != null) {
-                        appendChat(new ChatMessage(msg, title, false));
+                        ChatMessage chatMsg = new ChatMessage(msg, title, false);
+                        chatMsg.setMessageId(msgId);
+                        chatMsg.setRequestId(reqId);
+                        appendChat(chatMsg);
                         playTing();
                     }
                     break;
@@ -206,12 +231,17 @@ public class MainActivity extends AppCompatActivity {
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                if (isSettingsOpen) {
+                if (chatAdapter.isSelectionMode()) {
+                    chatAdapter.setSelectionMode(false);
+                } else if (searchOverlay.getVisibility() == android.view.View.VISIBLE) {
+                    toggleSearchOverlay();
+                } else if (advancedSettingsOverlay.getVisibility() == android.view.View.VISIBLE) {
+                    toggleAdvancedSettings();
+                } else if (isSettingsOpen) {
                     toggleSettings();
                 } else {
                     setEnabled(false);
                     MainActivity.this.onBackPressed();
-                    // On newer API, just finish() might be better, but this works for general cases
                 }
             }
         });
@@ -260,16 +290,128 @@ public class MainActivity extends AppCompatActivity {
         toggleSettingsButton = findViewById(R.id.toggleSettingsButton);
         clearHistoryButton   = findViewById(R.id.clearHistoryButton);
         settingsOverlay      = findViewById(R.id.settingsOverlay);
+        advancedSettingsOverlay = findViewById(R.id.advancedSettingsOverlay);
         connectionOverlay    = findViewById(R.id.connectionOverlay);
         mainContent          = findViewById(R.id.mainContent);
+        inputContainer       = findViewById(R.id.inputContainer);
+        if (inputContainer instanceof android.view.ViewGroup) {
+            LayoutTransition transition = ((android.view.ViewGroup)inputContainer).getLayoutTransition();
+            if (transition != null) {
+                transition.enableTransitionType(LayoutTransition.CHANGING);
+            }
+        }
+        
+        openAdvancedButton   = findViewById(R.id.openAdvancedButton);
+        closeAdvancedButton  = findViewById(R.id.closeAdvancedButton);
+        hideReplyToggle      = findViewById(R.id.hideReplyToggle);
+        selectionModeHeader  = findViewById(R.id.selectionModeHeader);
+        selectionModeFooter  = findViewById(R.id.selectionModeFooter);
+        selectionCountText   = findViewById(R.id.selectionCountText);
+        cancelSelectionButton = findViewById(R.id.cancelSelectionButton);
+        deleteSelectionButton = findViewById(R.id.deleteSelectionButton);
+        copySelectionButton   = findViewById(R.id.copySelectionButton);
+        replySelectionButton  = findViewById(R.id.replySelectionButton);
+        
+        replyPreviewContainer = findViewById(R.id.replyPreviewContainer);
+        replyTitleText       = findViewById(R.id.replyTitleText);
+        replyContentText     = findViewById(R.id.replyContentText);
+        cancelReplyButton    = findViewById(R.id.cancelReplyButton);
+        bypassToggleButton   = findViewById(R.id.bypassToggleButton);
+        filterInput          = findViewById(R.id.filterInput);
+        applyFilterButton    = findViewById(R.id.applyFilterButton);
+        searchOverlay        = findViewById(R.id.searchOverlay);
+        searchChatsButton    = findViewById(R.id.searchChatsButton);
+        chatSearchInput      = findViewById(R.id.chatSearchInput);
+        searchRecyclerView   = findViewById(R.id.searchRecyclerView);
+        closeSearchButton    = findViewById(R.id.closeSearchButton);
 
         chatAdapter = new ChatAdapter(chatMessages);
+        chatAdapter.setOnSelectionChangeListener(new ChatAdapter.OnSelectionChangeListener() {
+            @Override
+            public void onSelectionChanged(int count) {
+                selectionCountText.setText(count + " Selected");
+                updateSelectionFooterState();
+            }
+
+            @Override
+            public void onSelectionModeChanged(boolean active) {
+                selectionModeHeader.setVisibility(android.view.View.VISIBLE);
+                selectionModeFooter.setVisibility(android.view.View.VISIBLE);
+                if (!active) {
+                    selectionModeHeader.setVisibility(android.view.View.GONE);
+                    selectionModeFooter.setVisibility(android.view.View.GONE);
+                }
+                toggleSettingsButton.setVisibility(active ? android.view.View.GONE : android.view.View.VISIBLE);
+            }
+        });
         chatRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         chatRecyclerView.setAdapter(chatAdapter);
+        setupSwipeToReply();
 
-        boolean ttsEnabled = prefs.getBoolean(PREF_TTS_ENABLED, true);
+        chatRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                LinearLayoutManager layoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
+                if (layoutManager != null) {
+                    int lastVisible = layoutManager.findLastVisibleItemPosition();
+                    int total = chatAdapter.getItemCount();
+                    // If user is scrolled up by more than 4 messages, enter review mode
+                    isReviewMode = (total - lastVisible) > 5; // > 4 messages gap
+                }
+            }
+        });
+
+        searchRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        searchResultAdapter = new ChatAdapter(searchResults);
+        searchRecyclerView.setAdapter(searchResultAdapter);
+
+        searchResultAdapter.setOnItemClickListener((msg, pos) -> {
+            // 1. Hide everything
+            searchOverlay.setVisibility(android.view.View.GONE);
+            advancedSettingsOverlay.setVisibility(android.view.View.GONE);
+            settingsOverlay.setVisibility(android.view.View.GONE);
+            isSettingsOpen = false;
+            toggleSettingsButton.setText(">");
+            hideKeyboard();
+
+            // 2. Clear regex if it hides this message
+            String currentRegex = filterInput.getText().toString().trim();
+            if (!currentRegex.isEmpty() && !currentRegex.equals("*")) {
+                String title = msg.getTitle();
+                try {
+                    java.util.regex.Pattern p = java.util.regex.Pattern.compile(currentRegex, java.util.regex.Pattern.CASE_INSENSITIVE);
+                    if (title == null || !p.matcher(title).find()) {
+                        if (!msg.isUser()) {
+                            filterInput.setText("");
+                            chatAdapter.setFilter("");
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            // 3. Scroll to message
+            chatRecyclerView.post(() -> {
+                int displayPos = chatAdapter.getFilteredMessages().indexOf(msg);
+                if (displayPos != -1) {
+                    chatRecyclerView.smoothScrollToPosition(displayPos);
+                }
+            });
+        });
+
+        boolean ttsEnabled = prefs.getBoolean(PREF_TTS_ENABLED, false); // Default OFF
         ttsToggle.setChecked(ttsEnabled);
         updateTtsToggleColor(ttsEnabled);
+        Intent ttsIntent = new Intent(ACTION_SET_TTS_ENABLED);
+        ttsIntent.putExtra("enabled", ttsEnabled);
+        sendBroadcast(ttsIntent);
+
+        boolean hideReply = prefs.getBoolean(PREF_HIDE_REPLY_FIELD, false);
+        hideReplyToggle.setChecked(hideReply);
+        updateHideReplyState(hideReply);
+
+        String savedRegex = prefs.getString(PREF_TITLE_FILTER_REGEX, "");
+        filterInput.setText(savedRegex);
+        chatAdapter.setFilter(savedRegex);
     }
 
     private void setupHistory() {
@@ -334,6 +476,174 @@ public class MainActivity extends AppCompatActivity {
                 .setNegativeButton("Cancel", null)
                 .show();
         });
+
+        openAdvancedButton.setOnClickListener(v -> toggleAdvancedSettings());
+        closeAdvancedButton.setOnClickListener(v -> toggleAdvancedSettings());
+
+        hideReplyToggle.setOnCheckedChangeListener((btn, checked) -> {
+            prefs.edit().putBoolean(PREF_HIDE_REPLY_FIELD, checked).apply();
+            updateHideReplyState(checked);
+        });
+
+        cancelSelectionButton.setOnClickListener(v -> chatAdapter.setSelectionMode(false));
+        
+        deleteSelectionButton.setOnClickListener(v -> {
+            List<ChatMessage> selected = chatAdapter.getSelectedMessages();
+            chatMessages.removeAll(selected);
+            // Refresh filtered list
+            chatAdapter.setFilter(prefs.getString(PREF_TITLE_FILTER_REGEX, ""));
+            chatAdapter.setSelectionMode(false);
+            ChatHistory.save(this, chatMessages);
+            Toast.makeText(this, "Deleted " + selected.size() + " messages", Toast.LENGTH_SHORT).show();
+        });
+
+        copySelectionButton.setOnClickListener(v -> {
+            List<ChatMessage> selected = chatAdapter.getSelectedMessages();
+            StringBuilder sb = new StringBuilder();
+            for (ChatMessage m : selected) {
+                if (m.getTitle() != null && !m.getTitle().isEmpty()) {
+                    sb.append("[").append(m.getTitle()).append("]\n");
+                }
+                sb.append(m.getText()).append("\n\n");
+            }
+            android.content.ClipboardManager clipboard = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            android.content.ClipData clip = android.content.ClipData.newPlainText("GuGa Messages", sb.toString().trim());
+            clipboard.setPrimaryClip(clip);
+            chatAdapter.setSelectionMode(false);
+            Toast.makeText(this, "Copied to clipboard", Toast.LENGTH_SHORT).show();
+        });
+
+        replySelectionButton.setOnClickListener(v -> {
+            List<ChatMessage> selected = chatAdapter.getSelectedMessages();
+            if (selected.size() == 1) {
+                ChatMessage m = selected.get(0);
+                startReply(m);
+                chatAdapter.setSelectionMode(false);
+            }
+        });
+
+        cancelReplyButton.setOnClickListener(v -> cancelReply());
+        
+        bypassToggleButton.setOnClickListener(v -> {
+            isBypassActive = !isBypassActive;
+            updateBypassToggleUI();
+        });
+
+        applyFilterButton.setOnClickListener(v -> {
+            String regex = filterInput.getText().toString().trim();
+            prefs.edit().putString(PREF_TITLE_FILTER_REGEX, regex).apply();
+            chatAdapter.setFilter(regex);
+            Toast.makeText(this, "Filter Applied", Toast.LENGTH_SHORT).show();
+        });
+
+        searchChatsButton.setOnClickListener(v -> toggleSearchOverlay());
+        closeSearchButton.setOnClickListener(v -> toggleSearchOverlay());
+        
+        chatSearchInput.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                performSearch(s.toString());
+            }
+            @Override public void afterTextChanged(android.text.Editable s) {}
+        });
+    }
+
+    private void performSearch(String query) {
+        searchResults.clear();
+        if (!query.isEmpty()) {
+            String q = query.toLowerCase();
+            for (ChatMessage m : chatMessages) {
+                if (m.getText().toLowerCase().contains(q) || (m.getTitle() != null && m.getTitle().toLowerCase().contains(q))) {
+                    searchResults.add(m);
+                }
+            }
+        }
+        searchResultAdapter.setFilter(""); // No filtering in search results
+        searchResultAdapter.notifyDataSetChanged();
+    }
+
+    private void toggleSearchOverlay() {
+        boolean isOpen = searchOverlay.getVisibility() == android.view.View.VISIBLE;
+        searchOverlay.setVisibility(isOpen ? android.view.View.GONE : android.view.View.VISIBLE);
+        advancedSettingsOverlay.setVisibility(isOpen ? android.view.View.VISIBLE : android.view.View.GONE);
+        if (!isOpen) {
+            chatSearchInput.requestFocus();
+            showKeyboard();
+        } else {
+            hideKeyboard();
+        }
+    }
+
+    private void startReply(ChatMessage m) {
+        pendingReplyRequestId = m.getRequestId();
+        pendingReplyMessageId = m.getMessageId();
+        
+        replyTitleText.setText(m.getTitle() != null ? m.getTitle() : "Bot Message");
+        replyContentText.setText(m.getText());
+        replyPreviewContainer.setVisibility(android.view.View.VISIBLE);
+        
+        manualCommandInput.requestFocus();
+        showKeyboard();
+    }
+
+    private void cancelReply() {
+        pendingReplyRequestId = null;
+        pendingReplyMessageId = null;
+        replyPreviewContainer.setVisibility(android.view.View.GONE);
+    }
+
+    private void updateBypassToggleUI() {
+        bypassToggleButton.setTextColor(isBypassActive ? Color.WHITE : Color.GRAY);
+        // Optional: add a small visual indicator or toast
+    }
+
+    private void updateSelectionFooterState() {
+        List<ChatMessage> selected = chatAdapter.getSelectedMessages();
+        boolean allBot = true;
+        for (ChatMessage m : selected) {
+            if (m.isUser()) {
+                allBot = false;
+                break;
+            }
+        }
+        // Only allow reply if exactly ONE bot message is selected (per usual UX, but user said "if only bot messages are selected")
+        // I'll stick to 1 for simplicity of correlating, or I could handle a list.
+        // User said: "Only shown if only bot items are selected"
+        replySelectionButton.setVisibility(allBot && !selected.isEmpty() && selected.size() == 1 ? android.view.View.VISIBLE : android.view.View.GONE);
+    }
+
+    private void setupSwipeToReply() {
+        androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback callback = 
+            new androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(0, androidx.recyclerview.widget.ItemTouchHelper.LEFT) {
+                @Override
+                public boolean onMove(@NonNull RecyclerView rv, @NonNull RecyclerView.ViewHolder vh, @NonNull RecyclerView.ViewHolder t) { return false; }
+
+                @Override
+                public int getSwipeDirs(@NonNull RecyclerView rv, @NonNull RecyclerView.ViewHolder vh) {
+                    int pos = vh.getAdapterPosition();
+                    if (pos != RecyclerView.NO_POSITION && !chatMessages.get(pos).isUser()) {
+                        return super.getSwipeDirs(rv, vh);
+                    }
+                    return 0;
+                }
+
+                @Override
+                public void onChildDraw(@NonNull Canvas c, @NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
+                    float limit = -recyclerView.getWidth() * 0.05f; // 5% limit
+                    float newX = Math.max(dX, limit);
+                    super.onChildDraw(c, recyclerView, viewHolder, newX, dY, actionState, isCurrentlyActive);
+                }
+
+                @Override
+                public void onSwiped(@NonNull RecyclerView.ViewHolder vh, int dir) {
+                    int pos = vh.getAdapterPosition();
+                    if (pos != RecyclerView.NO_POSITION) {
+                        startReply(chatAdapter.getFilteredMessages().get(pos));
+                        chatAdapter.notifyItemChanged(pos); // Reset swipe visual
+                    }
+                }
+            };
+        new androidx.recyclerview.widget.ItemTouchHelper(callback).attachToRecyclerView(chatRecyclerView);
     }
 
     private void updateTtsToggleColor(boolean enabled) {
@@ -569,8 +879,24 @@ public class MainActivity extends AppCompatActivity {
     private void toggleSettings() {
         isSettingsOpen = !isSettingsOpen;
         settingsOverlay.setVisibility(isSettingsOpen ? android.view.View.VISIBLE : android.view.View.GONE);
+        if (!isSettingsOpen) advancedSettingsOverlay.setVisibility(android.view.View.GONE);
+        
         toggleSettingsButton.setText(isSettingsOpen ? "<" : ">");
         if (!isSettingsOpen) updateConnectionVisibility();
+    }
+
+    private void toggleAdvancedSettings() {
+        boolean isAdvancedOpen = advancedSettingsOverlay.getVisibility() == android.view.View.VISIBLE;
+        advancedSettingsOverlay.setVisibility(isAdvancedOpen ? android.view.View.GONE : android.view.View.VISIBLE);
+        settingsOverlay.setVisibility(isAdvancedOpen ? android.view.View.VISIBLE : android.view.View.GONE);
+    }
+
+    private void updateHideReplyState(boolean hide) {
+        inputContainer.setVisibility(hide ? android.view.View.GONE : android.view.View.VISIBLE);
+        hideReplyToggle.setTextColor(hide ? Color.WHITE : Color.GRAY);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            hideReplyToggle.setThumbTintList(android.content.res.ColorStateList.valueOf(hide ? Color.WHITE : Color.GRAY));
+        }
     }
 
     private void updateConnectionVisibility() {
@@ -589,16 +915,37 @@ public class MainActivity extends AppCompatActivity {
         appendChat(new ChatMessage(cmd, true));
         Intent intent = new Intent(ACTION_SEND_MANUAL_COMMAND);
         intent.putExtra("command", cmd);
+        
+        if (isBypassActive) {
+            intent.putExtra("request_id", "None");
+        } else if (pendingReplyRequestId != null) {
+            intent.putExtra("request_id", pendingReplyRequestId);
+        }
+        
+        if (pendingReplyMessageId != null) {
+            intent.putExtra("message_id", pendingReplyMessageId);
+        }
         sendBroadcast(intent);
         manualCommandInput.setText("");
+        cancelReply();
         hideKeyboard();
     }
 
-    private void appendChat(ChatMessage message) {
+    private void appendChat(ChatMessage msg) {
         mainHandler.post(() -> {
-            chatMessages.add(message);
-            chatAdapter.notifyItemInserted(chatMessages.size() - 1);
-            chatRecyclerView.scrollToPosition(chatMessages.size() - 1);
+            chatMessages.add(msg);
+            chatAdapter.onMessageAdded();
+            
+            // Auto-scroll logic
+            if (msg.isUser()) {
+                // User messages always force scroll and exit review mode
+                isReviewMode = false;
+                chatRecyclerView.smoothScrollToPosition(chatAdapter.getItemCount());
+            } else if (!isReviewMode) {
+                // Bot messages only scroll if we are not in review mode
+                chatRecyclerView.smoothScrollToPosition(chatAdapter.getItemCount());
+            }
+            
             ChatHistory.save(this, chatMessages);
         });
     }
@@ -646,5 +993,10 @@ public class MainActivity extends AppCompatActivity {
     private void hideKeyboard() {
         InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
         if (imm != null) imm.hideSoftInputFromWindow(manualCommandInput.getWindowToken(), 0);
+    }
+
+    private void showKeyboard() {
+        InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        if (imm != null) imm.showSoftInput(manualCommandInput, InputMethodManager.SHOW_IMPLICIT);
     }
 }

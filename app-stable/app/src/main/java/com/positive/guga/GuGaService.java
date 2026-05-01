@@ -87,7 +87,11 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
                     connectWebSocket();
                     break;
                 case "com.positive.guga.SEND_MANUAL_COMMAND":
-                    sendCommandToBackend(intent.getStringExtra("command"));
+                    sendCommandToBackend(
+                        intent.getStringExtra("command"),
+                        intent.getStringExtra("request_id"),
+                        intent.getStringExtra("message_id")
+                    );
                     break;
                 case "com.positive.guga.SET_TTS_ENABLED":
                     ttsEnabled = intent.getBooleanExtra("enabled", true);
@@ -170,7 +174,7 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
         sendBroadcast(intent);
     }
 
-    private void sendCommandToBackend(String commandText) {
+    private void sendCommandToBackend(String commandText, String requestId, String messageId) {
         if (backendAddress.isEmpty()) return;
         String authToken = getAuthToken();
         String deviceId = fetchAndroidId();
@@ -180,6 +184,8 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
         try {
             JSONObject phraseObj = new JSONObject();
             phraseObj.put("phrase", commandText);
+            if (requestId != null) phraseObj.put("request_id", requestId);
+            if (messageId != null) phraseObj.put("message_id", messageId);
             plaintext = phraseObj.toString();
         } catch (JSONException e) { return; }
 
@@ -218,48 +224,63 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
             mSocket = IO.socket(backendAddress, opts);
             mSocket.on(Socket.EVENT_CONNECT, args -> sendBroadcast(new Intent("com.positive.guga.SOCKET_CONNECTED")));
             mSocket.on(Socket.EVENT_DISCONNECT, args -> sendBroadcast(new Intent("com.positive.guga.SOCKET_DISCONNECTED")));
-            mSocket.on("guga_response", args -> {
-                if (args.length > 0 && args[0] instanceof JSONObject) {
-                    try {
-                        JSONObject payload = (JSONObject) args[0];
-                        String currentToken = getAuthToken();
-                        String message;
-                        String title = null;
-
-                        if (currentToken != null && payload.has("iv") && payload.has("ciphertext")) {
-                            String decryptedJson = CryptoUtils.decrypt(payload, currentToken);
-                            JSONObject decryptedObj = new JSONObject(decryptedJson);
-                            message = decryptedObj.getString("message");
-                            if (decryptedObj.has("title")) {
-                                title = decryptedObj.getString("title");
-                            }
-                        } else {
-                            message = payload.getString("message");
-                            if (payload.has("title")) {
-                                title = payload.getString("title");
-                            }
-                        }
-
-                        Intent intent = new Intent("com.positive.guga.GUGA_RESPONSE");
-                        intent.putExtra("message", message);
-                        if (title != null) intent.putExtra("title", title);
-                        sendBroadcast(intent);
-
-                        // Also persist directly in case MainActivity is killed
-                        ChatHistory.append(this, new ChatMessage(message, false));
-
-                        if (ttsEnabled && tts != null) {
-                            tts.speak(message, TextToSpeech.QUEUE_FLUSH, null, null);
-                        } 
-                        
-                        if (!isAppInForeground) {
-                            showResponseNotification(message, title);
-                        }
-                    } catch (Exception e) { Log.e(TAG, "Response process failed", e); }
-                }
-            });
+            mSocket.on("guga_response", args -> handleSocketPayload(args));
+            mSocket.on("guga_ask", args -> handleSocketPayload(args));
             mSocket.connect();
         } catch (URISyntaxException ignored) {}
+    }
+
+    private void handleSocketPayload(Object[] args) {
+        if (args.length > 0 && args[0] instanceof JSONObject) {
+            try {
+                JSONObject payload = (JSONObject) args[0];
+                String currentToken = getAuthToken();
+                String message;
+                String title = null;
+
+                if (currentToken != null && payload.has("iv") && payload.has("ciphertext")) {
+                    String decryptedJson = CryptoUtils.decrypt(payload, currentToken);
+                    JSONObject decryptedObj = new JSONObject(decryptedJson);
+                    message = decryptedObj.getString("message");
+                    if (decryptedObj.has("title")) {
+                        title = decryptedObj.getString("title");
+                    }
+                } else {
+                    message = payload.getString("message");
+                    if (payload.has("title")) {
+                        title = payload.getString("title");
+                    }
+                }
+
+                Intent intent = new Intent("com.positive.guga.GUGA_RESPONSE");
+                intent.putExtra("message", message);
+                if (title != null) intent.putExtra("title", title);
+
+                String messageId = payload.optString("unique_message_id", null);
+                String requestId = payload.optString("request_id", null);
+                boolean isAsk = payload.optBoolean("is_ask", false);
+
+                if (messageId != null) intent.putExtra("message_id", messageId);
+                if (requestId != null) intent.putExtra("request_id", requestId);
+                intent.putExtra("is_ask", isAsk);
+
+                sendBroadcast(intent);
+
+                // Also persist directly
+                ChatMessage chatMsg = new ChatMessage(message, title, false);
+                chatMsg.setMessageId(messageId);
+                chatMsg.setRequestId(requestId);
+                ChatHistory.append(this, chatMsg);
+
+                if (ttsEnabled && tts != null) {
+                    tts.speak(message, TextToSpeech.QUEUE_FLUSH, null, null);
+                }
+
+                if (!isAppInForeground) {
+                    showResponseNotification(message, title);
+                }
+            } catch (Exception e) { Log.e(TAG, "Payload process failed", e); }
+        }
     }
 
     // ----------------------------------------------------------------

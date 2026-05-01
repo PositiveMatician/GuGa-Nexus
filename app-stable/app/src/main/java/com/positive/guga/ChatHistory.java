@@ -23,6 +23,8 @@ public class ChatHistory {
                 obj.put("text", m.getText());
                 obj.put("title", m.getTitle());
                 obj.put("isUser", m.isUser());
+                obj.put("requestId", m.getRequestId());
+                obj.put("messageId", m.getMessageId());
                 array.put(obj);
             }
             try (FileOutputStream fos = context.openFileOutput(FILE_NAME, Context.MODE_PRIVATE)) {
@@ -54,11 +56,14 @@ public class ChatHistory {
             JSONArray array = new JSONArray(new String(bytes));
             for (int i = 0; i < array.length(); i++) {
                 JSONObject obj = array.getJSONObject(i);
-                list.add(new ChatMessage(
+                ChatMessage chatMsg = new ChatMessage(
                     obj.getString("text"),
                     obj.optString("title", null),
                     obj.getBoolean("isUser")
-                ));
+                );
+                chatMsg.setRequestId(obj.optString("requestId", null));
+                chatMsg.setMessageId(obj.optString("messageId", null));
+                list.add(chatMsg);
             }
         } catch (FileNotFoundException ignored) {
         } catch (Exception e) {

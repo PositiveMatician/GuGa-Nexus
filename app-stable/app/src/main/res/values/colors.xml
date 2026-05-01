@@ -10,4 +10,5 @@
     <color name="logText">#FFFFFF</color>
     <color name="divider">#1A1A1A</color>
     <color name="inputBackground">#111111</color>
+    <color name="gray">#888888</color>
 </resources>
