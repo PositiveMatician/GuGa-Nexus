@@ -17,7 +17,9 @@ from guga.daemon import app, socketio as server_socketio, connected_clients
 class TestInteractiveModeExtended(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        from test_utils import kill_port
         cls.server_port = 6781
+        kill_port(cls.server_port)
         cls.server_url = f"http://127.0.0.1:{cls.server_port}"
         
         # Prevent real notifications

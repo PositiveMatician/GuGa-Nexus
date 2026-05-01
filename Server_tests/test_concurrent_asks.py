@@ -17,7 +17,9 @@ from guga.daemon import app, socketio as server_socketio, connected_clients
 class TestConcurrentAsks(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        from test_utils import kill_port
         cls.server_port = 6782
+        kill_port(cls.server_port)
         cls.server_url = f"http://127.0.0.1:{cls.server_port}"
         
         # Prevent real notifications
@@ -174,11 +176,28 @@ class TestConcurrentAsks(unittest.TestCase):
         script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'scratch', 'prompt_script.py'))
         results = {}
         
+        # Auto-responder: reply to each ask as it arrives, mapping session order to names
+        reply_map = {}
+        ask_count = [0]
+        names = ["UserOne", "UserTwo"]
+        
+        @self.sio.on('guga_ask')
+        def auto_reply(data):
+            req_id = data.get('request_id')
+            idx = ask_count[0]
+            ask_count[0] += 1
+            self.received_asks.append(data)
+            if idx < len(names):
+                reply_map[req_id] = names[idx]
+                # Reply immediately in a separate thread to avoid blocking
+                def do_reply():
+                    time.sleep(0.3)
+                    self.sio.emit('reply', {'request_id': req_id, 'message': names[idx]})
+                threading.Thread(target=do_reply, daemon=True).start()
+        
         def run_session(session_id):
-            # Capture stdout to verify completion
             with patch('sys.stdout.write') as mock_write:
                 try:
-                    # Run interactive command via CLI
                     cli.run_interactive_command([sys.executable, script_path], self.server_port, False, f"Session {session_id}", "test-device")
                 except SystemExit:
                     pass
@@ -189,28 +208,11 @@ class TestConcurrentAsks(unittest.TestCase):
         t2 = threading.Thread(target=run_session, args=(2,))
         
         t1.start()
-        time.sleep(1.5) # Wait for first PTY to spawn and prompt
+        time.sleep(2)  # Give session 1 enough time to spawn and emit a prompt
         t2.start()
         
-        # Wait for both asks to be received by client
-        max_wait = 10
-        while len(self.received_asks) < 2 and max_wait > 0:
-            time.sleep(0.5)
-            max_wait -= 0.5
-            
-        self.assertEqual(len(self.received_asks), 2, f"Expected 2 asks, got {len(self.received_asks)}")
-        
-        # Resolve by mapping IDs
-        # The received_asks order should match t1, t2 because of the sleep
-        id1 = self.received_asks[0]['request_id']
-        id2 = self.received_asks[1]['request_id']
-        
-        # Reply to each specific request
-        self.sio.emit('reply', {'request_id': id1, 'message': 'UserOne'})
-        self.sio.emit('reply', {'request_id': id2, 'message': 'UserTwo'})
-        
-        t1.join(timeout=10)
-        t2.join(timeout=10)
+        t1.join(timeout=20)
+        t2.join(timeout=20)
         
         self.assertIn("Hello, UserOne!", results.get(1, ""), f"Session 1 output mismatch: {results.get(1)}")
         self.assertIn("Hello, UserTwo!", results.get(2, ""), f"Session 2 output mismatch: {results.get(2)}")

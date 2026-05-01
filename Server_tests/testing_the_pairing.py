@@ -20,21 +20,26 @@ os.environ["ENABLE_OS_NOTIFICATIONS"] = "False"
 os.environ["MODE"] = "lan"
 os.environ["GUGA_VERBOSE"] = "false"
 
-# Create a temporary trusted devices file
+# Create a temporary database
 tmp_dir = tempfile.mkdtemp()
-tmp_trusted = os.path.join(tmp_dir, "trusted_devices.json")
-with open(tmp_trusted, "w") as f:
-    json.dump({}, f)
+tmp_db = os.path.join(tmp_dir, "guga_test.db")
+os.environ["GUGA_DB_PATH"] = tmp_db
+
+from guga.db_utils import Database
+db_test = Database(tmp_db)
 
 from guga import daemon
-daemon.TRUSTED_DEVICES_FILE = tmp_trusted
+# daemon.TRUSTED_DEVICES_FILE = tmp_trusted  # No longer needed
 from guga.daemon import app
 
 class TestPairingSuite2(unittest.TestCase):
     def setUp(self):
         self.client = app.test_client()
-        daemon.pending_pairings.clear()
-        daemon.blocked_devices.clear()
+        with db_test._get_connection() as conn:
+            conn.execute("DELETE FROM pending_pairings")
+            conn.execute("DELETE FROM blocked_devices")
+            conn.execute("DELETE FROM trusted_devices")
+            conn.commit()
 
     def test_concurrent_pairing(self):
         '''Suite 2.3: Concurrent Pairing Requests'''
@@ -62,8 +67,11 @@ class TestPairingSuite2(unittest.TestCase):
 class TestPairingSuite3(unittest.TestCase):
     def setUp(self):
         self.client = app.test_client()
-        daemon.pending_pairings.clear()
-        daemon.blocked_devices.clear()
+        with db_test._get_connection() as conn:
+            conn.execute("DELETE FROM pending_pairings")
+            conn.execute("DELETE FROM blocked_devices")
+            conn.execute("DELETE FROM trusted_devices")
+            conn.commit()
 
     def test_manual_rejection(self):
         '''Suite 3.5: Manual Rejection'''
@@ -113,20 +121,23 @@ class TestPairingSuite3(unittest.TestCase):
 class TestPairingSuite4(unittest.TestCase):
     def setUp(self):
         self.client = app.test_client()
-        daemon.pending_pairings.clear()
-        daemon.blocked_devices.clear()
+        with db_test._get_connection() as conn:
+            conn.execute("DELETE FROM pending_pairings")
+            conn.execute("DELETE FROM blocked_devices")
+            conn.execute("DELETE FROM trusted_devices")
+            conn.commit()
 
     def test_pairing_request_expiration(self):
         '''Suite 4.8: Pairing Request Expiration (TTL)'''
         self.client.post("/api/hello", json={"device_id": "ttl-1", "pin": "12345678", "device_name": "ExpireMe"})
         
         # Manually alter the requested_at time to simulate 6 minutes passing
-        daemon.pending_pairings["ttl-1"]["requested_at"] = time.time() - 360
+        db_test.update_pending_pairing("ttl-1", requested_at=time.time() - 360)
         
         # GET /api/pending automatically calls clean_expired_pairings()
         pending = self.client.get("/api/pending", environ_base={'REMOTE_ADDR': '127.0.0.1'}).json["pending"]
         self.assertEqual(len(pending), 0)
-        self.assertNotIn("ttl-1", daemon.pending_pairings)
+        self.assertIsNone(db_test.get_pending_pairing("ttl-1"))
 
     def test_force_repair(self):
         '''Suite 4.9: Force Re-pair'''

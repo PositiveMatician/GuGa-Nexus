@@ -35,6 +35,9 @@ try:
 except ImportError:
     argcomplete = None
 from guga import __version__
+from guga.db_utils import Database
+
+db = Database()
 
 # ── Colour helpers ────────────────────────────────────────────────────────────
 RESET  = "\033[0m"; BOLD = "\033[1m"; DIM = "\033[2m"
@@ -44,13 +47,7 @@ CONFIG_DIR = os.path.expanduser("~/.guga")
 CAPABILITIES_FILE = os.path.join(CONFIG_DIR, "capabilities.json")
 
 def load_capabilities():
-    if os.path.exists(CAPABILITIES_FILE):
-        try:
-            with open(CAPABILITIES_FILE, "r") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {"installed_stages": [], "capabilities": {}}
+    return db.get_capabilities()
 
 def parse_duration(duration: str) -> Optional[int]:
     """Parses duration strings like 1200s, 10m, 1h, or 'never' into seconds."""

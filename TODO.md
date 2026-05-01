@@ -4,17 +4,7 @@
 
 3. Create the MCP server for the guga 
 
-4. Concurrent interactive sessions for the same device
-    Summary & Recommendation
-    Mode	Thread-Safe?	Condition
-    Standard (-r)	✅ Yes	Safe for all devices and concurrent runs.
-    Interactive (-i)	⚠️ Partial	Safe only if targeting different device_ids.
-    Ask User (--ask)	⚠️ Partial	Safe only if targeting different device_ids.
-    Recommendation: If you need to support multiple concurrent interactive sessions for the same device, the server's pending_asks logic should be refactored to use a unique request_id or correlation_id instead of just the device_id.
-    
-    This client UI needs features like:
-    i. Reply to a message ✅
-    ii. Copy message ✅
+4. Update the persistant notification in the GuGa app
 
 5.  there are several other areas that are not thread-safe or concurrency-safe.
 
@@ -60,7 +50,7 @@
     3. What still needs a Logic Change
     While SQLite and Locks solve the data corruption, some issues require a logic change in addition to the tools:
 
-    Concurrent Interactive Sessions: Even with a Mutex, if the server uses pending_asks[device_id], it can still only track one question per phone. You must change the logic to use a request_id (e.g., pending_asks[request_id]) so the phone can say "I'm replying to request #102."
+    Concurrent Interactive Sessions: Even with a Mwutex, if the server uses pending_asks[device_id], it can still only track one question per phone. You must change the logic to use a request_id (e.g., pending_asks[request_id]) so the phone can say "I'm replying to request #102."
     Multi-Admin Approval: With SQLite, you can add a status column to the pending pairings. When one admin opens the approval screen, the server can mark that request as UNDER_REVIEW in the DB, so other admins don't try to approve the same one.
     Summary of the Fix:
     Issue	Fix

@@ -5,6 +5,12 @@ import urllib.request
 import shutil
 import platform
 import textwrap
+import json
+
+from .db_utils import Database
+from .lock_utils import FileLock
+
+db = Database()
 
 
 
@@ -20,27 +26,32 @@ def dim(msg):   print(f"  {DIM}{msg}{RESET}")
 def ask(msg):   return input(f"  {msg}").strip()
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-CONFIG_DIR = os.path.expanduser("~/.guga")
+CONFIG_DIR = os.environ.get("GUGA_CONFIG_DIR", os.path.expanduser("~/.guga"))
 CAPABILITIES_FILE = os.path.join(CONFIG_DIR, "capabilities.json")
 
 def is_root():
     return os.geteuid() == 0
 
 def load_capabilities():
-    if os.path.exists(CAPABILITIES_FILE):
-        try:
-            with open(CAPABILITIES_FILE, "r") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {"installed_stages": [], "capabilities": {}}
+    return db.get_capabilities()
 
 def save_capabilities(data):
-    try:
-        with open(CAPABILITIES_FILE, "w") as f:
-            json.dump(data, f, indent=4)
-    except Exception:
-        pass
+    db.save_capabilities(data)
+
+def migrate_capabilities_json():
+    """Migrate capabilities.json to SQLite on first run."""
+    if os.path.exists(CAPABILITIES_FILE):
+        step("Migrating capabilities.json to db...")
+        try:
+            with open(CAPABILITIES_FILE, "r") as f:
+                data = json.load(f)
+                db.save_capabilities(data)
+            os.rename(CAPABILITIES_FILE, CAPABILITIES_FILE + ".bak")
+            ok("Migration complete")
+        except Exception as e:
+            warn(f"Migration failed: {e}")
+
+migrate_capabilities_json()
 
 if not os.path.exists(CONFIG_DIR):
     try:
@@ -464,148 +475,151 @@ def run_system_installer(qr_only=False, setup_only=False):
         print("❌  This setup only runs on Linux.")
         print(f"    Current OS: {platform.system()}")
         sys.exit(1)
-    env_path = os.path.join(CONFIG_DIR, ".env")
     
-    if qr_only:
-        existing_mode = "lan"
-        if os.path.exists(env_path):
+    with FileLock("install"):
+        env_path = os.path.join(CONFIG_DIR, ".env")
+        
+        if qr_only:
+            existing_mode = "lan"
+            if os.path.exists(env_path):
+                for line in open(env_path):
+                    if line.startswith("MODE="):
+                        existing_mode = line.split("=", 1)[1].strip()
+            print_qr(existing_mode)
+            sys.exit(0)
+
+        print()
+        print(f"  {BOLD}{'─' * 40}{RESET}")
+        print(f"  {BOLD}  GuGa Nexus  —  Setup{RESET}")
+        print(f"  {BOLD}{'─' * 40}{RESET}")
+
+        state = load_capabilities()
+        reconfigure = "--reconfigure" in sys.argv
+
+        if os.path.exists(env_path) and not reconfigure:
+            warn(".env already exists — skipping basic configuration")
+            dim("Reading existing configuration…")
+            mode = "lan"
+            os_notif = "False"
             for line in open(env_path):
-                if line.startswith("MODE="):
-                    existing_mode = line.split("=", 1)[1].strip()
-        print_qr(existing_mode)
-        sys.exit(0)
+                if line.startswith("MODE="):      mode     = line.split("=",1)[1].strip()
+                if line.startswith("ENABLE_OS_"): os_notif = line.split("=",1)[1].strip()
+        else:
+            mode     = ask_mode()
+            os_notif = ask_os_notif()
+            ensure_env_exists(mode, os_notif, force=True)
 
-    print()
-    print(f"  {BOLD}{'─' * 40}{RESET}")
-    print(f"  {BOLD}  GuGa Nexus  —  Setup{RESET}")
-    print(f"  {BOLD}{'─' * 40}{RESET}")
+        # Advanced Options
+        print()
+        print(f"  {BOLD}Advanced Options{RESET}")
+        print(f"    {BOLD}1){RESET}  Standard Service (Background, Systemd)")
+        print(f"    {BOLD}2){RESET}  Foreground Only  (Skip systemd setup)")
+        print()
+        adv_choice = ask("Your choice [1/2]: ")
+        foreground_only = (adv_choice.strip() == "2")
 
-    state = load_capabilities()
-    reconfigure = "--reconfigure" in sys.argv
+        stages = [
+            Stage("system_packages", "System Dependencies", True, install_linux_packages),
+            Stage("env_config", "Configuration", False, lambda: ensure_env_exists(mode, os_notif, force=reconfigure)),
+            Stage("man_page", "Manual Page", True, setup_man_page, check_man),
+        ]
 
-    if os.path.exists(env_path) and not reconfigure:
-        warn(".env already exists — skipping basic configuration")
-        dim("Reading existing configuration…")
-        mode = "lan"
-        os_notif = "False"
-        for line in open(env_path):
-            if line.startswith("MODE="):      mode     = line.split("=",1)[1].strip()
-            if line.startswith("ENABLE_OS_"): os_notif = line.split("=",1)[1].strip()
-    else:
-        mode     = ask_mode()
-        os_notif = ask_os_notif()
-        ensure_env_exists(mode, os_notif, force=True)
+        if mode == "public":
+            stages.insert(1, Stage("cloudflared", "Cloudflare Tunnel", False, download_cloudflared))
 
-    # Advanced Options
-    print()
-    print(f"  {BOLD}Advanced Options{RESET}")
-    print(f"    {BOLD}1){RESET}  Standard Service (Background, Systemd)")
-    print(f"    {BOLD}2){RESET}  Foreground Only  (Skip systemd setup)")
-    print()
-    adv_choice = ask("Your choice [1/2]: ")
-    foreground_only = (adv_choice.strip() == "2")
+        if not foreground_only:
+            stages.append(Stage("systemd_service", "Systemd Service", True, install_systemd_service, check_systemd, "background_service"))
+        else:
+            # Explicitly remove systemd capability if it was there
+            state["capabilities"].pop("background_service", None)
+            if "systemd_service" in state["installed_stages"]:
+                state["installed_stages"].remove("systemd_service")
 
-    stages = [
-        Stage("system_packages", "System Dependencies", True, install_linux_packages),
-        Stage("env_config", "Configuration", False, lambda: ensure_env_exists(mode, os_notif, force=reconfigure)),
-        Stage("man_page", "Manual Page", True, setup_man_page, check_man),
-    ]
+        for s in stages:
+            s.run(state, force=reconfigure)
 
-    if mode == "public":
-        stages.insert(1, Stage("cloudflared", "Cloudflare Tunnel", False, download_cloudflared))
+        save_capabilities(state)
 
-    if not foreground_only:
-        stages.append(Stage("systemd_service", "Systemd Service", True, install_systemd_service, check_systemd, "background_service"))
-    else:
-        # Explicitly remove systemd capability if it was there
-        state["capabilities"].pop("background_service", None)
-        if "systemd_service" in state["installed_stages"]:
-            state["installed_stages"].remove("systemd_service")
-
-    for s in stages:
-        s.run(state, force=reconfigure)
-
-    save_capabilities(state)
-
-    print()
-    print(f"  {BOLD}{'─' * 40}{RESET}")
-    print(f"  {GREEN}{BOLD}  GuGa Nexus setup complete{RESET}")
-    print(f"  {BOLD}{'─' * 40}{RESET}")
-    print()
-    
-    if foreground_only:
-        ok("Foreground mode selected: systemd service was NOT installed.")
-        print(f"  {DIM}To start the server, run:{RESET}")
-        print(f"    {BOLD}guga --start-server{RESET}\n")
-    elif "background_service" in state["capabilities"]:
-        ok("Server is running as a systemd service.")
-    
-    if mode == "public":
-        print(f"  {DIM}Run this command in a few seconds to pair your device:{RESET}")
-    else:
-        print(f"  {DIM}Run this command to pair your device:{RESET}")
-    print(f"    {BOLD}guga --qr{RESET}\n")
+        print()
+        print(f"  {BOLD}{'─' * 40}{RESET}")
+        print(f"  {GREEN}{BOLD}  GuGa Nexus setup complete{RESET}")
+        print(f"  {BOLD}{'─' * 40}{RESET}")
+        print()
+        
+        if foreground_only:
+            ok("Foreground mode selected: systemd service was NOT installed.")
+            print(f"  {DIM}To start the server, run:{RESET}")
+            print(f"    {BOLD}guga --start-server{RESET}\n")
+        elif "background_service" in state["capabilities"]:
+            ok("Server is running as a systemd service.")
+        
+        if mode == "public":
+            print(f"  {DIM}Run this command in a few seconds to pair your device:{RESET}")
+        else:
+            print(f"  {DIM}Run this command to pair your device:{RESET}")
+        print(f"    {BOLD}guga --qr{RESET}\n")
 
 def run_system_uninstaller():
-    print()
-    print(f"  {BOLD}{'─' * 40}{RESET}")
-    print(f"  {BOLD}  GuGa Nexus  —  Uninstallation{RESET}")
-    print(f"  {BOLD}{'─' * 40}{RESET}")
-    print()
+    with FileLock("install"):
+        print()
+        print(f"  {BOLD}{'─' * 40}{RESET}")
+        print(f"  {BOLD}  GuGa Nexus  —  Uninstallation{RESET}")
+        print(f"  {BOLD}{'─' * 40}{RESET}")
+        print()
 
-    # 1. Stop and Disable Service
-    step("Stopping and disabling systemd service...")
-    try:
-        subprocess.run(["sudo", "systemctl", "stop", "guga"], stderr=subprocess.DEVNULL)
-        subprocess.run(["sudo", "systemctl", "disable", "guga"], stderr=subprocess.DEVNULL)
-        ok("Service stopped and disabled")
-    except Exception as e:
-        warn(f"Could not stop service: {e}")
-
-    # 2. Remove Service File
-    step("Removing systemd unit file...")
-    service_path = "/etc/systemd/system/guga.service"
-    try:
-        # Check existence via sudo if necessary, but since we use sudo rm it's fine
-        subprocess.run(["sudo", "rm", "-f", service_path], check=True)
-        subprocess.run(["sudo", "systemctl", "daemon-reload"], check=True)
-        ok("Service file removed")
-    except Exception as e:
-        warn(f"Could not remove service file: {e}")
-
-    # 3. Remove Man Page
-    step("Removing man page...")
-    man_path = "/usr/local/share/man/man1/guga.1"
-    try:
-        subprocess.run(["sudo", "rm", "-f", man_path], check=True)
-        if shutil.which("mandb"):
-            subprocess.run(["sudo", "mandb", "-q"], stderr=subprocess.DEVNULL)
-        ok("Man page removed")
-    except Exception as e:
-        warn(f"Could not remove man page: {e}")
-
-    # 4. Optional: Remove Config Directory
-    print()
-    choice = ask(f"  {BOLD}Remove all configuration and logs in {CONFIG_DIR}? [y/N]{RESET} ")
-    if choice.lower() == "y":
-        step(f"Removing {CONFIG_DIR}...")
+        # 1. Stop and Disable Service
+        step("Stopping and disabling systemd service...")
         try:
-            shutil.rmtree(CONFIG_DIR)
-            ok("Configuration directory deleted")
+            subprocess.run(["sudo", "systemctl", "stop", "guga"], stderr=subprocess.DEVNULL)
+            subprocess.run(["sudo", "systemctl", "disable", "guga"], stderr=subprocess.DEVNULL)
+            ok("Service stopped and disabled")
         except Exception as e:
-            warn(f"Could not remove config directory: {e}")
-    else:
-        dim("Keeping configuration directory")
+            warn(f"Could not stop service: {e}")
 
-    print()
-    print(f"  {BOLD}{'─' * 40}{RESET}")
-    print(f"  {GREEN}{BOLD}  System components removed successfully{RESET}")
-    print(f"  {BOLD}{'─' * 40}{RESET}")
-    print()
-    print(f"  {BOLD}Next step:{RESET}")
-    print(f"  To completely remove the Python package, run:")
-    print(f"  {BOLD}pip uninstall GuGa{RESET}")
-    print()
+        # 2. Remove Service File
+        step("Removing systemd unit file...")
+        service_path = "/etc/systemd/system/guga.service"
+        try:
+            # Check existence via sudo if necessary, but since we use sudo rm it's fine
+            subprocess.run(["sudo", "rm", "-f", service_path], check=True)
+            subprocess.run(["sudo", "systemctl", "daemon-reload"], check=True)
+            ok("Service file removed")
+        except Exception as e:
+            warn(f"Could not remove service file: {e}")
+
+        # 3. Remove Man Page
+        step("Removing man page...")
+        man_path = "/usr/local/share/man/man1/guga.1"
+        try:
+            subprocess.run(["sudo", "rm", "-f", man_path], check=True)
+            if shutil.which("mandb"):
+                subprocess.run(["sudo", "mandb", "-q"], stderr=subprocess.DEVNULL)
+            ok("Man page removed")
+        except Exception as e:
+            warn(f"Could not remove man page: {e}")
+
+        # 4. Optional: Remove Config Directory
+        print()
+        choice = ask(f"  {BOLD}Remove all configuration and logs in {CONFIG_DIR}? [y/N]{RESET} ")
+        if choice.lower() == "y":
+            step(f"Removing {CONFIG_DIR}...")
+            try:
+                shutil.rmtree(CONFIG_DIR)
+                ok("Configuration directory deleted")
+            except Exception as e:
+                warn(f"Could not remove config directory: {e}")
+        else:
+            dim("Keeping configuration directory")
+
+        print()
+        print(f"  {BOLD}{'─' * 40}{RESET}")
+        print(f"  {GREEN}{BOLD}  System components removed successfully{RESET}")
+        print(f"  {BOLD}{'─' * 40}{RESET}")
+        print()
+        print(f"  {BOLD}Next step:{RESET}")
+        print(f"  To completely remove the Python package, run:")
+        print(f"  {BOLD}pip uninstall GuGa{RESET}")
+        print()
 
 def run_status():
     """Display a consolidated report of the GuGa service status."""
@@ -615,10 +629,10 @@ def run_status():
     print(f"  {BOLD}{'─' * 40}{RESET}")
     print()
 
-    # 1. Determine Port
-    port = "6769"
+    # 1. Determine Port — env var takes priority over .env file
+    port = os.environ.get("PORT", "6769")
     env_path = os.path.join(CONFIG_DIR, ".env")
-    if os.path.exists(env_path):
+    if port == "6769" and os.path.exists(env_path):
         try:
             with open(env_path, "r") as f:
                 for line in f:

@@ -65,3 +65,5 @@ dist/
 target/
 # --- Project Notes ---
 Guga/
+
+.agents/

@@ -17,6 +17,11 @@ from typing import Set, List, Dict
 import collections
 import uuid
 
+from .db_utils import Database
+from .lock_utils import FileLock
+
+db = Database()
+
 from dotenv import load_dotenv
 
 CONFIG_DIR = os.path.expanduser("~/.guga")
@@ -134,19 +139,10 @@ socketio = SocketIO(
     async_mode="eventlet",
 )
 
-connected_clients: dict[str, str] = {}  # session_id -> device_id
-pending_pairings: dict = {}
-# Structure per entry:
-# {
-#   "pin": "47291835",
-#   "device_name": "Pixel 7",
-#   "requested_at": 1712345678.0,
-#   "attempts": 0,
-#   "approved": False
-# }
+connected_clients: dict[str, str] = {}  # session_id -> device_id (remains in-memory)
 
-blocked_devices: dict = {}
-# Structure per entry: { device_id: unblock_timestamp }
+# The following were moved to SQLite:
+# pending_pairings, blocked_devices, message_caches (partially)
 
 # For each device_id, stores a deque of (message_id, message_dict)
 message_caches: Dict[str, collections.deque] = {} 
@@ -159,16 +155,41 @@ request_stacks: Dict[str, List[str]] = {}
 
 command_queue = eventlet.queue.Queue()
 
-TRUSTED_DEVICES_FILE = os.path.join(CONFIG_DIR, "trusted_devices.json")
+TRUSTED_DEVICES_FILE = os.environ.get("GUGA_TRUSTED_DEVICES_FILE", os.path.join(CONFIG_DIR, "trusted_devices.json"))
 
+def migrate_json_to_db():
+    """Migrates existing JSON data to SQLite on first run."""
+    if os.path.exists(TRUSTED_DEVICES_FILE):
+        log_event("⚙", YELLOW, "migrating trusted_devices.json to db...")
+        try:
+            with open(TRUSTED_DEVICES_FILE, "r") as f:
+                devices = json.load(f)
+                for did, info in devices.items():
+                    if isinstance(info, str): # Legacy migration
+                        db.save_trusted_device(did, info, "app", time.time() + 30*24*3600, "Unknown Device")
+                    else:
+                        db.save_trusted_device(
+                            did, 
+                            info.get("token"), 
+                            info.get("type", "app"), 
+                            info.get("expires_at", 0), 
+                            info.get("name", "Unknown Device"),
+                            info.get("tag")
+                        )
+            os.rename(TRUSTED_DEVICES_FILE, TRUSTED_DEVICES_FILE + ".bak")
+            log_event("✓", GREEN, "migration complete")
+        except Exception as e:
+            log_event("✗", RED, "migration failed", str(e))
+
+migrate_json_to_db()
 
 def clean_expired_pairings():
     """Remove pending entries older than 5 minutes."""
     now = time.time()
-    expired = [d for d, e in pending_pairings.items()
-               if now - e["requested_at"] > 300]
-    for d in expired:
-        del pending_pairings[d]
+    pending = db.get_pending_pairings()
+    for entry in pending:
+        if now - entry["requested_at"] > 300:
+            db.delete_pending_pairing(entry["id"])
 
 
 # ------------------------------------------------------------
@@ -198,51 +219,24 @@ class CryptoHelper:
 
 
 def load_trusted_devices() -> dict:
-    """Load trusted devices from JSON file."""
-    if not os.path.exists(TRUSTED_DEVICES_FILE):
-        return {}
-    try:
-        with open(TRUSTED_DEVICES_FILE, "r") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, IOError):
-        return {}
+    """Load trusted devices from SQLite."""
+    return db.get_trusted_devices()
 
 
 def save_trusted_device(device_id: str, token: str, client_type: str, expires_at: float, name: str = "Unknown Device") -> None:
-    """Persist a paired device's token, type, and expiry to JSON file."""
-    devices = load_trusted_devices()
-    entry = devices.get(device_id, {})
-    entry.update({
-        "token": token,
-        "type": client_type,
-        "expires_at": expires_at,
-        "name": name
-    })
-    devices[device_id] = entry
-    with open(TRUSTED_DEVICES_FILE, "w") as f:
-        json.dump(devices, f, indent=2)
+    """Persist a paired device's token, type, and expiry to SQLite."""
+    db.save_trusted_device(device_id, token, client_type, expires_at, name)
 
 
 def is_device_trusted(device_id: str) -> bool:
-    trusted = load_trusted_devices()
+    trusted = db.get_trusted_devices()
     entry = trusted.get(device_id)
     if not entry:
         return False
 
-    # Handle legacy string-only tokens (migrate them)
-    if isinstance(entry, str):
-        log_debug(f"migrating legacy entry for {device_id}")
-        token = entry
-        client_type = "browser" if device_id.startswith("browser-") else "app"
-        expires_at = time.time() + (30 * 24 * 3600)
-        save_trusted_device(device_id, token, client_type, expires_at)
-        return True
-
     if time.time() >= entry.get("expires_at", 0):
         log_event("⚠", YELLOW, "device expired", device_id)
-        del trusted[device_id]
-        with open(TRUSTED_DEVICES_FILE, "w") as f:
-            json.dump(trusted, f, indent=2)
+        db.delete_trusted_device(device_id)
         return False
     return True
 
@@ -879,7 +873,9 @@ def handle_ask():
     msg_id = uuid.uuid4().hex[:8]
     request_id = f"{device_id}_{msg_id}"
     
-    # Track in stack
+    # Track in DB and stack
+    db.add_pending_ask(request_id, device_id, message, title)
+    
     if device_id not in request_stacks:
         request_stacks[device_id] = []
     request_stacks[device_id].append(request_id)
@@ -907,10 +903,12 @@ def handle_ask():
         if timeout:
             with eventlet.Timeout(timeout):
                 reply = evt.wait()
+                db.set_ask_reply(request_id, reply)
                 return jsonify({"reply": reply}), 200
         else:
             # Infinite wait
             reply = evt.wait()
+            db.set_ask_reply(request_id, reply)
             return jsonify({"reply": reply}), 200
     except eventlet.Timeout:
         return jsonify({"error": "Timed out waiting for user reply"}), 408
@@ -944,22 +942,17 @@ def handle_hello():
         return jsonify({"error": "pin must be 8 digits"}), 400
 
     # Check blocklist
-    if device_id in blocked_devices:
-        if time.time() < blocked_devices[device_id]:
+    blocked = db.get_blocked_devices()
+    if device_id in blocked:
+        if time.time() < blocked[device_id]:
             return jsonify({"error": "too many failed attempts"}), 429
         else:
-            del blocked_devices[device_id]
+            db.unblock_device(device_id)
 
     clean_expired_pairings()
 
     # Store pending pairing
-    pending_pairings[device_id] = {
-        "pin": pin,
-        "device_name": device_name,
-        "requested_at": time.time(),
-        "attempts": 0,
-        "approved": False
-    }
+    db.add_pending_pairing(device_id, pin, device_name)
 
     log_event("?", YELLOW, "pairing request", f"{device_name} ({device_id[:8]}...) - PIN: {pin}")
     return jsonify({"status": "pin_required"}), 200
@@ -973,17 +966,18 @@ def handle_verify_pin():
     pin = data.get("pin", "").strip()
     client_type = data.get("client_type", "app").strip()
 
-    entry = pending_pairings.get(device_id)
+    entry = db.get_pending_pairing(device_id)
     if not entry:
         return jsonify({"error": "No pending pairing for this device"}), 404
 
     # The client must provide the same PIN it sent in /api/hello
     if entry["pin"] != pin:
-        entry["attempts"] += 1
-        if entry["attempts"] >= 5:
-            del pending_pairings[device_id]
-            blocked_devices[device_id] = time.time() + 600  # 10 min
+        attempts = entry["attempts"] + 1
+        if attempts >= 5:
+            db.delete_pending_pairing(device_id)
+            db.block_device(device_id, time.time() + 600)  # 10 min
             return jsonify({"error": "too many attempts"}), 401
+        db.update_pending_pairing(device_id, attempts=attempts)
         return jsonify({"error": "Invalid PIN"}), 401
 
     if not entry["approved"]:
@@ -994,8 +988,8 @@ def handle_verify_pin():
     expires_at = time.time() + ttl_seconds
 
     token = secrets.token_hex(32)
-    save_trusted_device(device_id, token, client_type, expires_at, name=entry["device_name"])
-    pending_pairings.pop(device_id, None)
+    save_trusted_device(device_id, token, client_type, expires_at, name=entry["name"])
+    db.delete_pending_pairing(device_id)
 
     log_event("✓", GREEN, "device paired", f"{device_id}  type={client_type}")
     return jsonify({"status": "paired", "token": token}), 200
@@ -1007,15 +1001,17 @@ def get_pending():
     if request.remote_addr not in ["127.0.0.1", "::1"]:
         return jsonify({"error": "Forbidden"}), 403
     clean_expired_pairings()
+    pending = db.get_pending_pairings()
     result = [
         {
-            "device_id": did,
-            "device_name": entry["device_name"],
+            "device_id": entry["id"],
+            "device_name": entry["name"],
             "pin": entry["pin"],
             "requested_at": entry["requested_at"],
             "attempts": entry["attempts"],
+            "status": entry["status"],
         }
-        for did, entry in pending_pairings.items() if not entry["approved"]
+        for entry in pending
     ]
     # Sort newest first
     result.sort(key=lambda x: x["requested_at"], reverse=True)
@@ -1029,23 +1025,30 @@ def approve_device():
         return jsonify({"error": "Forbidden"}), 403
     data = request.get_json(silent=True) or {}
     device_id = data.get("device_id", "").strip()
-    action = data.get("action", "").strip()  # "approve" or "reject"
+    action = data.get("action", "").strip()  # "approve", "reject", or "review"
+
+    if action == "review":
+        entry = db.get_pending_pairing(device_id)
+        if not entry:
+            return jsonify({"error": "No pending pairing"}), 404
+        db.update_pending_pairing(device_id, status="UNDER_REVIEW")
+        return jsonify({"status": "under_review"}), 200
 
     if action == "approve":
-        entry = pending_pairings.get(device_id)
+        entry = db.get_pending_pairing(device_id)
         if not entry:
             return jsonify({"error": "No pending pairing for this device"}), 404
-        entry["approved"] = True
-        log_event("✓", GREEN, "pairing approved", f"{entry['device_name']} ({device_id[:8]}...)")
+        db.update_pending_pairing(device_id, approved=1, status="APPROVED")
+        log_event("✓", GREEN, "pairing approved", f"{entry['name']} ({device_id[:8]}...)")
         return jsonify({"status": "approved"}), 200
 
     elif action == "reject":
-        pending_pairings.pop(device_id, None)
-        blocked_devices[device_id] = time.time() + 600
+        db.delete_pending_pairing(device_id)
+        db.block_device(device_id, time.time() + 600)
         log_event("✗", RED, "pairing rejected", device_id)
         return jsonify({"status": "rejected"}), 200
 
-    return jsonify({"error": "action must be approve or reject"}), 400
+    return jsonify({"error": "action must be approve, reject, or review"}), 400
 
 
 @app.route("/api/devices", methods=["GET"])
@@ -1084,7 +1087,7 @@ def rename_device():
     if not device_id:
         return jsonify({"error": "device_id required"}), 400
         
-    trusted = load_trusted_devices()
+    trusted = db.get_trusted_devices()
     if device_id not in trusted:
         return jsonify({"error": "Device not found"}), 404
         
@@ -1094,9 +1097,15 @@ def rename_device():
             if info.get("tag") == tag and did != device_id:
                 return jsonify({"error": f"Tag '{tag}' is already used by another device"}), 400
 
-    trusted[device_id]["tag"] = tag
-    with open(TRUSTED_DEVICES_FILE, "w") as f:
-        json.dump(trusted, f, indent=2)
+    entry = trusted[device_id]
+    db.save_trusted_device(
+        device_id, 
+        entry["token"], 
+        entry["type"], 
+        entry["expires_at"], 
+        entry["name"], 
+        tag
+    )
         
     log_event("✎", YELLOW, "device tagged", f"{device_id} -> {tag or 'None'}")
     return jsonify({"status": "ok"}), 200
@@ -1347,30 +1356,31 @@ def get_local_ip() -> str:
 
 def start_cloudflare_tunnel(port: int) -> str:
     """Start an ephemeral Cloudflare tunnel and capture the URL."""
-    log_event("⚙", CYAN, f"spawning tunnel on port {port}...")
-    
-    filename = "cloudflared.exe" if platform.system().lower() == "windows" else "./cloudflared"
-    cloudflare_cmd = os.path.join(CONFIG_DIR, filename)
-    
-    if not os.path.exists(cloudflare_cmd):
-        cloudflare_cmd = "cloudflared"
+    with FileLock("tunnel"):
+        log_event("⚙", CYAN, f"spawning tunnel on port {port}...")
+        
+        filename = "cloudflared.exe" if platform.system().lower() == "windows" else "./cloudflared"
+        cloudflare_cmd = os.path.join(CONFIG_DIR, filename)
+        
+        if not os.path.exists(cloudflare_cmd):
+            cloudflare_cmd = "cloudflared"
 
-    proc = subprocess.Popen(
-        [cloudflare_cmd, "tunnel", "--url", f"http://localhost:{port}"],
-        stderr=subprocess.PIPE,
-        text=True
-    )
-    atexit.register(lambda: proc.terminate())
-    
-    url_pattern = re.compile(r"https://[-a-z0-9]+\.trycloudflare\.com")
-    
-    # Read stderr to find the URL
-    for line in iter(proc.stderr.readline, ""):
-        match = url_pattern.search(line)
-        if match:
-            url = match.group(0)
-            return url
-    return ""
+        proc = subprocess.Popen(
+            [cloudflare_cmd, "tunnel", "--url", f"http://localhost:{port}"],
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        atexit.register(lambda: proc.terminate())
+        
+        url_pattern = re.compile(r"https://[-a-z0-9]+\.trycloudflare\.com")
+        
+        # Read stderr to find the URL
+        for line in iter(proc.stderr.readline, ""):
+            match = url_pattern.search(line)
+            if match:
+                url = match.group(0)
+                return url
+        return ""
 
 
 # ── Background Process Lifecycle ──────────────────────────────────────────

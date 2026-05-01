@@ -21,19 +21,26 @@ os.environ["ENABLE_OS_NOTIFICATIONS"] = "False"
 os.environ["MODE"] = "lan"
 os.environ["GUGA_VERBOSE"] = "false"
 
-# Create a temporary trusted devices file for 10 devices
+# Create a temporary database and config paths
 tmp_dir = tempfile.mkdtemp()
+tmp_db = os.path.join(tmp_dir, "guga_test.db")
 tmp_trusted = os.path.join(tmp_dir, "trusted_devices.json")
-trusted_data = {
-    f"browser-{i}": {"token": f"test-token-{i}", "type": "browser", "expires_at": time.time() + 3600}
-    for i in range(1, 11)
-}
+os.environ["GUGA_DB_PATH"] = tmp_db
+os.environ["GUGA_TRUSTED_DEVICES_FILE"] = tmp_trusted
+
+# Ensure the "trusted" file is empty so migration does nothing or migrates empty
 with open(tmp_trusted, "w") as f:
-    json.dump(trusted_data, f)
+    json.dump({}, f)
+
+from guga.db_utils import Database
+db_test = Database(tmp_db)
+# Pre-populate trusted devices
+for i in range(1, 11):
+    db_test.save_trusted_device(f"browser-{i}", f"test-token-{i}", "browser", time.time() + 3600, f"Device {i}")
 
 # Import daemon and override the file constant
 from guga import daemon
-daemon.TRUSTED_DEVICES_FILE = tmp_trusted
+# daemon.TRUSTED_DEVICES_FILE = tmp_trusted
 
 from guga.daemon import app, socketio as server_socketio
 
@@ -66,6 +73,8 @@ class TestPrivateCommandReplyToClient(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        from test_utils import kill_port
+        kill_port(6768)
         cls.server_url = "http://127.0.0.1:6768"
         
         # Start the server in a background thread
