@@ -201,7 +201,7 @@ def send_message_to(target_id: str, message: str, port: int, silent: bool, title
             print(f"❌ Unexpected error: {e}", file=sys.stderr)
         sys.exit(1)
 
-def guga_ask_user(prompt: str, port: int, device_id: str, title: Optional[str] = None, timeout: Optional[int] = None, quiet: bool = False) -> str:
+def guga_ask_user(prompt: str, port: int, device_id: str, title: Optional[str] = None, timeout: Optional[int] = None, quiet: bool = False, default: Optional[str] = None) -> str:
     """
     Sends a synchronous request-reply prompt to a specific device.
     Blocks the local CLI until the user replies from the Android app
@@ -214,9 +214,10 @@ def guga_ask_user(prompt: str, port: int, device_id: str, title: Optional[str] =
         title (str, optional): Label for the notification.
         timeout (int, optional): Seconds to wait before expiring.
         quiet (bool): If True, suppresses printing the reply to stdout.
+        default (str, optional): Default value to return if the request times out.
         
     Returns:
-        str: The user's reply.
+        str: The user's reply or the default value.
     """
     url = f"http://localhost:{port}/api/ask"
     payload = {"message": prompt, "device_id": device_id, "timeout": timeout}
@@ -246,6 +247,10 @@ def guga_ask_user(prompt: str, port: int, device_id: str, title: Optional[str] =
                 sys.exit(1)
     except (urllib.error.HTTPError) as e:
         if e.code == 408:
+            if default is not None:
+                if not quiet:
+                    print(default)
+                return default
             print("❌ Expired: Timed out waiting for user reply.", file=sys.stderr)
             sys.exit(1)
         try:
@@ -833,7 +838,12 @@ for more details:
     parser.add_argument(
         "--ask-user",
         metavar="PROMPT",
-        help="Send a prompt to the device and wait for a reply.",
+        help="Ask user for input and wait for reply.",
+    )
+    parser.add_argument(
+        "--default",
+        metavar="VALUE",
+        help="Default value to use if --ask-user times out.",
     )
     parser.add_argument(
         "--delay",
@@ -876,7 +886,8 @@ def show_help(error: Optional[str] = None) -> None:
     print('  -t, --title LABEL             Set notification title (e.g. "GPU Server")', file=sys.stderr)
     print('  --send-to DEVICE_ID           Send to a specific device', file=sys.stderr)
     print('  --ask-user PROMPT             Ask user for input and wait for reply', file=sys.stderr)
-    print('  --delay DURATION              Timeout for reply (e.g. 1200s, 10m, never)', file=sys.stderr)
+    print('  --default VALUE               Default value if --ask-user times out', file=sys.stderr)
+    print('  --timeout SECONDS             Wait time for --ask-user (default: 60)', file=sys.stderr)
     print('  --silent                      Suppress internal output', file=sys.stderr)
 
     print("\nAdvanced Mode:", file=sys.stderr)
@@ -957,12 +968,10 @@ def main():
         return
 
     if args.ask_user:
-        if not args.send_to:
-            print("❌ Error: --send-to DEVICE_ID is mandatory when using --ask-user.", file=sys.stderr)
-            sys.exit(1)
+        target_id = args.send_to if args.send_to else "all"
         try:
-            timeout_sec = parse_duration(args.delay)
-            guga_ask_user(args.ask_user, args.server, args.send_to, args.title, timeout_sec)
+            timeout_sec = parse_duration(args.delay) if args.delay else 60
+            guga_ask_user(args.ask_user, args.server, target_id, title=args.title, timeout=timeout_sec, default=args.default)
         except ValueError as e:
             print(f"❌ Error: {e}", file=sys.stderr)
             sys.exit(1)
