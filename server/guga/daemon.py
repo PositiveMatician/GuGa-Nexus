@@ -814,9 +814,10 @@ async def send_to_all():
     data = await request.get_json() or {}
     message = data.get("message", "").strip()
     title = data.get("title", "").strip()
+    msg_id = data.get("unique_message_id")
     if not message:
         return jsonify({"error": "No message provided"}), 400
-    await notify_all_clients(message, title)
+    await notify_all_clients(message, title, msg_id=msg_id)
     return jsonify({"ok": True, "sent_to": len(connected_clients)}), 200
 
 
@@ -929,8 +930,9 @@ async def send_to_one(target_id: str):
     if not target_sids:
         return jsonify({"error": f"No active client found for '{target_id}'"}), 404
 
+    msg_id = data.get("unique_message_id")
     for sid in target_sids:
-        await send_private_message(sid, message, title)
+        await send_private_message(sid, message, title, msg_id=msg_id)
 
     return jsonify({"ok": True, "sent_to_sessions": len(target_sids)}), 200
 
@@ -1404,9 +1406,10 @@ def process_command(command: str) -> dict:
         "message": f"Command '{command}' not found. Please wait for the admin to update the command list."
     }
  
-def cache_message(device_id: str, message_data: dict) -> str:
+def cache_message(device_id: str, message_data: dict, msg_id: str = None) -> str:
     """Assigns a unique ID, caches the message, and returns the message ID."""
-    msg_id = uuid.uuid4().hex[:8]
+    if not msg_id:
+        msg_id = uuid.uuid4().hex[:8]
     message_data["unique_message_id"] = msg_id
     
     if device_id not in message_caches:
@@ -1415,7 +1418,7 @@ def cache_message(device_id: str, message_data: dict) -> str:
     return msg_id
 
 
-async def notify_all_clients(message: str, title: str = None) -> None:
+async def notify_all_clients(message: str, title: str = None, msg_id: str = None) -> None:
     """Emit guga_response to all connected clients."""
     trusted = load_trusted_devices()
     payload_data = {"message": message}
@@ -1430,7 +1433,7 @@ async def notify_all_clients(message: str, title: str = None) -> None:
 
             # Clone data to avoid modifying the original during caching for different devices
             local_payload = payload_data.copy()
-            msg_id = cache_message(device_id, local_payload)
+            final_msg_id = cache_message(device_id, local_payload, msg_id=msg_id)
             local_payload_json = json.dumps(local_payload)
 
             if client_type == "browser" or device_id.startswith("browser-") or not token:
@@ -1442,7 +1445,7 @@ async def notify_all_clients(message: str, title: str = None) -> None:
             log_event("✗", RED, "send failed", f"{sid} ({device_id}): {e}")
 
 
-async def send_private_message(session_id: str, message: str, title: str = None) -> bool:
+async def send_private_message(session_id: str, message: str, title: str = None, msg_id: str = None) -> bool:
     """Send a private message to a specific session."""
     if session_id not in connected_clients:
         return False
@@ -1459,7 +1462,7 @@ async def send_private_message(session_id: str, message: str, title: str = None)
     test_mode = os.getenv("GUGA_TEST_MODE", "false").lower() == "true"
     
     try:
-        msg_id = cache_message(device_id, payload_data)
+        final_msg_id = cache_message(device_id, payload_data, msg_id=msg_id)
         payload_json = json.dumps(payload_data)
 
         if test_mode or client_type == "browser" or not token:

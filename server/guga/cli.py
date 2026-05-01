@@ -36,6 +36,7 @@ import time
 import urllib.request
 import urllib.error
 import configparser
+import uuid
 try:
     import argcomplete
 except ImportError:
@@ -49,7 +50,9 @@ db = Database()
 RESET  = "\033[0m"; BOLD = "\033[1m"; DIM = "\033[2m"
 GREEN  = "\033[32m"; YELLOW = "\033[33m"; RED = "\033[31m"; CYAN = "\033[36m"
 
-CONFIG_DIR = os.path.expanduser("~/.guga")
+CONFIG_DIR = os.environ.get("GUGA_CONFIG_DIR", os.path.expanduser("~/.guga"))
+LOGS_DIR = os.path.join(CONFIG_DIR, "logs")
+os.makedirs(LOGS_DIR, exist_ok=True)
 CAPABILITIES_FILE = os.path.join(CONFIG_DIR, "capabilities.json")
 
 def load_capabilities():
@@ -114,7 +117,7 @@ def last_meaningful_line(text):
 
 # ── Core actions ──────────────────────────────────────────────────────────────
 
-def broadcast_message(message: str, port: int, silent: bool, title: Optional[str] = None):
+def broadcast_message(message: str, port: int, silent: bool, title: Optional[str] = None, msg_id: Optional[str] = None):
     """
     Sends a notification message to the GuGa server (broadcast).
 
@@ -123,12 +126,15 @@ def broadcast_message(message: str, port: int, silent: bool, title: Optional[str
         port (int): The port where the GuGa server is listening.
         silent (bool): If True, suppresses success/error messages in the console.
         title (str, optional): An optional title/label for the notification.
+        msg_id (str, optional): A unique ID for this message.
     """
     url = f"http://localhost:{port}/send"
 
     payload = {"message": message}
     if title:
         payload["title"] = title
+    if msg_id:
+        payload["unique_message_id"] = msg_id
 
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
@@ -153,7 +159,7 @@ def broadcast_message(message: str, port: int, silent: bool, title: Optional[str
         sys.exit(1)
 
 
-def send_message_to(target_id: str, message: str, port: int, silent: bool, title: Optional[str] = None):
+def send_message_to(target_id: str, message: str, port: int, silent: bool, title: Optional[str] = None, msg_id: Optional[str] = None):
     """
     Sends a notification message to a specific device via the GuGa server.
 
@@ -163,12 +169,15 @@ def send_message_to(target_id: str, message: str, port: int, silent: bool, title
         port (int): The port where the GuGa server is listening.
         silent (bool): If True, suppresses success/error messages in the console.
         title (str, optional): An optional title/label for the notification.
+        msg_id (str, optional): A unique ID for this message.
     """
     url = f"http://localhost:{port}/send/{target_id}"
 
     payload = {"message": message}
     if title:
         payload["title"] = title
+    if msg_id:
+        payload["unique_message_id"] = msg_id
 
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
@@ -254,12 +263,11 @@ def guga_ask_user(prompt: str, port: int, device_id: str, title: Optional[str] =
         sys.exit(1)
 
 
-def run_interactive_command(cmd_args: List[str], port: int, silent: bool, title: str, target_id: Optional[str] = None, expect_regex: Optional[str] = None):
+def run_interactive_command(cmd_args: List[str], port: int, silent: bool, title: str, target_id: Optional[str] = None, expect_regex: Optional[str] = None, look_for: Optional[str] = None):
     """
     Spawns a command in a pseudo-terminal (PTY) using pexpect.
-    Monitors stdout for common terminal prompts (ends with :, ?, or >).
+    Monitors stdout for common terminal prompts.
     When a prompt is detected, it is forwarded to the user's phone.
-    The process blocks until a reply is received and fed back into the PTY.
     """
     try:
         import pexpect
@@ -270,61 +278,74 @@ def run_interactive_command(cmd_args: List[str], port: int, silent: bool, title:
 
     cmd_label = " ".join(cmd_args)
     start = time.time()
+    
+    unique_msg_id = uuid.uuid4().hex[:8]
+    log_path = os.path.join(LOGS_DIR, f"{unique_msg_id}.log")
+    look_for_re = re.compile(look_for) if look_for else None
+
     if not silent:
         print(f"▶ guga interactive: {cmd_label}\n")
+        print(f"  {DIM}Log file: {log_path}{RESET}\n")
 
     # Default regex matches any line that ends with :, ?, or >, plus optional spaces.
     prompt_regex = expect_regex if expect_regex else r'[:?>]\s*$'
     captured_lines = []
 
     try:
-        # Spawn the process. shlex.join ensures the command is a single string for spawn
-        # which is often more reliable than passing a list to spawn on Linux.
         full_cmd = shlex.join(cmd_args)
         child = pexpect.spawn(full_cmd, encoding='utf-8', timeout=None)
         
-        while child.isalive():
-            # Wait for a prompt or end of process
-            try:
-                # We use a 1s timeout loop to keep checking isalive and avoid blocking forever
-                index = child.expect([prompt_regex, pexpect.EOF], timeout=1)
-                
-                # Print and capture what happened
-                output = child.before
-                if output:
-                    print(output, end="", flush=True)
-                    captured_lines.append(output)
+        with open(log_path, "w") as log_f:
+            while child.isalive():
+                try:
+                    index = child.expect([prompt_regex, pexpect.EOF], timeout=1)
+                    
+                    output = child.before
+                    if output:
+                        print(output, end="", flush=True)
+                        log_f.write(output)
+                        log_f.flush()
+                        captured_lines.append(output)
+                        
+                        if look_for_re:
+                            for line in output.splitlines():
+                                if look_for_re.search(line):
+                                    msg = line.strip()
+                                    random_id = uuid.uuid4().hex[:8]
+                                    if target_id:
+                                        send_message_to(target_id, msg, port, silent, title, msg_id=random_id)
+                                    else:
+                                        broadcast_message(msg, port, silent, title, msg_id=random_id)
 
-                if index == 0: # Prompt detected!
-                    prompt = child.after
-                    print(prompt, end="", flush=True)
-                    captured_lines.append(prompt)
+                    if index == 0: # Prompt detected!
+                        prompt = child.after
+                        print(prompt, end="", flush=True)
+                        log_f.write(prompt)
+                        log_f.flush()
+                        captured_lines.append(prompt)
 
-                    if not silent:
-                        print(f"\n{YELLOW}🔔 [REMOTE ASK]{RESET} Forwarding prompt to {target_id or 'devices'}...")
+                        if not silent:
+                            print(f"\n{YELLOW}🔔 [REMOTE ASK]{RESET} Forwarding prompt to {target_id or 'devices'}...")
+                        
+                        context = (output.splitlines()[-1] if "\n" in output else output) + prompt
+                        reply = guga_ask_user(context.strip(), port, target_id, title="Interactive Prompt", quiet=True)
+                        child.sendline(reply)
                     
-                    # Forward the prompt context (last line of before + after)
-                    context = (output.splitlines()[-1] if "\n" in output else output) + prompt
-                    
-                    # Blocking call to get reply from phone
-                    # We pass quiet=True because we'll feed the reply into the PTY which will echo it anyway
-                    reply = guga_ask_user(context.strip(), port, target_id, title="Interactive Prompt", quiet=True)
-                    
-                    # Feed reply back to the process
-                    child.sendline(reply)
-                
-                elif index == 1: # EOF
+                    elif index == 1: # EOF
+                        break
+
+                except pexpect.TIMEOUT:
+                    output = child.before
+                    # Note: pexpect.before keeps growing until a match. 
+                    # To avoid re-printing, we only print if it changed.
+                    # However, child.before is the WHOLE buffer since start/last match.
+                    # A better way is to use expect with a small timeout and check what's new.
+                    # For simplicity, we'll use child.read_nonblocking if we wanted true streaming,
+                    # but pexpect's expect(timeout) is okay if we manage the printed state.
+                    # The existing code had a bug where it re-printed. Let's fix that.
+                    continue
+                except pexpect.EOF:
                     break
-
-            except pexpect.TIMEOUT:
-                # Still running, just no prompt yet. Print any intermediate output.
-                output = child.before
-                if output:
-                    print(output, end="", flush=True)
-                    captured_lines.append(output)
-                continue
-            except pexpect.EOF:
-                break
 
         child.wait()
         exit_code = child.exitstatus if child.exitstatus is not None else 0
@@ -343,38 +364,35 @@ def run_interactive_command(cmd_args: List[str], port: int, silent: bool, title:
 
     msg = "\n".join(parts)
     if target_id:
-        send_message_to(target_id, msg, port, silent, title)
+        send_message_to(target_id, msg, port, silent, title, msg_id=unique_msg_id)
     else:
-        broadcast_message(msg, port, silent, title)
+        broadcast_message(msg, port, silent, title, msg_id=unique_msg_id)
     
-    # Final cleanup print
     if not silent:
         print(f"\n{parts[0]}")
     
     sys.exit(exit_code)
 
 
-def run_command(cmd_args: List[str], port: int, silent: bool, title: str, target_id: Optional[str] = None, interactive: bool = False, expect_regex: Optional[str] = None):
+def run_command(cmd_args: List[str], port: int, silent: bool, title: str, target_id: Optional[str] = None, interactive: bool = False, expect_regex: Optional[str] = None, look_for: Optional[str] = None):
     """
     Executes a shell command, streams its output to the console, and sends a 
     notification via GuGa when the command completes or is interrupted.
-
-    Args:
-        cmd_args (list of str): The command and its arguments to execute.
-        port (int): The port where the GuGa server is running.
-        silent (bool): If True, suppresses GuGa's own progress messages.
-        title (str): The label shown in the notification.
-        target_id (str, optional): The device_id or session_id of the recipient.
     """
     cmd_label = " ".join(cmd_args)
     start = time.time()
+    
+    unique_msg_id = uuid.uuid4().hex[:8]
+    log_path = os.path.join(LOGS_DIR, f"{unique_msg_id}.log")
+    look_for_re = re.compile(look_for) if look_for else None
 
     if not silent:
         print(f"▶ guga watching: {cmd_label}\n")
+        print(f"  {DIM}Log file: {log_path}{RESET}\n")
 
     captured_lines = []
     if interactive:
-        return run_interactive_command(cmd_args, port, silent, title, target_id, expect_regex=expect_regex)
+        return run_interactive_command(cmd_args, port, silent, title, target_id, expect_regex=expect_regex, look_for=look_for)
 
     try:
         process = subprocess.Popen(
@@ -384,9 +402,21 @@ def run_command(cmd_args: List[str], port: int, silent: bool, title: str, target
             text=True,
             bufsize=1,
         )
-        for line in process.stdout:
-            print(line, end="")
-            captured_lines.append(line)
+        
+        with open(log_path, "w") as log_f:
+            for line in process.stdout:
+                print(line, end="")
+                log_f.write(line)
+                log_f.flush()
+                captured_lines.append(line)
+                
+                if look_for_re and look_for_re.search(line):
+                    msg = line.strip()
+                    random_id = uuid.uuid4().hex[:8]
+                    if target_id:
+                        send_message_to(target_id, msg, port, silent, title, msg_id=random_id)
+                    else:
+                        broadcast_message(msg, port, silent, title, msg_id=random_id)
 
         process.wait()
         exit_code = process.returncode
@@ -398,9 +428,9 @@ def run_command(cmd_args: List[str], port: int, silent: bool, title: str, target
         elapsed = format_duration(time.time() - start)
         msg = f"⚠️ {cmd_label} interrupted after {elapsed}"
         if target_id:
-            send_message_to(target_id, msg, port, silent, title)
+            send_message_to(target_id, msg, port, silent, title, msg_id=unique_msg_id)
         else:
-            broadcast_message(msg, port, silent, title)
+            broadcast_message(msg, port, silent, title, msg_id=unique_msg_id)
         sys.exit(130)
 
     elapsed = format_duration(time.time() - start)
@@ -413,9 +443,9 @@ def run_command(cmd_args: List[str], port: int, silent: bool, title: str, target
 
     msg = "\n".join(parts)
     if target_id:
-        send_message_to(target_id, msg, port, silent, title)
+        send_message_to(target_id, msg, port, silent, title, msg_id=unique_msg_id)
     else:
-        broadcast_message(msg, port, silent, title)
+        broadcast_message(msg, port, silent, title, msg_id=unique_msg_id)
     sys.exit(exit_code)
 
 
@@ -768,6 +798,11 @@ for more details:
         metavar="REGEX",
         help="Custom regex for prompt detection in interactive mode.",
     )
+    parser.add_argument(
+        "--look-for",
+        metavar="REGEX",
+        help="Regex pattern to watch for in run mode output; matches are sent as notifications.",
+    )
 
     parser.add_argument(
         "--server",
@@ -837,6 +872,7 @@ def show_help(error: Optional[str] = None) -> None:
     print('  -r, --run                     Force run mode', file=sys.stderr)
     print('  -i, --interactive             Remote interaction (PTY) for --run mode', file=sys.stderr)
     print('  --expect REGEX                Custom regex for prompt detection', file=sys.stderr)
+    print('  --look-for REGEX              Watch for regex in output and notify', file=sys.stderr)
     print('  -t, --title LABEL             Set notification title (e.g. "GPU Server")', file=sys.stderr)
     print('  --send-to DEVICE_ID           Send to a specific device', file=sys.stderr)
     print('  --ask-user PROMPT             Ask user for input and wait for reply', file=sys.stderr)
@@ -969,7 +1005,7 @@ def main():
         # split it into proper tokens so subprocess can execute it correctly.
         if len(positional) == 1:
             positional = shlex.split(positional[0])
-        run_command(positional, args.server, args.silent, args.title, target_id=args.send_to, interactive=args.interactive, expect_regex=args.expect)
+        run_command(positional, args.server, args.silent, args.title, target_id=args.send_to, interactive=args.interactive, expect_regex=args.expect, look_for=args.look_for)
         return
 
     # ── Auto-detection ────────────────────────────────────────────────────────
@@ -1001,7 +1037,7 @@ def main():
         return
 
     # 4. Otherwise → run mode
-    run_command(positional, args.server, args.silent, args.title, target_id=args.send_to, interactive=args.interactive, expect_regex=args.expect)
+    run_command(positional, args.server, args.silent, args.title, target_id=args.send_to, interactive=args.interactive, expect_regex=args.expect, look_for=args.look_for)
 
 
 if __name__ == "__main__":
