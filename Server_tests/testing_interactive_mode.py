@@ -148,7 +148,7 @@ class TestInteractiveModeExtended(unittest.TestCase):
         """Test guga -r -i logic: detects prompt, forwards to phone, feeds back reply."""
         from guga import cli
         
-        script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'server', 'scratch', 'prompt_script.py'))
+        script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'scratch', 'prompt_script.py'))
         
         @self.sio.on('guga_ask')
         def on_ask(data):

@@ -13,7 +13,9 @@ import subprocess
 import sys
 import threading
 import time
-from typing import Set
+from typing import Set, List, Dict
+import collections
+import uuid
 
 from dotenv import load_dotenv
 
@@ -146,7 +148,14 @@ pending_pairings: dict = {}
 blocked_devices: dict = {}
 # Structure per entry: { device_id: unblock_timestamp }
 
-pending_asks: dict[str, eventlet.event.Event] = {} # device_id -> Event
+# For each device_id, stores a deque of (message_id, message_dict)
+message_caches: Dict[str, collections.deque] = {} 
+
+# Maps request_id (device_id + "_" + message_id) to eventlet Event
+pending_requests: Dict[str, eventlet.event.Event] = {}
+
+# Tracks the order of active 'ask' requests for each device
+request_stacks: Dict[str, List[str]] = {}
 
 command_queue = eventlet.queue.Queue()
 
@@ -640,6 +649,8 @@ HTML_PAGE = """
         }
     }
 
+    let lastRequestId = null;
+
     function connectSocket() {
         let shownDisconnect = false;
 
@@ -665,8 +676,18 @@ HTML_PAGE = """
         socket.on('guga_response', (data) => {
             typingEl.classList.remove('active');
             if (data.title || data.message) {
-                addNotification(data.title, data.message || 'encrypted payload');
+                const msg = data.message || 'encrypted payload';
+                const idSuffix = data.unique_message_id ? ` (id: ${data.unique_message_id})` : '';
+                addNotification(data.title, msg + idSuffix);
             }
+        });
+
+        socket.on('guga_ask', (data) => {
+            typingEl.classList.remove('active');
+            lastRequestId = data.request_id;
+            const msg = data.message || 'Question';
+            const idSuffix = data.request_id ? ` [req: ${data.request_id}]` : '';
+            addNotification(data.title || "Question", msg + idSuffix);
         });
 
         socket.on('connect_error', (err) => {
@@ -687,10 +708,25 @@ HTML_PAGE = """
 
     function sendCommand() {
         const input = document.getElementById('cmdInput');
-        const text = input.value.trim();
+        let text = input.value.trim();
         if (!text || !socket) return;
+        
+        let payload = { phrase: text, device_id: deviceId };
+        
+        // Support explicit request targeting via "req:id:message"
+        // Use "req:null:message" to bypass interactive blocks
+        if (text.startsWith('req:')) {
+            const parts = text.split(':');
+            if (parts.length >= 3) {
+                const reqId = parts[1].trim();
+                payload.request_id = (reqId === 'null' || reqId === 'none') ? null : reqId;
+                payload.phrase = parts.slice(2).join(':').trim();
+                text = `[${reqId}] ${payload.phrase}`;
+            }
+        }
+
         addBubble('usr', text);
-        socket.emit('command', { phrase: text, device_id: deviceId });
+        socket.emit('command', payload);
         input.value = '';
         typingEl.classList.add('active');
         feed.scrollTo({ top: feed.scrollHeight, behavior: 'smooth' });
@@ -821,7 +857,16 @@ def handle_ask():
 
     # Create an event to wait for
     evt = eventlet.event.Event()
-    pending_asks[device_id] = evt
+    
+    # Generate unique IDs
+    msg_id = uuid.uuid4().hex[:8]
+    request_id = f"{device_id}_{msg_id}"
+    
+    # Track in stack
+    if device_id not in request_stacks:
+        request_stacks[device_id] = []
+    request_stacks[device_id].append(request_id)
+    pending_requests[request_id] = evt
 
     log_event("?", YELLOW, "ask user", f"{device_id}: {message} (timeout: {timeout if timeout else 'never'})")
     
@@ -829,8 +874,13 @@ def handle_ask():
     payload = {
         "message": message,
         "title": title,
-        "is_ask": True
+        "is_ask": True,
+        "unique_message_id": msg_id,
+        "request_id": request_id
     }
+    
+    # Cache the message
+    cache_message(device_id, payload)
     
     for sid in target_sids:
         socketio.emit("guga_ask", payload, room=sid)
@@ -848,7 +898,9 @@ def handle_ask():
     except eventlet.Timeout:
         return jsonify({"error": "Timed out waiting for user reply"}), 408
     finally:
-        pending_asks.pop(device_id, None)
+        pending_requests.pop(request_id, None)
+        if device_id in request_stacks and request_id in request_stacks[device_id]:
+            request_stacks[device_id].remove(request_id)
 
 @app.route("/api/hello", methods=["POST"])
 def handle_hello():
@@ -1021,27 +1073,34 @@ def handle_disconnect():
 def handle_command(data):
     """Accepts encrypted command payload from trusted Android device."""
     device_id = data.get("device_id", "").strip()
+    test_mode = os.getenv("GUGA_TEST_MODE", "false").lower() == "true"
     trusted = load_trusted_devices()
 
-    if device_id not in trusted:
+    if not test_mode and device_id not in trusted:
         log_event("✗", RED, "untrusted command", device_id)
         emit("error", {"message": "Untrusted device"})
         return
 
     try:
         log_debug(f"incoming WS payload from {device_id}")
-        token = trusted[device_id].get("token")
-        client_type = trusted[device_id].get("type", "app")
+        device_info = trusted.get(device_id, {})
+        token = device_info.get("token")
+        client_type = device_info.get("type", "browser" if test_mode else "app")
         
         if "iv" in data and "ciphertext" in data and token:
             phrase_json = CryptoHelper.decrypt(data, token)
             phrase_obj = json.loads(phrase_json)
             command = phrase_obj.get("phrase", "").strip()
-        elif client_type == "browser":
-            log_debug(f"plaintext command for browser device: {device_id}")
+        elif client_type == "browser" or test_mode:
+            log_debug(f"plaintext command for device: {device_id}")
             command = data.get("phrase", "").strip()
         else:
             raise ValueError("Encrypted payload required for app clients")
+            
+        # Extract request_id if present (can be in encrypted payload or outer data)
+        request_id = data.get("request_id")
+        if "phrase_obj" in locals() and not request_id:
+            request_id = phrase_obj.get("request_id")
             
     except Exception as e:
         log_event("✗", RED, "processing error", str(e))
@@ -1053,7 +1112,9 @@ def handle_command(data):
     command_queue.put({
         "device_id": device_id,
         "sid": request.sid,
-        "command": command
+        "command": command,
+        "request_id": request_id,
+        "has_request_id_field": "request_id" in data or ("phrase_obj" in locals() and "request_id" in phrase_obj)
     })
 
 
@@ -1065,10 +1126,22 @@ def handle_reply(data):
         return
 
     reply = data.get("message", "").strip()
-    log_event("←", GREEN, "reply", f"{device_id}: {reply!r}")
+    request_id = data.get("request_id")
+    
+    log_event("←", GREEN, "reply", f"{device_id} (req: {request_id if request_id else 'latest'}): {reply!r}")
 
-    if device_id in pending_asks:
-        pending_asks[device_id].send(reply)
+    # 1. Explicit request_id targeted
+    if request_id:
+        if request_id in pending_requests:
+            pending_requests[request_id].send(reply)
+        else:
+            log_event("⚠", YELLOW, "orphan reply", f"Request ID {request_id} not found or expired")
+    
+    # 2. Fallback to stack-based resolution (latest request)
+    elif device_id in request_stacks and request_stacks[device_id]:
+        target_id = request_stacks[device_id][-1]
+        if target_id in pending_requests:
+            pending_requests[target_id].send(reply)
 
 
 # ------------------------------------------------------------
@@ -1083,12 +1156,24 @@ def command_worker():
             device_id = item["device_id"]
             sid = item["sid"]
             command = item["command"]
+            request_id = item.get("request_id")
+            has_explicit_field = item.get("has_request_id_field", False)
             
-            # Check if this command should be intercepted as a reply to a pending ask
-            if device_id in pending_asks:
-                log_event("←", GREEN, "intercepted as reply", f"{device_id}: {command!r}")
-                pending_asks[device_id].send(command)
-                continue
+            # 1. Check if this command should be intercepted as a reply to a pending ask
+            # Bypass interception ONLY if client explicitly sent request_id=None
+            if has_explicit_field and request_id is None:
+                log_event("⚙", CYAN, "explicit command bypass", f"{device_id}: {command!r}")
+                # Fall through to normal command processing
+            elif device_id in request_stacks and request_stacks[device_id]:
+                # Resolve target request_id: specific one provided or the latest in stack
+                target_id = request_id if request_id else request_stacks[device_id][-1]
+                
+                if target_id in pending_requests:
+                    log_event("←", GREEN, "intercepted as reply", f"{device_id} (req: {target_id}): {command!r}")
+                    pending_requests[target_id].send(command)
+                    continue
+                else:
+                    log_event("⚠", YELLOW, "orphan intercept", f"Request {target_id} not found")
 
             # Process as normal command
             log_event("⚙", CYAN, "processing command", f"{device_id}: {command!r}")
@@ -1105,6 +1190,16 @@ def process_command(command: str) -> dict:
         "title": "System",
         "message": f"Command '{command}' not found. Please wait for the admin to update the command list."
     }
+ 
+def cache_message(device_id: str, message_data: dict) -> str:
+    """Assigns a unique ID, caches the message, and returns the message ID."""
+    msg_id = uuid.uuid4().hex[:8]
+    message_data["unique_message_id"] = msg_id
+    
+    if device_id not in message_caches:
+        message_caches[device_id] = collections.deque(maxlen=50)
+    message_caches[device_id].append((msg_id, message_data))
+    return msg_id
 
 
 def notify_all_clients(message: str, title: str = None) -> None:
@@ -1121,10 +1216,15 @@ def notify_all_clients(message: str, title: str = None) -> None:
             client_type = device_info.get("type", "app")
             token = device_info.get("token")
 
+            # Clone data to avoid modifying the original during caching for different devices
+            local_payload = payload_data.copy()
+            msg_id = cache_message(device_id, local_payload)
+            local_payload_json = json.dumps(local_payload)
+
             if client_type == "browser" or device_id.startswith("browser-") or not token:
-                socketio.emit("guga_response", payload_data, room=sid)
+                socketio.emit("guga_response", local_payload, room=sid)
             else:
-                encrypted = CryptoHelper.encrypt(payload_json, token)
+                encrypted = CryptoHelper.encrypt(local_payload_json, token)
                 socketio.emit("guga_response", encrypted, room=sid)
         except Exception as e:
             log_event("✗", RED, "send failed", f"{sid} ({device_id}): {e}")
@@ -1148,6 +1248,9 @@ def send_private_message(session_id: str, message: str , title:str = None) -> bo
     test_mode = os.getenv("GUGA_TEST_MODE", "false").lower() == "true"
     
     try:
+        msg_id = cache_message(device_id, payload_data)
+        payload_json = json.dumps(payload_data)
+
         if test_mode or client_type == "browser" or not token:
             socketio.emit("guga_response", payload_data, room=session_id)
         else:

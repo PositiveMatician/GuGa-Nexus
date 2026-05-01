@@ -66,7 +66,7 @@
     Issue	Fix
     JSON Corruption	✅ SQLite (Transactions)
     Installer Races	✅ File Lock (Cross-process Mutex)
-    Interactive Sessions	🔄 Logic Change (Map by Request ID, not Device ID)
+    Interactive Sessions	✅ Logic Change (Map by Request ID, not Device ID)
     Admin Collisions	✅ SQLite (Row Status) + Logic Change
     Recommendation: If you move to SQLite, use the aiosqlite or dataset library for ease of use, and consider a simple .lock file in ~/.guga/ for the installer/service management.
 
