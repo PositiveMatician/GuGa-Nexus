@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 guga - Send notifications to your Android via the GuGa server.
+Version: 1.5.0
 
 Usage:
   guga [options] "message"           Send a notification
@@ -14,7 +15,10 @@ Options:
   -i, --interactive                  Remote interactive mode (PTY wrapping)
   --ask-user PROMPT                  Synchronous request-reply loop
   --delay DURATION                   Timeout for replies (e.g. 5m, 1200s, never)
-  --send-to DEVICE_ID                Target a specific device
+  --send-to DEVICE_ID                Target a specific device or custom tag
+  --status                           Show server status and connections
+  --qr                               Show pairing QR code
+  --start-server                     Start the GuGa ASGI server
 """
 
 import argparse
@@ -77,7 +81,7 @@ def check_capabilities(args):
         
     if not state.get("installed_stages"):
         # If no stages are installed, they probably haven't run --install-service
-        if not (args.install_service or args.uninstall or args.version):
+        if not (args.install_service or args.uninstall):
             print(f"⚠️  {BOLD}{YELLOW}Warning:{RESET} GuGa hasn't been fully initialized.")
             print(f"   Run {BOLD}guga --install-service{RESET} to set up the system.\n")
 

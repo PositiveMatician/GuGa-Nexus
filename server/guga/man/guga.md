@@ -1,37 +1,28 @@
 # guga
 
 > Send notifications to Android via the local GuGa server.
-> Supports plain messages, stdin pipes, and watching commands to notify on completion.
-> More information: <https://github.com/your-repo/guga>
+> Supports plain messages, interactive prompts, and watching commands to notify on completion.
 
 - Send a plain message:
-
 `guga "{{Build finished}}"`
 
-- Send a notification from stdin:
+- Send a notification from stdin to a specific device tag:
+`echo "{{Deploy done}}" | guga --send-to {{F}}`
 
-`echo "{{Deploy done}}" | guga`
-
-- Run a command and notify when it finishes (includes exit status, elapsed time, last output line):
-
+- Run a command and notify when it finishes:
 `guga {{python train.py --epochs 100}}`
 
-- Force message mode (never executes, even if the string looks like a command):
+- Run a command interactively (forwarding terminal prompts to device):
+`guga -r -i --send-to {{F}} {{python3 train.py}}`
 
-`guga --message "{{python train.py}}"`
+- Ask a question and wait for a reply:
+`guga --ask-user "{{Continue build?}}" --send-to {{F}} --delay {{5m}}`
 
-- Force run mode with a quoted command string:
+- Show current server status and connected devices:
+`guga --status`
 
-`guga --run "{{sleep 5}}"`
+- Show pairing QR code:
+`guga --qr`
 
-- Run a command with a label so you know which machine fired the notification:
-
-`guga --run {{./deploy.sh}} --title "{{Prod Server}}"`
-
-- Run silently (no terminal output from guga, command output still streams normally):
-
-`guga {{python train.py}} --silent --title "{{GPU}}"`
-
-- Use a custom server port:
-
-`guga "{{message}}" --server {{9000}}`
+- Start the GuGa ASGI server in the foreground:
+`guga --start-server`

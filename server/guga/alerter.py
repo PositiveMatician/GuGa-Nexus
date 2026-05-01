@@ -1,3 +1,11 @@
+"""
+GuGa Nexus — OS Notification Alerter
+Version: 1.5.0
+
+This module monitors D-Bus for system notifications and forwards
+them to the local GuGa server for delivery to Android devices.
+"""
+
 import asyncio
 import asyncio.subprocess
 import re

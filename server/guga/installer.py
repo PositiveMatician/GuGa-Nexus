@@ -1,3 +1,12 @@
+"""
+GuGa Nexus — System Installer & Configurator
+Version: 1.5.0
+
+This module handles the initial setup of the GuGa system on Linux,
+including dependency installation, systemd service generation,
+and capability registration.
+"""
+
 import os
 import sys
 import subprocess
@@ -238,7 +247,7 @@ def install_systemd_service():
 
     if not shutil.which("systemctl"):
         warn("systemd not found — skipping service install")
-        dim("Start the server manually with: python3 -m guga.daemon")
+        dim("Start the server manually with: guga --start-server")
         return
 
     gunicorn_path = shutil.which("gunicorn") or sys.executable + " -m gunicorn"
@@ -274,7 +283,7 @@ def install_systemd_service():
         EnvironmentFile={env_file}
         Environment="PYTHONUNBUFFERED=1"
         Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/{current_uid}/bus"
-        ExecStart={gunicorn_path} --worker-class eventlet -w 1 {daemon_module} --bind 0.0.0.0:6769 --log-level error
+        ExecStart={gunicorn_path} --worker-class uvicorn.workers.UvicornWorker -w 1 {daemon_module} --bind 0.0.0.0:6769 --log-level error
         Restart=on-failure
         RestartSec=5
         KillSignal=SIGTERM
@@ -296,7 +305,7 @@ def install_systemd_service():
         ok("systemd service installed and enabled on boot")
     except Exception as e:
         warn(f"Could not install systemd service: {e}")
-        dim("Start the server manually with: python3 -m guga.daemon")
+        dim("Start the server manually with: guga --start-server")
         return
 
     try:

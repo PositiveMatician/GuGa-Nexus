@@ -1,5 +1,14 @@
-import eventlet
-eventlet.monkey_patch()
+"""
+GuGa Nexus — Core ASGI Backend
+Version: 1.5.0
+
+This module implements the GuGa server using Quart (ASGI) and SocketIO.
+It handles device pairing, encrypted command routing, and non-blocking
+interactive PTY sessions.
+"""
+
+
+import asyncio
 
 import atexit
 import base64
@@ -43,8 +52,8 @@ if platform.system() != "Linux":
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 import qrcode
-from flask import Flask, jsonify, render_template_string, request
-from flask_socketio import SocketIO, emit
+from quart import Quart, jsonify, render_template_string, request
+import socketio
 
 # ------------------------------------------------------------
 # Configuration
@@ -132,12 +141,14 @@ def generate_qr(data: str, inverted: bool = False, show_gui: bool = False) -> No
 # ------------------------------------------------------------
 # Flask App & SocketIO
 # ------------------------------------------------------------
-app = Flask(__name__)
-socketio = SocketIO(
-    app,
-    cors_allowed_origins=CORS_ALLOWED_ORIGINS,
-    async_mode="eventlet",
+sio = socketio.AsyncServer(
+    async_mode="asgi",
+    cors_allowed_origins="*",
 )
+app = Quart(__name__)
+app_asgi = socketio.ASGIApp(sio, app)
+ 
+main_loop = None
 
 connected_clients: dict[str, str] = {}  # session_id -> device_id (remains in-memory)
 
@@ -147,13 +158,13 @@ connected_clients: dict[str, str] = {}  # session_id -> device_id (remains in-me
 # For each device_id, stores a deque of (message_id, message_dict)
 message_caches: Dict[str, collections.deque] = {} 
 
-# Maps request_id (device_id + "_" + message_id) to eventlet Event
-pending_requests: Dict[str, eventlet.event.Event] = {}
+# Maps request_id (device_id + "_" + message_id) to asyncio Event
+pending_requests: Dict[str, asyncio.Event] = {}
 
 # Tracks the order of active 'ask' requests for each device
 request_stacks: Dict[str, List[str]] = {}
 
-command_queue = eventlet.queue.Queue()
+command_queue = asyncio.Queue()
 
 TRUSTED_DEVICES_FILE = os.environ.get("GUGA_TRUSTED_DEVICES_FILE", os.path.join(CONFIG_DIR, "trusted_devices.json"))
 
@@ -741,33 +752,33 @@ HTML_PAGE = """
 # region HTTP Routes
 # ------------------------------------------------------------
 @app.route("/")
-def web_interface():
-    return render_template_string(HTML_PAGE)
+async def web_interface():
+    return await render_template_string(HTML_PAGE)
 
 
 @app.route("/ping")
-def ping():
+async def ping():
     return jsonify({"status": "online", "clients": len(connected_clients)}), 200
 
 
 @app.route("/clients")
-def list_clients():
+async def list_clients():
     """List all connected client session IDs."""
     return jsonify({"clients": list(connected_clients), "count": len(connected_clients)}), 200
 
 
 @app.route("/send", methods=["POST"])
-def send_to_all():
+async def send_to_all():
     """Broadcast a message to ALL connected clients (localhost only)."""
     # Restrict to localhost requests
     if request.remote_addr not in ["127.0.0.1", "::1"]:
         return jsonify({"error": "Forbidden"}), 403
-    data = request.get_json(silent=True) or {}
+    data = await request.get_json() or {}
     message = data.get("message", "").strip()
     title = data.get("title", "").strip()
     if not message:
         return jsonify({"error": "No message provided"}), 400
-    notify_all_clients(message, title)
+    await notify_all_clients(message, title)
     return jsonify({"ok": True, "sent_to": len(connected_clients)}), 200
 
 
@@ -788,9 +799,9 @@ def get_sids_by_device(target: str) -> list[str]:
 
 
 @app.route("/send/<target_id>", methods=["POST"])
-def send_to_one(target_id: str):
+async def send_to_one(target_id: str):
     """Send a message to a specific device_id or session_id."""
-    data = request.get_json(silent=True) or {}
+    data = await request.get_json() or {}
     message = data.get("message", "").strip()
     title = data.get("title", "").strip()
     if not message:
@@ -807,15 +818,15 @@ def send_to_one(target_id: str):
         return jsonify({"error": f"No active client found for '{target_id}'"}), 404
 
     for sid in target_sids:
-        send_private_message(sid, message, title)
+        await send_private_message(sid, message, title)
 
     return jsonify({"ok": True, "sent_to_sessions": len(target_sids)}), 200
 
 
 @app.route("/api/command", methods=["POST"])
-def handle_command_api():
+async def handle_command_api():
     """Encrypted HTTP fallback for Android clients."""
-    data = request.get_json(silent=True) or {}
+    data = await request.get_json() or {}
     device_id = data.get("device_id", "").strip()
 
     if not is_device_trusted(device_id):
@@ -840,14 +851,14 @@ def handle_command_api():
     log_event("→", CYAN, "command (HTTP)", f"{device_id}: {command!r}")
     response_msg = process_command(command)
     for sid in get_sids_by_device(device_id):
-        send_private_message(sid, response_msg["message"], response_msg["title"])
+        await send_private_message(sid, response_msg["message"], response_msg["title"])
     return jsonify({"ok": True}), 200
 
 
 @app.route("/api/ask", methods=["POST"])
-def handle_ask():
+async def handle_ask():
     """Sends a prompt to a device and blocks until a reply is received."""
-    data = request.get_json(silent=True) or {}
+    data = await request.get_json() or {}
     message = data.get("message", "").strip()
     device_id = data.get("device_id", "").strip()
     title = data.get("title", "Question")
@@ -867,7 +878,7 @@ def handle_ask():
     device_id = connected_clients[target_sids[0]]
 
     # Create an event to wait for
-    evt = eventlet.event.Event()
+    evt = asyncio.Event()
     
     # Generate unique IDs
     msg_id = uuid.uuid4().hex[:8]
@@ -881,7 +892,7 @@ def handle_ask():
     request_stacks[device_id].append(request_id)
     pending_requests[request_id] = evt
 
-    log_event("?", YELLOW, "ask user", f"{device_id}: {message} (timeout: {timeout if timeout else 'never'})")
+    log_event("?", YELLOW, "ask user", f"{device_id}: {message} (req: {request_id})")
     
     # Send the ask via SocketIO
     payload = {
@@ -896,21 +907,21 @@ def handle_ask():
     cache_message(device_id, payload)
     
     for sid in target_sids:
-        socketio.emit("guga_ask", payload, room=sid)
-
+        await sio.emit("guga_ask", payload, to=sid)
+ 
     try:
         # Wait for the reply
         if timeout:
-            with eventlet.Timeout(timeout):
-                reply = evt.wait()
-                db.set_ask_reply(request_id, reply)
-                return jsonify({"reply": reply}), 200
+            await asyncio.wait_for(evt.wait(), timeout=timeout)
         else:
             # Infinite wait
-            reply = evt.wait()
-            db.set_ask_reply(request_id, reply)
-            return jsonify({"reply": reply}), 200
-    except eventlet.Timeout:
+            await evt.wait()
+        
+        reply = getattr(evt, "reply", None)
+        log_event("✓", GREEN, "ask resolved", f"{device_id} (req: {request_id}): {reply!r}")
+        db.set_ask_reply(request_id, reply)
+        return jsonify({"reply": reply}), 200
+    except (asyncio.TimeoutError, TimeoutError):
         return jsonify({"error": "Timed out waiting for user reply"}), 408
     finally:
         pending_requests.pop(request_id, None)
@@ -918,9 +929,8 @@ def handle_ask():
             request_stacks[device_id].remove(request_id)
 
 @app.route("/api/hello", methods=["POST"])
-def handle_hello():
-    """Device introduces itself. Returns 'trusted' or 'pin_required'."""
-    data = request.get_json(silent=True) or {}
+async def handle_hello():
+    data = await request.get_json() or {}
     device_id = data.get("device_id", "").strip()
     pin = data.get("pin", "").strip()
     device_name = data.get("device_name", "Unknown Device").strip()
@@ -959,9 +969,9 @@ def handle_hello():
 
 
 @app.route("/api/verify_pin", methods=["POST"])
-def handle_verify_pin():
+async def handle_verify_pin():
     """Wait for authorization. Returns token on success."""
-    data = request.get_json(silent=True) or {}
+    data = await request.get_json() or {}
     device_id = data.get("device_id", "").strip()
     pin = data.get("pin", "").strip()
     client_type = data.get("client_type", "app").strip()
@@ -996,7 +1006,7 @@ def handle_verify_pin():
 
 
 @app.route("/api/pending", methods=["GET"])
-def get_pending():
+async def get_pending():
     """List pending pairing requests (localhost only)."""
     if request.remote_addr not in ["127.0.0.1", "::1"]:
         return jsonify({"error": "Forbidden"}), 403
@@ -1019,11 +1029,11 @@ def get_pending():
 
 
 @app.route("/api/approve", methods=["POST"])
-def approve_device():
+async def approve_device():
     """Approve or reject a specific device (localhost only)."""
     if request.remote_addr not in ["127.0.0.1", "::1"]:
         return jsonify({"error": "Forbidden"}), 403
-    data = request.get_json(silent=True) or {}
+    data = await request.get_json() or {}
     device_id = data.get("device_id", "").strip()
     action = data.get("action", "").strip()  # "approve", "reject", or "review"
 
@@ -1052,7 +1062,7 @@ def approve_device():
 
 
 @app.route("/api/devices", methods=["GET"])
-def list_active_devices():
+async def list_active_devices():
     """List connected devices with their names and tags (localhost only)."""
     if request.remote_addr not in ["127.0.0.1", "::1"]:
         return jsonify({"error": "Forbidden"}), 403
@@ -1076,11 +1086,11 @@ def list_active_devices():
 
 
 @app.route("/api/rename", methods=["POST"])
-def rename_device():
+async def rename_device():
     """Assign a tag to a device (localhost only)."""
     if request.remote_addr not in ["127.0.0.1", "::1"]:
         return jsonify({"error": "Forbidden"}), 403
-    data = request.get_json(silent=True) or {}
+    data = await request.get_json() or {}
     device_id = data.get("device_id", "").strip()
     tag = data.get("tag", "").strip()
     
@@ -1115,10 +1125,12 @@ def rename_device():
 # ------------------------------------------------------------
 # Socket.IO Events
 # ------------------------------------------------------------
-@socketio.on("connect")
-def handle_connect():
-    device_id = request.args.get('device_id')
-    token = request.args.get('token')
+@sio.on("connect")
+async def handle_connect(sid, environ):
+    from urllib.parse import parse_qs
+    query = parse_qs(environ.get('QUERY_STRING', ''))
+    device_id = query.get('device_id', [None])[0]
+    token = query.get('token', [None])[0]
     
     # In test mode, we allow mock clients to connect even if not trusted
     test_mode = os.getenv("GUGA_TEST_MODE", "false").lower() == "true"
@@ -1138,19 +1150,19 @@ def handle_connect():
             log_event("✗", RED, "token mismatch", f"device_id={device_id}")
             return False
             
-    connected_clients[request.sid] = device_id
-    log_event("↑", GREEN, "connected", f"{device_id} (SID: {request.sid}) ({len(connected_clients)} online)")
-    send_private_message(request.sid, "Connection established. GuGa online.")
+    connected_clients[sid] = device_id
+    log_event("↑", GREEN, "connected", f"{device_id} (SID: {sid}) ({len(connected_clients)} online)")
+    await send_private_message(sid, "Connection established. GuGa online.")
 
 
-@socketio.on("disconnect")
-def handle_disconnect():
-    connected_clients.pop(request.sid, None)
+@sio.on("disconnect")
+async def handle_disconnect(sid):
+    connected_clients.pop(sid, None)
     log_event("↓", DIM, "disconnected", f"({len(connected_clients)} online)")
 
 
-@socketio.on("command")
-def handle_command(data):
+@sio.on("command")
+async def handle_command(sid, data):
     """Accepts encrypted command payload from trusted Android device."""
     device_id = data.get("device_id", "").strip()
     test_mode = os.getenv("GUGA_TEST_MODE", "false").lower() == "true"
@@ -1158,7 +1170,7 @@ def handle_command(data):
 
     if not test_mode and device_id not in trusted:
         log_event("✗", RED, "untrusted command", device_id)
-        emit("error", {"message": "Untrusted device"})
+        await sio.emit("error", {"message": "Untrusted device"}, to=sid)
         return
 
     try:
@@ -1184,24 +1196,24 @@ def handle_command(data):
             
     except Exception as e:
         log_event("✗", RED, "processing error", str(e))
-        emit("error", {"message": f"Processing error: {str(e)}"})
+        await sio.emit("error", {"message": f"Processing error: {str(e)}"}, to=sid)
         return
 
     log_event("→", CYAN, "command queued", f"{device_id}: {command!r}")
     
-    command_queue.put({
+    await command_queue.put({
         "device_id": device_id,
-        "sid": request.sid,
+        "sid": sid,
         "command": command,
         "request_id": request_id,
         "has_request_id_field": "request_id" in data or ("phrase_obj" in locals() and "request_id" in phrase_obj)
     })
 
 
-@socketio.on("reply")
-def handle_reply(data):
+@sio.on("reply")
+async def handle_reply(sid, data):
     """Receives a reply from a client for a pending 'ask'."""
-    device_id = connected_clients.get(request.sid)
+    device_id = connected_clients.get(sid)
     if not device_id:
         return
 
@@ -1213,25 +1225,32 @@ def handle_reply(data):
     # 1. Explicit request_id targeted
     if request_id:
         if request_id in pending_requests:
-            pending_requests[request_id].send(reply)
+            log_event("←", GREEN, "reply matched", f"{device_id} (req: {request_id})")
+            evt = pending_requests[request_id]
+            evt.reply = reply
+            evt.set()
         else:
-            log_event("⚠", YELLOW, "orphan reply", f"Request ID {request_id} not found or expired")
+            log_event("⚠", YELLOW, "orphan reply", f"Request ID {request_id} not found in {list(pending_requests.keys())}")
     
     # 2. Fallback to stack-based resolution (latest request)
     elif device_id in request_stacks and request_stacks[device_id]:
         target_id = request_stacks[device_id][-1]
         if target_id in pending_requests:
-            pending_requests[target_id].send(reply)
+            evt = pending_requests[target_id]
+            evt.reply = reply
+            evt.set()
 
 
 # ------------------------------------------------------------
 # Core Logic
 # ------------------------------------------------------------
-def command_worker():
+async def command_worker():
     """Background worker to process commands sequentially from the queue."""
     log_event("⚙", CYAN, "command worker started")
     while True:
-        item = command_queue.get()
+        log_event("⚙", CYAN, "worker waiting for item")
+        item = await command_queue.get()
+        log_event("⚙", CYAN, "worker got item")
         try:
             device_id = item["device_id"]
             sid = item["sid"]
@@ -1250,7 +1269,9 @@ def command_worker():
                 
                 if target_id in pending_requests:
                     log_event("←", GREEN, "intercepted as reply", f"{device_id} (req: {target_id}): {command!r}")
-                    pending_requests[target_id].send(command)
+                    evt = pending_requests[target_id]
+                    evt.reply = command
+                    evt.set()
                     continue
                 else:
                     log_event("⚠", YELLOW, "orphan intercept", f"Request {target_id} not found")
@@ -1258,11 +1279,11 @@ def command_worker():
             # Process as normal command
             log_event("⚙", CYAN, "processing command", f"{device_id}: {command!r}")
             response_msg = process_command(command)
-            send_private_message(sid, response_msg["message"], response_msg["title"])
+            await send_private_message(sid, response_msg["message"], response_msg["title"])
         except Exception as e:
             log_event("✗", RED, "worker error", str(e))
         finally:
-            eventlet.sleep(0) # Yield
+            await asyncio.sleep(0) # Yield
 
 def process_command(command: str) -> dict:
     """Take the command and return a temporary not found message."""
@@ -1282,13 +1303,12 @@ def cache_message(device_id: str, message_data: dict) -> str:
     return msg_id
 
 
-def notify_all_clients(message: str, title: str = None) -> None:
+async def notify_all_clients(message: str, title: str = None) -> None:
     """Emit guga_response to all connected clients."""
     trusted = load_trusted_devices()
     payload_data = {"message": message}
     if title:
         payload_data["title"] = title
-    payload_json = json.dumps(payload_data)
     
     for sid, device_id in list(connected_clients.items()):
         try:
@@ -1302,15 +1322,15 @@ def notify_all_clients(message: str, title: str = None) -> None:
             local_payload_json = json.dumps(local_payload)
 
             if client_type == "browser" or device_id.startswith("browser-") or not token:
-                socketio.emit("guga_response", local_payload, room=sid)
+                await sio.emit("guga_response", local_payload, to=sid)
             else:
                 encrypted = CryptoHelper.encrypt(local_payload_json, token)
-                socketio.emit("guga_response", encrypted, room=sid)
+                await sio.emit("guga_response", encrypted, to=sid)
         except Exception as e:
             log_event("✗", RED, "send failed", f"{sid} ({device_id}): {e}")
 
 
-def send_private_message(session_id: str, message: str , title:str = None) -> bool:
+async def send_private_message(session_id: str, message: str, title: str = None) -> bool:
     """Send a private message to a specific session."""
     if session_id not in connected_clients:
         return False
@@ -1323,7 +1343,6 @@ def send_private_message(session_id: str, message: str , title:str = None) -> bo
     payload_data = {"message": message}
     if title:
         payload_data["title"] = title
-    payload_json = json.dumps(payload_data) 
 
     test_mode = os.getenv("GUGA_TEST_MODE", "false").lower() == "true"
     
@@ -1332,10 +1351,10 @@ def send_private_message(session_id: str, message: str , title:str = None) -> bo
         payload_json = json.dumps(payload_data)
 
         if test_mode or client_type == "browser" or not token:
-            socketio.emit("guga_response", payload_data, room=session_id)
+            await sio.emit("guga_response", payload_data, to=session_id)
         else:
             encrypted = CryptoHelper.encrypt(payload_json, token)
-            socketio.emit("guga_response", encrypted, room=session_id)
+            await sio.emit("guga_response", encrypted, to=session_id)
         return True
     except Exception as e:
         log_event("✗", RED, "private send failed", f"{session_id}: {e}")
@@ -1440,8 +1459,6 @@ if not os.environ.get("GUGA_INITIALIZED"):
     initialize_system()
 
 def run_server():
-    # Start background workers
-    eventlet.spawn(command_worker)
     os_notif_enabled = os.getenv("ENABLE_OS_NOTIFICATIONS", "False").lower() == "true"
     mode = os.getenv("MODE", "lan").lower()
     port = int(os.getenv("PORT", 6769))
@@ -1476,7 +1493,21 @@ def run_server():
     print(f"  {DIM}press Ctrl+C to stop{RESET}")
     print()
 
-    socketio.run(app, host="0.0.0.0", port=port, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
+    import uvicorn
+    config = uvicorn.Config(app_asgi, host="0.0.0.0", port=port, log_level="error")
+    server = uvicorn.Server(config)
+
+    async def main_async():
+        global main_loop
+        main_loop = asyncio.get_running_loop()
+        log_event("⚙", CYAN, f"Main loop captured: {main_loop}")
+        sio.start_background_task(command_worker)
+        await server.serve()
+
+    try:
+        asyncio.run(main_async())
+    except KeyboardInterrupt:
+        pass
 
 if __name__ == "__main__":
     run_server()

@@ -1,3 +1,11 @@
+"""
+GuGa Nexus — Locking Utilities
+Version: 1.5.0
+
+This module provides simple file-based locking to prevent race conditions
+during installation and concurrent system operations.
+"""
+
 import os
 import fcntl
 import time

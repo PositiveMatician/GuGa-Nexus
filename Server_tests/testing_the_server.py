@@ -91,8 +91,9 @@ class TestPrivateMessagesToClient(unittest.TestCase):
             client2.connect(self.server_url)
             time.sleep(1)
 
-            with app.test_client() as c:
-                c.post("/send", json={"message": "Hello", "title": "test"})
+            import urllib.request
+            req = urllib.request.Request(f"{self.server_url}/send", data=json.dumps({"message": "Hello", "title": "test"}).encode(), headers={'Content-Type': 'application/json'})
+            urllib.request.urlopen(req)
 
             time.sleep(1)
 
@@ -117,9 +118,13 @@ class TestPrivateMessagesToClient(unittest.TestCase):
             client2.connect(self.server_url)
             time.sleep(1)
 
-            with app.test_client() as c:
-                c.post(f"/send/{client1.device_id}", json={"message": "Secret for 1", "title": "Private"})
-                c.post(f"/send/{client2.device_id}", json={"message": "Secret for 2", "title": "Private"})
+            import urllib.request
+            def post_api(path, data):
+                req = urllib.request.Request(f"{self.server_url}{path}", data=json.dumps(data).encode(), headers={'Content-Type': 'application/json'})
+                urllib.request.urlopen(req)
+
+            post_api(f"/send/{client1.device_id}", {"message": "Secret for 1", "title": "Private"})
+            post_api(f"/send/{client2.device_id}", {"message": "Secret for 2", "title": "Private"})
 
             time.sleep(1)
 

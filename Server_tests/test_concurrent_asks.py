@@ -5,7 +5,6 @@ import os
 import sys
 import json
 import socketio
-import eventlet
 from unittest.mock import patch, MagicMock
 
 # Add server directory to path
@@ -60,11 +59,11 @@ class TestConcurrentAsks(unittest.TestCase):
         results = {}
         
         def ask_1():
-            res = cli.guga_ask_user("Question 1", self.server_port, "test-device", timeout=10)
+            res = cli.guga_ask_user("Question 1", self.server_port, "test-device", timeout=30)
             results['ask_1'] = res
             
         def ask_2():
-            res = cli.guga_ask_user("Question 2", self.server_port, "test-device", timeout=10)
+            res = cli.guga_ask_user("Question 2", self.server_port, "test-device", timeout=30)
             results['ask_2'] = res
 
         t1 = threading.Thread(target=ask_1)

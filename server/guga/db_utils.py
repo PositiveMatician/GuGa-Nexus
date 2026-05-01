@@ -1,3 +1,11 @@
+"""
+GuGa Nexus — Database Utilities
+Version: 1.5.0
+
+This module manages the SQLite backend for persistence of trusted devices,
+pending pairings, capabilities, and message caches.
+"""
+
 import os
 import sqlite3
 import time

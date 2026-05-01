@@ -5,7 +5,6 @@ import os
 import sys
 import json
 import socketio
-import eventlet
 from unittest.mock import patch, MagicMock
 
 # Add server directory to path
