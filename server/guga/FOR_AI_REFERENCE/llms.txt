@@ -28,11 +28,12 @@ To pipe output from a previous command:
 The AI can pause execution, send a question to the user's phone, and block until the user
 replies from the Android app. This is the primary interaction loop for agentic workflows.
 
-  REPLY=$(guga --ask-user "Should I deploy to production?" --send-to F --delay 10m)
+  REPLY=$(guga --ask-user "Should I deploy to production?" --send-to F --delay 10m --default "no")
 
 The reply is printed to stdout and can be captured in a shell variable. The --delay flag
 sets a timeout (e.g. 5m, 120s, never). If the user does not reply in time, the command
-exits with code 1.
+exits with code 1. If a --default value is provided, it is returned on timeout instead
+of failing, and the process exits with code 0.
 
 ### 3. Watching a command and notifying on completion
 The AI can wrap any shell command with guga. When the command finishes (success or failure),
@@ -47,6 +48,18 @@ For commands that require interactive input (e.g. a script that asks "Are you su
 the AI can forward the prompts to the user's phone and feed their replies back.
 
   guga -r -i --send-to F python3 setup_wizard.py
+
+### 5. Watching for specific output patterns (--look-for)
+The AI can watch the command output in real-time and send notifications whenever a 
+specific regex matches a line.
+
+  guga -r --look-for "ERROR|CRITICAL" ./long_script.sh
+
+### 6. Command Output Logging
+All command output in run mode is automatically saved to a unique log file.
+The final notification includes the unique message ID which matches the log filename.
+
+  Log path: ~/.guga/logs/{unique_message_id}.log
 
 ---
 
@@ -100,13 +113,16 @@ Shell example:
   guga --ask-user "PROMPT" --send-to DEVICE_ID --delay 5m
   guga --ask-user "PROMPT" --send-to DEVICE_ID --delay never
 
-  --delay accepts: 120s, 5m, 1h, never (default: never)
-  The reply is printed to stdout and the process exits 0 on success, 1 on timeout.
+  --delay accepts: 120s, 5m, 1h, never (default: 60s)
+  --default VALUE sets a fallback if the timeout expires.
+  The reply is printed to stdout and the process exits 0 on success, 1 on timeout (unless --default is used).
 
 ### Watching commands
   guga COMMAND [ARGS...]                   # Auto-detect run mode, notify on finish
   guga -r COMMAND [ARGS...]                # Explicit run mode
+  guga -r --look-for REGEX [ARGS...]       # Notify on regex match during execution
   guga -r -i --send-to DEVICE COMMAND     # Interactive PTY mode (forwards prompts)
+  guga -r -i --expect REGEX COMMAND       # Use custom regex for prompt detection
 
 ### Setup & pairing
   guga --start-server                      # Start the GuGa backend server
@@ -158,9 +174,10 @@ Start the MCP server for local tools (e.g. Claude Desktop):
 4. Use `Authorization: Bearer <token>` header.
 
 ### MCP Tools
-- `send_notification`: Push a message to devices.
-- `ask_user`: Prompt user on phone and wait for reply.
+- `send_notification`: Push a message to devices. Accepts `unique_message_id`.
+- `ask_user`: Prompt user on phone and wait for reply. Supports `default`.
 - `list_devices`: Get status of paired clients.
+- `run_command`: Execute a command with logging and `look_for` support.
 
 ### Configuration Tutorial (for Antigravity)
 Edit `~/.gemini/antigravity/mcp_config.json` and add:

@@ -21,6 +21,10 @@
             "send_to": {
               "type": "string",
               "description": "Optional target device ID or short tag (e.g. 'F'). If omitted, broadcasts to all connected devices. Use guga_status to discover available device tags."
+            },
+            "unique_message_id": {
+              "type": "string",
+              "description": "Optional custom message ID. If provided, the server will use this ID for tracking and the log filename (in run mode)."
             }
           },
           "required": ["message"]
@@ -57,6 +61,10 @@
             "title": {
               "type": "string",
               "description": "Optional label shown in the notification header. Example: 'Deploy Agent needs your input'"
+            },
+            "default": {
+              "type": "string",
+              "description": "Optional default value to return if the timeout expires. If provided, the command will not fail on timeout."
             }
           },
           "required": ["prompt", "send_to"]
@@ -95,6 +103,10 @@
               "type": "boolean",
               "default": false,
               "description": "If true, suppresses guga's own console output (progress messages). The command's own stdout/stderr is not affected."
+            },
+            "look_for": {
+              "type": "string",
+              "description": "Optional regex pattern to watch for in the command output. If matched, a notification is sent immediately."
             }
           },
           "required": ["command"]
@@ -126,6 +138,14 @@
             "title": {
               "type": "string",
               "description": "Optional label for the interactive session notifications."
+            },
+            "expect_regex": {
+              "type": "string",
+              "description": "Optional custom regex for prompt detection. Default: r'[:?>]\\s*$'"
+            },
+            "look_for": {
+              "type": "string",
+              "description": "Optional regex pattern to watch for in the output and notify immediately."
             }
           },
           "required": ["command", "send_to"]

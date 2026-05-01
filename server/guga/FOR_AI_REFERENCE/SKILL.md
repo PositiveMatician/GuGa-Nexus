@@ -56,10 +56,8 @@ If the user does not reply within the delay, the command exits with code 1.
 Always handle this case in scripts.
 
 ```bash
-REPLY=$(guga --ask-user "Continue with risky migration?" --send-to F --delay 10m) || {
-  echo "No reply — aborting."
-  exit 1
-}
+REPLY=$(guga --ask-user "Continue with risky migration?" --send-to F --delay 10m --default "no")
+# If the user doesn't reply in 10m, $REPLY will be "no".
 ```
 
 ---
@@ -130,6 +128,19 @@ guga -r -i --send-to F python3 interactive_script.py
 
 ---
 
+### Pattern 6 — Watch for specific output patterns
+Use `--look-for` to receive instant notifications when a specific pattern appears in a command's output.
+
+```bash
+guga -r --look-for "ERROR|CRITICAL" ./long_script.sh
+```
+
+### Pattern 7 — Output Logging
+Every `guga -r` or `guga -i` execution is automatically logged to `~/.guga/logs/{unique_message_id}.log`. 
+The message ID in your notification matches the filename for easy lookup.
+
+---
+
 ## CLI Quick Reference
 
 | Command | Purpose |
@@ -140,8 +151,11 @@ guga -r -i --send-to F python3 interactive_script.py
 | `echo "MSG" \| guga` | Send stdin as notification |
 | `guga --ask-user "Q" --send-to TAG` | Ask user, block for reply |
 | `guga --ask-user "Q" --send-to TAG --delay 5m` | Ask with a 5-minute timeout |
+| `guga --ask-user "Q" --send-to TAG --default "X"` | Return "X" if timeout expires |
 | `guga CMD [ARGS]` | Run command, notify on completion |
+| `guga -r --look-for "REGEX" CMD` | Notify on regex match in output |
 | `guga -r -i --send-to TAG CMD` | Run interactively, forward prompts |
+| `guga -r -i --expect "REGEX" CMD` | Custom regex for prompt detection |
 | `guga --status` | Show server status & devices |
 | `guga --qr` | Show pairing QR code |
 | `guga --approve` | Approve device pairing requests |
