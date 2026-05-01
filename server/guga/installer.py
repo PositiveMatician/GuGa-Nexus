@@ -37,6 +37,7 @@ def ask(msg):   return input(f"  {msg}").strip()
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_DIR = os.environ.get("GUGA_CONFIG_DIR", os.path.expanduser("~/.guga"))
 CAPABILITIES_FILE = os.path.join(CONFIG_DIR, "capabilities.json")
+REPO_ROOT = os.path.dirname(os.path.dirname(HERE))
 
 def is_root():
     return os.geteuid() == 0
@@ -478,7 +479,69 @@ def check_man():
         return True, ""
     return False, "man page source (guga.1) not found"
 
-def run_system_installer(qr_only=False, setup_only=False):
+def register_skill_in_lockfile():
+    """Registers the guga skill in skills-lock.json."""
+    lockfile_path = os.path.join(REPO_ROOT, "skills-lock.json")
+    
+    skill_entry = {
+        "source": "local",
+        "sourceType": "local",
+        "skillPath": "guga/SKILL.md"
+    }
+
+    data = {"version": 1, "skills": {}}
+    
+    if os.path.exists(lockfile_path):
+        try:
+            with open(lockfile_path, "r") as f:
+                data = json.load(f)
+        except Exception as e:
+            warn(f"Could not read skills-lock.json: {e}")
+
+    if "skills" not in data:
+        data["skills"] = {}
+
+    data["skills"]["guga"] = skill_entry
+
+    try:
+        with open(lockfile_path, "w") as f:
+            json.dump(data, f, indent=2)
+        ok("Skill registered in skills-lock.json")
+    except Exception as e:
+        warn(f"Could not update skills-lock.json: {e}")
+
+def install_skills():
+    """Installs the GuGa skill to the .agents/skills directory."""
+    step("Installing GuGa skill…")
+    
+    skills_dir = os.path.join(REPO_ROOT, ".agents", "skills")
+    if not os.path.exists(skills_dir):
+        try:
+            os.makedirs(skills_dir, exist_ok=True)
+            ok(f"Created skills directory: {skills_dir}")
+        except Exception as e:
+            fail(f"Could not create skills directory: {e}")
+
+    source_skill = os.path.join(HERE, "FOR_AI_REFERENCE")
+    dest_skill = os.path.join(skills_dir, "guga")
+
+    if not os.path.exists(source_skill):
+        warn(f"Source skill directory not found: {source_skill}")
+        return
+
+    try:
+        if os.path.exists(dest_skill):
+            shutil.rmtree(dest_skill)
+        shutil.copytree(source_skill, dest_skill)
+        ok(f"Skill installed to {dest_skill}")
+        
+        # New step: Register in lockfile
+        register_skill_in_lockfile()
+        
+    except Exception as e:
+        warn(f"Failed to install skill: {e}")
+
+def run_system_installer(qr_only=False, setup_only=False, install_skills_flag=False):
     # ── Linux guard ───────────────────────────────────────────────────────────────
     if platform.system() != "Linux":
         print("❌  This setup only runs on Linux.")
@@ -504,6 +567,12 @@ def run_system_installer(qr_only=False, setup_only=False):
 
         state = load_capabilities()
         reconfigure = "--reconfigure" in sys.argv
+
+        if install_skills_flag:
+            install_skills()
+            if not setup_only: # If only skills was requested, exit after
+                save_capabilities(state)
+                return
 
         if os.path.exists(env_path) and not reconfigure:
             warn(".env already exists — skipping basic configuration")

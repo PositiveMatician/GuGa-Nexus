@@ -693,6 +693,11 @@ for more details:
         help="Safely remove all GuGa system components (service, man pages, config).",
     )
     proxy_mode.add_argument(
+        "--install-skills",
+        action="store_true",
+        help="Installs the GuGa skill to the .agents/skills directory.",
+    )
+    proxy_mode.add_argument(
         "--status",
         action="store_true",
         help="Show the current service status and connected devices.",
@@ -836,7 +841,7 @@ def main():
     args = parse_args()
     
     # ── Proxy modes ───────────────────────────────────────────────────────────
-    if args.install_service or args.qr or args.approve or args.rename_device or args.uninstall or args.status or args.url or args.start_server or args.reload_server:
+    if args.install_service or args.qr or args.approve or args.rename_device or args.uninstall or args.status or args.url or args.start_server or args.reload_server or args.install_skills:
         from guga.installer import run_system_installer, run_system_uninstaller, run_status, run_url, run_reload
         if args.uninstall:
             run_system_uninstaller()
@@ -864,7 +869,7 @@ def main():
                 # Fallback if run_server isn't defined yet
                 import guga.daemon
             return
-        run_system_installer(qr_only=args.qr, setup_only=args.install_service)
+        run_system_installer(qr_only=args.qr, setup_only=args.install_service, install_skills_flag=args.install_skills)
         return
 
     if args.ask_user:

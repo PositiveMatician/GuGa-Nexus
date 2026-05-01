@@ -1,0 +1,155 @@
+# GuGa Nexus — LLM Reference
+
+GuGa Nexus is a tool that bridges the gap between an AI agent running on a Linux machine
+and the user's Android phone. It allows AI agents to send notifications, ask questions,
+watch long-running commands, and receive replies from the user's device in real-time.
+
+The GuGa server runs locally on the Linux machine and communicates with a paired Android
+app (or browser) over LAN or internet (via Cloudflare Tunnel).
+
+---
+
+## Core Use Cases for AI Agents
+
+### 1. Sending a notification to the user
+When the AI finishes a task or has something to report, it sends a message to the user's phone.
+
+  guga "Your model finished training. Accuracy: 94.2%"
+
+To send to a specific device by tag:
+
+  guga --send-to F "Deployment complete on production server."
+
+To pipe output from a previous command:
+
+  echo "Build succeeded" | guga --send-to F
+
+### 2. Asking the user a question and waiting for a reply
+The AI can pause execution, send a question to the user's phone, and block until the user
+replies from the Android app. This is the primary interaction loop for agentic workflows.
+
+  REPLY=$(guga --ask-user "Should I deploy to production?" --send-to F --delay 10m)
+
+The reply is printed to stdout and can be captured in a shell variable. The --delay flag
+sets a timeout (e.g. 5m, 120s, never). If the user does not reply in time, the command
+exits with code 1.
+
+### 3. Watching a command and notifying on completion
+The AI can wrap any shell command with guga. When the command finishes (success or failure),
+the user's phone receives a notification with the result.
+
+  guga python train.py --epochs 50 --lr 0.001
+
+  guga ./deploy.sh --env production --from "GPU Server"
+
+### 4. Remote interactive execution (PTY mode)
+For commands that require interactive input (e.g. a script that asks "Are you sure?"),
+the AI can forward the prompts to the user's phone and feed their replies back.
+
+  guga -r -i --send-to F python3 setup_wizard.py
+
+---
+
+## Agentic Interaction Loop (Key Pattern)
+
+The most powerful use of GuGa for AI agents is a **human-in-the-loop** workflow:
+
+  1. AI completes a step.
+  2. AI asks the user for approval or input via --ask-user.
+  3. User replies from phone.
+  4. AI captures the reply, acts on it, and repeats.
+
+Shell example:
+
+  #!/bin/bash
+  DEVICE="F"
+
+  guga "Starting code review. I will ask for your input at each stage." --send-to $DEVICE
+
+  REPLY=$(guga --ask-user "Review auth module first or API layer?" --send-to $DEVICE --delay 5m)
+
+  if echo "$REPLY" | grep -qi "auth"; then
+    guga "Reviewing auth module..." --send-to $DEVICE
+    # ... do the work ...
+    guga "Auth module review complete. 3 issues found." --send-to $DEVICE
+  else
+    guga "Reviewing API layer..." --send-to $DEVICE
+    # ... do the work ...
+    guga "API layer review complete. 1 issue found." --send-to $DEVICE
+  fi
+
+  REPLY=$(guga --ask-user "Generate a full report?" --send-to $DEVICE --delay 5m)
+  if echo "$REPLY" | grep -qi "yes\|y\|sure\|ok"; then
+    # ... generate report ...
+    guga "Report generated and saved to ~/report.md" --send-to $DEVICE
+  fi
+
+---
+
+## CLI Reference
+
+### Sending messages
+  guga "MESSAGE"                           # Broadcast to all paired devices
+  guga --send-to DEVICE_ID "MESSAGE"       # Send to a specific device or tag
+  guga -m "MESSAGE"                        # Explicit message mode (skips auto-detection)
+  guga --from "Label" "MESSAGE"            # Set the notification title/sender label
+  echo "MSG" | guga                        # Accept message from stdin
+
+### Asking for user input
+  guga --ask-user "PROMPT" --send-to DEVICE_ID
+  guga --ask-user "PROMPT" --send-to DEVICE_ID --delay 5m
+  guga --ask-user "PROMPT" --send-to DEVICE_ID --delay never
+
+  --delay accepts: 120s, 5m, 1h, never (default: never)
+  The reply is printed to stdout and the process exits 0 on success, 1 on timeout.
+
+### Watching commands
+  guga COMMAND [ARGS...]                   # Auto-detect run mode, notify on finish
+  guga -r COMMAND [ARGS...]                # Explicit run mode
+  guga -r -i --send-to DEVICE COMMAND     # Interactive PTY mode (forwards prompts)
+
+### Setup & pairing
+  guga --start-server                      # Start the GuGa backend server
+  guga --qr                                # Show pairing QR code for Android app
+  guga --approve                           # Approve pending pairing requests
+  guga --status                            # Show server status and connected devices
+  guga --rename-device                     # Assign a short tag to a device (e.g. "F")
+  guga --install-service                   # Install as a systemd background service
+  guga --install-skills                    # Install the GuGa AI skill to .agents/skills/
+  guga --uninstall                         # Remove all GuGa system components
+
+### Other flags
+  --silent / -s                            # Suppress guga's own console output
+  --server PORT                            # Override the server port (default: 6769)
+  --version                                # Show version
+
+---
+
+## Server HTTP API
+
+Base URL: http://localhost:6769
+
+  GET  /ping                 Health check. Returns {"status": "online"}
+  GET  /clients              List connected Socket.IO session IDs
+  GET  /llms.txt             This reference file (plain text, for AI crawlers)
+  GET  /tools.json           OpenAI-compatible tool definitions (JSON) — import into LangChain, AutoGen, CrewAI, Semantic Kernel, custom GPT Actions, etc.
+  POST /send                 Broadcast to all devices (localhost-only)
+  POST /send/<session_id>    Send to one specific device (localhost-only)
+  GET  /api/devices          List all paired devices with metadata (name, tag, id)
+  GET  /api/pending          List pending pairing requests
+  POST /api/approve          Approve or reject a pairing request
+  POST /api/ask              Send a synchronous ask request to a device
+  POST /api/rename           Assign a custom tag to a device
+
+---
+
+## Device Targeting
+
+Devices can be targeted by:
+  - Full device_id (e.g. "android-a3f9...")
+  - Short custom tag assigned via --rename-device (e.g. "F", "laptop", "phone")
+
+---
+
+## Version
+GuGa Nexus v1.5.0 — ASGI backend (Quart + python-socketio + uvicorn)

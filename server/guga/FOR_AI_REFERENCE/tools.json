@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "GuGa Nexus — OpenAI-compatible tool definitions. Import into any function-calling agent framework.",
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "guga_send",
+        "description": "Send a notification message to the user's Android phone or a specific paired device. Use this to inform the user of progress, results, or completion of a task. The user receives a push notification on their phone immediately.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "message": {
+              "type": "string",
+              "description": "The notification text to send. Be concise and informative. Example: 'Training complete. Final accuracy: 94.2%. Model saved to ~/models/v3.pt'"
+            },
+            "title": {
+              "type": "string",
+              "description": "Optional label shown as the sender/title of the notification. Example: 'GPU Server', 'Build Bot', 'Deploy Agent'"
+            },
+            "send_to": {
+              "type": "string",
+              "description": "Optional target device ID or short tag (e.g. 'F'). If omitted, broadcasts to all connected devices. Use guga_status to discover available device tags."
+            }
+          },
+          "required": ["message"]
+        },
+        "cli_mapping": {
+          "template": "guga {message}",
+          "with_title": "guga --from \"{title}\" \"{message}\"",
+          "with_target": "guga --send-to {send_to} \"{message}\"",
+          "full": "guga --from \"{title}\" --send-to {send_to} \"{message}\""
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "guga_ask_user",
+        "description": "Send a question to the user's Android phone and BLOCK until the user replies from the app. The reply is returned as a string. Use this to get human decisions, approvals, or input during long agentic workflows. Always set a timeout via the delay parameter. Handle the case where the user does not reply (timeout).",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "prompt": {
+              "type": "string",
+              "description": "The question or prompt to display on the user's phone. Be clear and specific. Example: 'Tests passed. Deploy to production now? (yes/no)', 'Which dataset should I use: ImageNet or CIFAR-10?'"
+            },
+            "send_to": {
+              "type": "string",
+              "description": "The device ID or short tag to send the question to. Example: 'F'. Required — you must always specify a target device for ask-user calls."
+            },
+            "delay": {
+              "type": "string",
+              "default": "10m",
+              "description": "How long to wait for a reply before timing out. Format: '120s', '5m', '1h', or 'never' for no timeout. Default is '10m'. If the timeout expires, the call fails and no reply is returned."
+            },
+            "title": {
+              "type": "string",
+              "description": "Optional label shown in the notification header. Example: 'Deploy Agent needs your input'"
+            }
+          },
+          "required": ["prompt", "send_to"]
+        },
+        "returns": {
+          "type": "string",
+          "description": "The user's reply text as typed on their phone. Empty string if no reply (timeout). The caller must check for timeout (non-zero exit in CLI, null/error in API)."
+        },
+        "cli_mapping": {
+          "template": "guga --ask-user \"{prompt}\" --send-to {send_to} --delay {delay}",
+          "with_title": "guga --ask-user \"{prompt}\" --send-to {send_to} --delay {delay} --from \"{title}\""
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "guga_run_command",
+        "description": "Execute a shell command on the Linux machine, stream its output to the local terminal, and automatically send a notification to the user's phone when the command finishes (success or failure). The notification includes the exit status, elapsed time, and the last line of output. Use this to wrap any long-running process.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "command": {
+              "type": "string",
+              "description": "The full shell command to execute. Example: 'python train.py --epochs 100 --lr 0.001', './deploy.sh --env production'"
+            },
+            "send_to": {
+              "type": "string",
+              "description": "Optional device ID or short tag to send the completion notification to. If omitted, broadcasts to all devices."
+            },
+            "title": {
+              "type": "string",
+              "description": "Optional label shown as the sender in the notification. Example: 'GPU Server', 'Build Bot'"
+            },
+            "silent": {
+              "type": "boolean",
+              "default": false,
+              "description": "If true, suppresses guga's own console output (progress messages). The command's own stdout/stderr is not affected."
+            }
+          },
+          "required": ["command"]
+        },
+        "cli_mapping": {
+          "template": "guga {command}",
+          "with_target": "guga --send-to {send_to} {command}",
+          "with_title": "guga --from \"{title}\" {command}",
+          "full": "guga --from \"{title}\" --send-to {send_to} {command}"
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "guga_interactive_run",
+        "description": "Execute a command in a pseudo-terminal (PTY) and forward any interactive prompts (lines ending in ':', '?', '>') to the user's phone in real time. The user replies from the Android app and their input is fed back into the process. Use this for scripts that interactively ask for input (e.g. setup wizards, interactive installers, confirmation prompts).",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "command": {
+              "type": "string",
+              "description": "The interactive command to execute. Example: 'python3 setup_wizard.py', 'ansible-playbook deploy.yml'"
+            },
+            "send_to": {
+              "type": "string",
+              "description": "Required. The device ID or short tag that will handle the interactive prompts. Example: 'F'"
+            },
+            "title": {
+              "type": "string",
+              "description": "Optional label for the interactive session notifications."
+            }
+          },
+          "required": ["command", "send_to"]
+        },
+        "cli_mapping": {
+          "template": "guga -r -i --send-to {send_to} {command}",
+          "with_title": "guga -r -i --send-to {send_to} --from \"{title}\" {command}"
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "guga_status",
+        "description": "Query the GuGa server for its current status, including whether it is active, its address, and the list of connected devices with their IDs and tags. Use this to discover which device tags are available before calling guga_send or guga_ask_user.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        },
+        "returns": {
+          "type": "object",
+          "properties": {
+            "active": { "type": "boolean" },
+            "address": { "type": "string" },
+            "devices": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "device_id": { "type": "string" },
+                  "device_name": { "type": "string" },
+                  "tag": { "type": "string", "description": "Short human-assigned alias, e.g. 'F'" }
+                }
+              }
+            }
+          }
+        },
+        "cli_mapping": {
+          "template": "guga --status"
+        },
+        "http_mapping": {
+          "method": "GET",
+          "url": "http://localhost:6769/api/devices"
+        }
+      }
+    }
+  ],
+  "agent_guidelines": {
+    "description": "Rules for any AI agent using these tools",
+    "rules": [
+      "Always call guga_status first to confirm the server is running and to discover device tags.",
+      "Always use guga_send to notify the user when starting a long task and again when it completes.",
+      "Always use guga_ask_user before any irreversible action (deploy, delete, migrate, overwrite).",
+      "Always set a delay on guga_ask_user. Use '10m' for decisions, 'never' only for non-critical prompts.",
+      "Always handle the timeout case — if guga_ask_user fails, abort the action and notify the user.",
+      "Parse the user's reply with flexible matching (grep -qi 'yes\\|y\\|ok\\|go\\|sure') not strict equality.",
+      "Do not send multiple notifications in rapid succession. Batch updates into a single message.",
+      "The GuGa server must be running before calling any tool. Start with: guga --start-server"
+    ],
+    "recommended_loop": [
+      "1. guga_status() — confirm server up, get device tag",
+      "2. guga_send(message='Starting task X...', send_to=TAG)",
+      "3. ... do the work ...",
+      "4. guga_send(message='Step 1 complete. Result: ...', send_to=TAG)",
+      "5. reply = guga_ask_user(prompt='Proceed to step 2?', send_to=TAG, delay='10m')",
+      "6. if reply is yes → continue; else → guga_send('Aborted on your request.') and stop",
+      "7. Repeat 3-6 for each decision point",
+      "8. guga_send(message='All done. Final result: ...', send_to=TAG)"
+    ]
+  }
+}

@@ -33,7 +33,8 @@ db = Database()
 
 from dotenv import load_dotenv
 
-CONFIG_DIR = os.path.expanduser("~/.guga")
+HERE = os.path.dirname(os.path.abspath(__file__))
+CONFIG_DIR = os.environ.get("GUGA_CONFIG_DIR", os.path.expanduser("~/.guga"))
 if not os.path.exists(CONFIG_DIR):
     try:
         os.makedirs(CONFIG_DIR, exist_ok=True)
@@ -52,7 +53,7 @@ if platform.system() != "Linux":
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 import qrcode
-from quart import Quart, jsonify, render_template_string, request
+from quart import Quart, jsonify, render_template_string, request, send_file
 import socketio
 
 # ------------------------------------------------------------
@@ -759,6 +760,24 @@ async def web_interface():
 @app.route("/ping")
 async def ping():
     return jsonify({"status": "online", "clients": len(connected_clients)}), 200
+
+
+@app.route("/llms.txt")
+async def llms_txt():
+    """Serve the llms.txt file for AI crawlers/reference."""
+    path = os.path.join(HERE, "FOR_AI_REFERENCE", "llms.txt")
+    if os.path.exists(path):
+        return await send_file(path)
+    return "Not Found", 404
+
+
+@app.route("/tools.json")
+async def tools_json():
+    """Serve OpenAI-compatible tool definitions for agent frameworks."""
+    path = os.path.join(HERE, "FOR_AI_REFERENCE", "tools.json")
+    if os.path.exists(path):
+        return await send_file(path, mimetype="application/json")
+    return jsonify({"error": "Not Found"}), 404
 
 
 @app.route("/clients")
