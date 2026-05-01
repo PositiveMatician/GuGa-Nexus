@@ -46,7 +46,7 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
     private Socket mSocket;
     private String backendAddress = "";
     private TextToSpeech tts;
-    private boolean ttsEnabled = true;
+    private boolean ttsEnabled = false;
     private boolean isAppInForeground = false;
 
     // ----------------------------------------------------------------
@@ -94,7 +94,7 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
                     );
                     break;
                 case "com.positive.guga.SET_TTS_ENABLED":
-                    ttsEnabled = intent.getBooleanExtra("enabled", true);
+                    ttsEnabled = intent.getBooleanExtra("enabled", false);
                     break;
                 case "com.positive.guga.SAVE_AUTH_TOKEN":
                     String token = intent.getStringExtra("token");
@@ -124,7 +124,7 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
 
         tts = new TextToSpeech(this, this);
         backendAddress = getSharedPreferences("AlphaPrefs", MODE_PRIVATE).getString("backend_ip", "");
-        ttsEnabled = getSharedPreferences("AlphaPrefs", MODE_PRIVATE).getBoolean("tts_enabled", true);
+        ttsEnabled = getSharedPreferences("AlphaPrefs", MODE_PRIVATE).getBoolean("tts_enabled", false);
 
         IntentFilter filter = new IntentFilter();
         filter.addAction("com.positive.guga.UPDATE_IP");

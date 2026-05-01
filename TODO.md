@@ -13,8 +13,8 @@
     Recommendation: If you need to support multiple concurrent interactive sessions for the same device, the server's pending_asks logic should be refactored to use a unique request_id or correlation_id instead of just the device_id.
     
     This client UI needs features like:
-    i. Reply to a message , which will help in identifying which message the user is replying to
-    ii. Copy message , allows the user to copy the message and paste it somewhere else 
+    i. Reply to a message ✅
+    ii. Copy message ✅
 
 5.  there are several other areas that are not thread-safe or concurrency-safe.
 
@@ -73,5 +73,5 @@
 
     
 
-6. The browser client needs a setting section and both browser and android needs animation and sounds. A new hide input toggle should be there for android and browser both. (reference Framework7 docs)(add the animations from the Framework7 docs)
+6. The browser client needs a setting section. Android now has a settings section, animations, sounds, and a hide input toggle. ✅ (Android part done)
 
