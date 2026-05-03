@@ -135,6 +135,9 @@ Shell example:
   guga --stop-server --all                 # Stop all background servers non-interactively
   guga --status                            # Show server status and connected devices
   guga --rename-device                     # Assign a short tag to a device (e.g. "F")
+  guga --blocked                           # List all devices on the blocklist
+  guga --unblock [DEVICE_ID]               # Remove a device from the blocklist
+  guga --revoke [DEVICE_ID]                # Revoke access for a trusted/paired device
   guga --install-service                   # Install as a systemd background service
   guga --install-skills                    # Install the GuGa AI skill to .agents/skills/
   guga --uninstall                         # Remove all GuGa system components
@@ -197,7 +200,6 @@ Edit `~/.gemini/antigravity/mcp_config.json` and add:
   }
 }
 ```
-*Note: Replace `python3` with absolute path to your venv python if necessary.*
 
 ---
 
@@ -210,4 +212,4 @@ Devices can be targeted by:
 ---
 
 ## Version
-GuGa Nexus v1.5.0 — ASGI backend (Quart + python-socketio + uvicorn)
+GuGa Nexus v1.5.1 — ASGI backend (Quart + python-socketio + uvicorn)

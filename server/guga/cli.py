@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 guga - Send notifications to your Android via the GuGa server.
-Version: 1.5.0
+Version: 1.5.1
 
 Usage:
   guga [options] "message"           Send a notification
@@ -622,6 +622,124 @@ def guga_rename_device(port: int):
     except ValueError:
         print(f"  {RED}Invalid input.{RESET}")
 
+def guga_list_blocked():
+    """List all devices currently on the blocklist."""
+    blocked = db.get_blocked_devices()
+    if not blocked:
+        print(f"\n  {DIM}No devices are currently blocked.{RESET}\n")
+        return
+
+    print(f"\n  {DIM}{'─' * 52}{RESET}")
+    print(f"   {BOLD}Blocked Devices{RESET}")
+    print(f"  {DIM}{'─' * 52}{RESET}")
+    now = time.time()
+    for i, (did, unblock_at) in enumerate(blocked.items()):
+        remaining = int(unblock_at - now)
+        if remaining <= 0:
+            status = f"{GREEN}Expired{RESET}"
+        else:
+            status = f"{RED}Blocked for {format_duration(remaining)}{RESET}"
+        print(f"  {i+1})  {BOLD}{did[:16].ljust(16)}{RESET}  {status}")
+    print(f"  {DIM}{'─' * 52}{RESET}\n")
+
+def guga_unblock_device(target_id=None):
+    """Remove a device from the blocklist."""
+    blocked = db.get_blocked_devices()
+    
+    # If target_id is the boolean True (from const=True when flag is passed without arg)
+    if target_id is True:
+        target_id = None
+
+    if not blocked:
+        print(f"\n  {DIM}No devices are currently blocked.{RESET}\n")
+        return
+
+    if target_id:
+        if target_id in blocked:
+            db.unblock_device(target_id)
+            print(f"\n  {GREEN}✓ Device unblocked: {BOLD}{target_id}{RESET}")
+        else:
+            # Try partial match
+            matches = [did for did in blocked if did.startswith(target_id)]
+            if len(matches) == 1:
+                db.unblock_device(matches[0])
+                print(f"\n  {GREEN}✓ Device unblocked: {BOLD}{matches[0]}{RESET}")
+            else:
+                print(f"\n  {RED}✗ Device '{target_id}' not found in blocklist.{RESET}")
+        return
+
+    # Interactive mode
+    guga_list_blocked()
+    choice = input(f"  {BOLD}Choose a device to unblock (1-{len(blocked)}): {RESET}").strip()
+    try:
+        idx = int(choice) - 1
+        dids = list(blocked.keys())
+        if 0 <= idx < len(dids):
+            did = dids[idx]
+            db.unblock_device(did)
+            print(f"\n  {GREEN}✓ Device unblocked: {BOLD}{did}{RESET}")
+        else:
+            print(f"  {RED}Invalid choice.{RESET}")
+    except ValueError:
+        print(f"  {RED}Invalid input.{RESET}")
+
+def guga_revoke_device(target_id=None):
+    """Revoke access for a trusted device."""
+    trusted = db.get_trusted_devices()
+    
+    if target_id is True:
+        target_id = None
+
+    if not trusted:
+        print(f"\n  {DIM}No trusted devices found.{RESET}\n")
+        return
+
+    if target_id:
+        # Check if target_id matches a device_id, name, or tag
+        actual_id = None
+        if target_id in trusted:
+            actual_id = target_id
+        else:
+            for did, info in trusted.items():
+                if info.get("name") == target_id or info.get("tag") == target_id:
+                    actual_id = did
+                    break
+        
+        if actual_id:
+            db.delete_trusted_device(actual_id)
+            print(f"\n  {GREEN}✓ Access revoked for: {BOLD}{target_id}{RESET}")
+        else:
+            print(f"\n  {RED}✗ Device '{target_id}' not found.{RESET}")
+        return
+
+    # Interactive mode
+    print(f"\n  {DIM}{'─' * 52}{RESET}")
+    print(f"   {BOLD}Trusted Devices (Revocation Mode){RESET}")
+    print(f"  {DIM}{'─' * 52}{RESET}")
+    dids = list(trusted.keys())
+    for i, did in enumerate(dids):
+        info = trusted[did]
+        name = info.get("name", "Unknown")[:14].ljust(14)
+        tag = info.get("tag") or "-"
+        print(f"  {i+1})  {BOLD}{name}{RESET}  {DIM}{did[:8]}{RESET}   Tag: {CYAN}{tag}{RESET}")
+    print(f"  {DIM}{'─' * 52}{RESET}")
+    
+    choice = input(f"  {BOLD}Choose a device to revoke (1-{len(trusted)}): {RESET}").strip()
+    try:
+        idx = int(choice) - 1
+        if 0 <= idx < len(dids):
+            did = dids[idx]
+            confirm = input(f"  {RED}Are you sure you want to revoke {BOLD}{trusted[did].get('name')}{RESET}? [y/N]: ").strip().lower()
+            if confirm == 'y':
+                db.delete_trusted_device(did)
+                print(f"\n  {GREEN}✓ Access revoked.{RESET}")
+            else:
+                print("\n  Cancelled.")
+        else:
+            print(f"  {RED}Invalid choice.{RESET}")
+    except ValueError:
+        print(f"  {RED}Invalid input.{RESET}")
+
 def run_stop_server(stop_all: bool = False):
     """Interactive manager or non-interactive terminator for background GuGa servers."""
     registry_path = os.path.join(CONFIG_DIR, "active_servers.json")
@@ -900,6 +1018,25 @@ for more details:
         help="Initializes the Linux background systemd service and components.",
     )
     proxy_mode.add_argument(
+        "--blocked",
+        action="store_true",
+        help="List all devices currently on the blocklist.",
+    )
+    proxy_mode.add_argument(
+        "--unblock",
+        nargs="?",
+        const=True,
+        metavar="DEVICE_ID",
+        help="Remove a device from the blocklist (interactive if ID omitted).",
+    )
+    proxy_mode.add_argument(
+        "--revoke",
+        nargs="?",
+        const=True,
+        metavar="DEVICE_ID",
+        help="Revoke access for a trusted/paired device (interactive if ID omitted).",
+    )
+    proxy_mode.add_argument(
         "--uninstall",
         action="store_true",
         help="Safely remove all GuGa system components (service, man pages, config).",
@@ -1101,7 +1238,7 @@ def main():
     args = parse_args()
     
     # ── Proxy modes ───────────────────────────────────────────────────────────
-    if args.install_service or args.qr or args.approve or args.rename_device or args.uninstall or args.status or args.url or args.start_server or args.reload_server or args.install_skills or args.mcp or args.mcp_token or args.stop_server:
+    if args.install_service or args.qr or args.approve or args.rename_device or args.uninstall or args.status or args.url or args.start_server or args.reload_server or args.install_skills or args.mcp or args.mcp_token or args.stop_server or args.blocked or args.unblock or args.revoke:
         from guga.installer import run_system_installer, run_system_uninstaller, run_status, run_url, run_reload
         if args.uninstall:
             run_system_uninstaller()
@@ -1123,6 +1260,15 @@ def main():
             return
         if args.rename_device:
             guga_rename_device(args.server)
+            return
+        if args.blocked:
+            guga_list_blocked()
+            return
+        if args.unblock:
+            guga_unblock_device(args.unblock)
+            return
+        if args.revoke:
+            guga_revoke_device(args.revoke)
             return
         if args.start_server:
             if args.background:

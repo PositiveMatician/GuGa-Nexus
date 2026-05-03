@@ -1,6 +1,6 @@
 """
 GuGa Nexus — Core ASGI Backend
-Version: 1.5.0
+Version: 1.5.1
 
 This module implements the GuGa server using Quart (ASGI) and SocketIO.
 It handles device pairing, encrypted command routing, and non-blocking
@@ -920,28 +920,41 @@ async def handle_mcp_messages():
 # endregion
 
 
+    return None
+ 
+ 
 def resolve_session_id(target: str) -> Optional[str]:
     """Resolves a target string (SID, Device ID, Name, or Tag) to a Session ID."""
-    # 1. Exact SID match
+    sids = get_sids_by_device(target)
+    return sids[0] if sids else None
+
+
+def get_sids_by_device(target: str) -> List[str]:
+    """Returns all session IDs associated with a device ID, name, or tag."""
+    if target == "all":
+        return list(connected_clients.keys())
+        
+    # If target is already a valid Session ID
     if target in connected_clients:
-        return target
+        return [target]
         
-    trusted = load_trusted_devices()
     target_lower = target.lower()
+    trusted = load_trusted_devices()
+    sids = []
     
-    # 2. Match by Device ID, Name, or Tag
     for sid, dev_id in connected_clients.items():
+        # Match by exact device ID
         if dev_id.lower() == target_lower:
-            return sid
+            sids.append(sid)
+            continue
             
+        # Match by name or tag
         info = trusted.get(dev_id, {})
-        name = (info.get("name") or "").lower()
-        tag = (info.get("tag") or "").lower()
-        
-        if name == target_lower or tag == target_lower:
-            return sid
+        if (info.get("name") or "").lower() == target_lower or \
+           (info.get("tag") or "").lower() == target_lower:
+            sids.append(sid)
             
-    return None
+    return sids
 
 
 @app.route("/api/command", methods=["POST"])

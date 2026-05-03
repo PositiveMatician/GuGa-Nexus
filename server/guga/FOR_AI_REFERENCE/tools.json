@@ -191,6 +191,33 @@
     {
       "type": "function",
       "function": {
+        "name": "guga_manage_devices",
+        "description": "Manage the device blocklist and trusted pairings. Use this to list blocked devices, unblock specific ones, or revoke access for previously trusted devices.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": ["list_blocked", "unblock", "revoke"],
+              "description": "The administrative action to perform."
+            },
+            "device_id": {
+              "type": "string",
+              "description": "The ID or tag of the device to unblock or revoke. Required for 'unblock' and 'revoke' actions."
+            }
+          },
+          "required": ["action"]
+        },
+        "cli_mapping": {
+          "list_blocked": "guga --blocked",
+          "unblock": "guga --unblock {device_id}",
+          "revoke": "guga --revoke {device_id}"
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
         "name": "guga_status",
         "description": "Query the GuGa server for its current status, including whether it is active, its address, and the list of connected devices with their IDs and tags. Use this to discover which device tags are available before calling guga_send or guga_ask_user.",
         "parameters": {

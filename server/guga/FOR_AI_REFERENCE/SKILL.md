@@ -8,6 +8,7 @@ description: >
   while the agent continues working on the Linux machine.
   Triggers on phrases like: "notify me", "tell me when done", "ask user", "send to phone",
   "wait for reply", "ping me", "human in the loop", or any long-running task.
+  Also handles device management: "list blocked", "unblock device", "revoke access".
 ---
 
 # GuGa Nexus Skill
@@ -173,6 +174,9 @@ The message ID in your notification matches the filename for easy lookup.
 | `guga --stop-server -A` | Stop all background servers |
 | `guga --approve -A` | Approve all pending clients |
 | `guga --status` | Show server status & devices |
+| `guga --blocked` | List blocked devices |
+| `guga --unblock [ID]` | Unblock a device |
+| `guga --revoke [ID]` | Revoke device access |
 | `guga --qr` | Show pairing QR code |
 | `guga --approve` | Approve device pairing requests |
 | `guga --rename-device` | Assign a short tag to a device |
