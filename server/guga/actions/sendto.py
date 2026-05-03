@@ -2,24 +2,58 @@ import json
 import urllib.request
 import urllib.error
 import asyncio
+import sys
 from ..db_utils import Database
 
-async def sendto_run_command(text: str, sender: str):
+async def sendto_run_command(text: str, sender: str, request_id: str = None):
     """Handles the 'sendto' command: sendto <target> <message>"""
     command_parts = text.split()
     
-    if len(command_parts) < 3:
-        return {
-            "title": "SendTo Error",
-            "message": "Usage: sendto <device_id/tag/name> <message>"
-        }
-        
-    target_input = command_parts[1]
-    message = " ".join(command_parts[2:])
+    target_input = None
+    message = text
 
-    # 1. Resolve names/tags using the database
-    # We run this in a thread if it's blocking, but SQLite is usually fast.
-    # For now, let's keep it simple.
+    # 1. Handle Orphan Replies (via request_id)
+    if request_id and not text.lower().startswith("sendto "):
+        # Extract title from daemon.message_caches[sender]
+        import sys
+        daemon = sys.modules.get("guga.daemon") or sys.modules.get("server.guga.daemon")
+        title = None
+        if daemon and hasattr(daemon, "message_caches"):
+            cache = daemon.message_caches.get(sender, [])
+            for mid, data in cache:
+                if mid == request_id:
+                    title = data.get("title")
+                    break
+        
+        if title:
+            # If the title was "From Jason", we want just "Jason"
+            if title.startswith("From "):
+                target_input = title[5:].strip()
+            else:
+                target_input = title
+            
+            # Strip "reply " keyword from the message body if present
+            if text.lower().startswith("reply "):
+                message = text[6:].strip()
+            else:
+                message = text
+        else:
+            return {
+                "title": "SendTo Error",
+                "message": "❌ Context lost: Could not find the original message title."
+            }
+    
+    # 2. Standard 'sendto' command parsing
+    else:
+        if len(command_parts) < 3:
+            return {
+                "title": "SendTo Error",
+                "message": "Usage: sendto <device_id/tag/name> <message>"
+            }
+        target_input = command_parts[1]
+        message = " ".join(command_parts[2:])
+
+    # 3. Resolve names/tags using the database
     db = Database()
     trusted = db.get_trusted_devices()
     
@@ -38,7 +72,7 @@ async def sendto_run_command(text: str, sender: str):
             target_display = info.get("tag") or info.get("name") or did
             break
 
-    # 2. Make the HTTP request to the local server
+    # 4. Make the HTTP request to the local server
     url = f"http://localhost:6769/send/{target_device_id}"
     payload = {
         "message": message,
@@ -54,8 +88,6 @@ async def sendto_run_command(text: str, sender: str):
             method="POST",
         )
         
-        # CRITICAL: Use asyncio.to_thread to avoid blocking the event loop.
-        # This prevents the deadlock where the worker blocks the server from handling the request.
         def do_request():
             with urllib.request.urlopen(req, timeout=5) as response:
                 return response.status

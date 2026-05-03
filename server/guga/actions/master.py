@@ -1,24 +1,17 @@
-import time
-from . import antigravity, sendto
+import asyncio
+from . import ping
+from . import status
+from . import sendto
+from . import antigravity
 
-# Command Registry
-# Format: "keyword": handler_function or response_dict
 COMMANDS = {
-    "ping": {
-        "title": "System",
-        "message": "pong 🏓"
-    },
-    "status": {
-        "title": "System",
-        "message": "All systems nominal. Server is listening for incoming signals."
-    },
-    "help": {
-        "title": "Available Commands",
-        "message": "Try: ping, status, antigravity, help, sendto"
-    }
+    "ping": ping.ping_run_command,
+    "status": status.status_run_command,
+    "help": "Available commands: ping, status, help, echo <text>, sendto <device> <text>, antigravity",
+    "echo": lambda cmd: {"title": "Echo", "message": cmd[5:].strip() if len(cmd) > 5 else ""}
 }
 
-async def run_command(command: str, client: str):
+async def run_command(command: str, client: str, request_id: str = None):
     """
     Take the command from the remote client and return a response dictionary.
     This is the central dispatcher for all remote-initiated actions.
@@ -39,6 +32,9 @@ async def run_command(command: str, client: str):
     elif "sendto" in cmd_lower:
         return await sendto.sendto_run_command(command, sender=client)
 
+    elif "reply" in cmd_lower and request_id:
+        return await sendto.sendto_run_command(command, sender=client, request_id=request_id)
+    
     # 2. Check static command registry
     if cmd_lower in COMMANDS:
         res = COMMANDS[cmd_lower]
