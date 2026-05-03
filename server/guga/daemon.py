@@ -935,8 +935,8 @@ def resolve_session_id(target: str) -> Optional[str]:
             return sid
             
         info = trusted.get(dev_id, {})
-        name = info.get("name", "").lower()
-        tag = info.get("tag", "").lower()
+        name = (info.get("name") or "").lower()
+        tag = (info.get("tag") or "").lower()
         
         if name == target_lower or tag == target_lower:
             return sid
