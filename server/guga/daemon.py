@@ -22,7 +22,7 @@ import subprocess
 import sys
 import threading
 import time
-from typing import Set, List, Dict
+from typing import Set, List, Dict, Optional, Any
 import collections
 import uuid
 
@@ -799,10 +799,35 @@ async def tools_json():
     return jsonify({"error": "Not Found"}), 404
 
 
+@app.route("/send/<target>", methods=["POST"])
+async def private_send(target: str):
+    """Route to send a message to a specific target (SID, Device ID, Name, or Tag)."""
+    if request.remote_addr != "127.0.0.1":
+        return "Unauthorized", 401
+    
+    data = await request.get_json()
+    if not data or "message" not in data:
+        return "Invalid request", 400
+        
+    success = await send_private_message(target, data["message"], data.get("title"), msg_id=data.get("unique_message_id"))
+    return "OK" if success else ("Not Found", 404)
+
+
 @app.route("/clients")
 async def list_clients():
-    """List all connected client session IDs."""
-    return jsonify({"clients": list(connected_clients), "count": len(connected_clients)}), 200
+    """List all connected clients with detailed info."""
+    trusted = load_trusted_devices()
+    data = []
+    for sid, device_id in connected_clients.items():
+        device_info = trusted.get(device_id, {})
+        data.append({
+            "session_id": sid,
+            "device_id": device_id,
+            "name": device_info.get("name", "Unknown"),
+            "type": device_info.get("type", "app"),
+            "tag": device_info.get("tag")
+        })
+    return json.dumps(data)
 
 
 @app.route("/send", methods=["POST"])
@@ -895,46 +920,28 @@ async def handle_mcp_messages():
 # endregion
 
 
-def get_sids_by_device(target: str) -> list[str]:
-    """Return all active session IDs for a given device_id OR tag."""
-    # 1. Direct device_id match
-    sids = [sid for sid, did in connected_clients.items() if did == target]
-    if sids: return sids
-    
-    # 2. Tag match
+def resolve_session_id(target: str) -> Optional[str]:
+    """Resolves a target string (SID, Device ID, Name, or Tag) to a Session ID."""
+    # 1. Exact SID match
+    if target in connected_clients:
+        return target
+        
     trusted = load_trusted_devices()
-    for did, info in trusted.items():
-        if info.get("tag") == target:
-            # Found the device_id for this tag, now find its sessions
-            return [sid for sid, conn_did in connected_clients.items() if conn_did == did]
-            
-    return []
-
-
-@app.route("/send/<target_id>", methods=["POST"])
-async def send_to_one(target_id: str):
-    """Send a message to a specific device_id or session_id."""
-    data = await request.get_json() or {}
-    message = data.get("message", "").strip()
-    title = data.get("title", "").strip()
-    if not message:
-        return jsonify({"error": "No message provided"}), 400
-
-    # Try mapping device_id to session first
-    target_sids = get_sids_by_device(target_id)
+    target_lower = target.lower()
     
-    # Fallback to direct session_id if not found as device_id
-    if not target_sids and target_id in connected_clients:
-        target_sids = [target_id]
-
-    if not target_sids:
-        return jsonify({"error": f"No active client found for '{target_id}'"}), 404
-
-    msg_id = data.get("unique_message_id")
-    for sid in target_sids:
-        await send_private_message(sid, message, title, msg_id=msg_id)
-
-    return jsonify({"ok": True, "sent_to_sessions": len(target_sids)}), 200
+    # 2. Match by Device ID, Name, or Tag
+    for sid, dev_id in connected_clients.items():
+        if dev_id.lower() == target_lower:
+            return sid
+            
+        info = trusted.get(dev_id, {})
+        name = info.get("name", "").lower()
+        tag = info.get("tag", "").lower()
+        
+        if name == target_lower or tag == target_lower:
+            return sid
+            
+    return None
 
 
 @app.route("/api/command", methods=["POST"])
@@ -1442,12 +1449,14 @@ async def notify_all_clients(message: str, title: str = None, msg_id: str = None
                 encrypted = CryptoHelper.encrypt(local_payload_json, token)
                 await sio.emit("guga_response", encrypted, to=sid)
         except Exception as e:
-            log_event("✗", RED, "send failed", f"{sid} ({device_id}): {e}")
+            log_event("✗", RED, "broadcast failed", f"{sid}: {e}")
 
 
-async def send_private_message(session_id: str, message: str, title: str = None, msg_id: str = None) -> bool:
-    """Send a private message to a specific session."""
-    if session_id not in connected_clients:
+async def send_private_message(target: Any, message: str, title: str = None, msg_id: str = None) -> bool:
+    """Sends a message to a specific client by resolving its target ID/Name/Tag."""
+    session_id = resolve_session_id(target)
+    
+    if not session_id or session_id not in connected_clients:
         return False
         
     device_id = connected_clients[session_id]
