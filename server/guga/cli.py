@@ -115,6 +115,21 @@ def last_meaningful_line(text):
     return lines[-1] if lines else None
 
 
+CHOICES = []
+_choice_idx = 0
+
+def guga_input(prompt):
+    global _choice_idx
+    if _choice_idx < len(CHOICES):
+        val = CHOICES[_choice_idx]
+        _choice_idx += 1
+        # If it's empty, print it as [ENTER] for clarity
+        display_val = val if val else "[ENTER]"
+        print(f"{prompt}{BOLD}{display_val}{RESET} {DIM}(auto){RESET}")
+        return val
+    return input(prompt)
+
+
 # ── Core actions ──────────────────────────────────────────────────────────────
 
 def broadcast_message(message: str, port: int, silent: bool, title: Optional[str] = None, msg_id: Optional[str] = None):
@@ -510,7 +525,7 @@ def guga_approve(port: int, watch: bool = False, approve_all: bool = False):
                         print(f"  1)  {BOLD}{p['device_name'][:14].ljust(14)}{RESET}  {DIM}{p['device_id'][:8]}{RESET}   {CYAN}{' '.join(p['pin'])}{RESET}   just now")
                         print(f"  {DIM}{'─' * 42}{RESET}")
                         
-                        choice = input(f"  {BOLD}[A] approve   [R] reject   [S] skip{RESET}\n\n  Your choice: ").strip().lower()
+                        choice = guga_input(f"  {BOLD}[A] approve   [R] reject   [S] skip{RESET}\n\n  Your choice: ").strip().lower()
                         if choice == 'a':
                             action_url = f"{base_url}/approve"
                             payload = json.dumps({"device_id": p['device_id'], "action": "approve"}).encode()
@@ -537,7 +552,7 @@ def guga_approve(port: int, watch: bool = False, approve_all: bool = False):
 
     print_list(pending)
     print(f"  {BOLD}[A] approve all   [R] reject all   [1,2,...] choose{RESET}")
-    choice = input(f"\n  Your choice: ").strip().lower()
+    choice = guga_input(f"\n  Your choice: ").strip().lower()
 
     if choice == 'a':
         for p in pending:
@@ -596,14 +611,14 @@ def guga_rename_device(port: int):
         return
 
     print_list(devices)
-    choice = input(f"  {BOLD}Choose a device (1-{len(devices)}): {RESET}").strip()
+    choice = guga_input(f"  {BOLD}Choose a device (1-{len(devices)}): {RESET}").strip()
     
     try:
         idx = int(choice) - 1
         if 0 <= idx < len(devices):
             device = devices[idx]
             print(f"\n  Renaming {BOLD}{device['device_name']}{RESET} ({DIM}{device['device_id'][:8]}{RESET})")
-            new_tag = input(f"  Enter new tag (empty to clear): ").strip()
+            new_tag = guga_input(f"  Enter new tag (empty to clear): ").strip()
             
             payload = json.dumps({"device_id": device['device_id'], "tag": new_tag}).encode()
             req = urllib.request.Request(f"{base_url}/rename", data=payload, headers={"Content-Type": "application/json"}, method="POST")
@@ -670,7 +685,7 @@ def guga_unblock_device(target_id=None):
 
     # Interactive mode
     guga_list_blocked()
-    choice = input(f"  {BOLD}Choose a device to unblock (1-{len(blocked)}): {RESET}").strip()
+    choice = guga_input(f"  {BOLD}Choose a device to unblock (1-{len(blocked)}): {RESET}").strip()
     try:
         idx = int(choice) - 1
         dids = list(blocked.keys())
@@ -724,12 +739,12 @@ def guga_revoke_device(target_id=None):
         print(f"  {i+1})  {BOLD}{name}{RESET}  {DIM}{did[:8]}{RESET}   Tag: {CYAN}{tag}{RESET}")
     print(f"  {DIM}{'─' * 52}{RESET}")
     
-    choice = input(f"  {BOLD}Choose a device to revoke (1-{len(trusted)}): {RESET}").strip()
+    choice = guga_input(f"  {BOLD}Choose a device to revoke (1-{len(trusted)}): {RESET}").strip()
     try:
         idx = int(choice) - 1
         if 0 <= idx < len(dids):
             did = dids[idx]
-            confirm = input(f"  {RED}Are you sure you want to revoke {BOLD}{trusted[did].get('name')}{RESET}? [y/N]: ").strip().lower()
+            confirm = guga_input(f"  {RED}Are you sure you want to revoke {BOLD}{trusted[did].get('name')}{RESET}? [y/N]: ").strip().lower()
             if confirm == 'y':
                 db.delete_trusted_device(did)
                 print(f"\n  {GREEN}✓ Access revoked.{RESET}")
@@ -797,7 +812,7 @@ def run_stop_server(stop_all: bool = False):
     print(f"  {DIM}{'─' * 60}{RESET}")
 
     print(f"  {BOLD}[A] stop all   [1,2,...] choose   [Q] quit{RESET}")
-    choice = input(f"\n  Your choice: ").strip().lower()
+    choice = guga_input(f"\n  Your choice: ").strip().lower()
 
     if choice == 'q' or not choice:
         return
@@ -1099,6 +1114,10 @@ for more details:
         help="Run the server in the background (detached).",
     )
     parser.add_argument(
+        "--choices",
+        help="Pre-fill interactive prompts with comma-separated values (e.g. '1,2,,4' where ,, is default).",
+    )
+    parser.add_argument(
         "--mode",
         choices=["lan", "public"],
         help="Server mode: 'lan' for local network, 'public' for internet (Cloudflare Tunnel).",
@@ -1246,6 +1265,12 @@ def main():
     # ── Proxy modes ───────────────────────────────────────────────────────────
     if args.install_service or args.qr or args.approve or args.rename_device or args.uninstall or args.status or args.url or args.start_server or args.reload_server or args.install_skills or args.mcp or args.mcp_token or args.stop_server or args.blocked or args.unblock or args.revoke:
         from guga.installer import run_system_installer, run_system_uninstaller, run_status, run_url, run_reload
+        import guga.installer
+        
+        if args.choices:
+            global CHOICES
+            CHOICES = [c.strip() for c in args.choices.split(",")]
+            guga.installer.PREFILLED_CHOICES = CHOICES
         if args.uninstall:
             run_system_uninstaller()
             return

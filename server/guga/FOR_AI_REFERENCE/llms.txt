@@ -146,6 +146,7 @@ Shell example:
 ### Other flags
   --silent / -s                            # Suppress guga's own console output
   --server PORT                            # Override the server port (default: 6769)
+  --choices "1,2,,y"                       # Pre-fill interactive prompts for automation
   --version                                # Show version
 
 ---

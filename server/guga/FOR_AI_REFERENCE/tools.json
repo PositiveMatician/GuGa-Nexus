@@ -177,14 +177,18 @@
             "port": {
               "type": "integer",
               "description": "Override server port. Default: 6769."
+            },
+            "choices": {
+              "type": "string",
+              "description": "Pre-fill interactive prompts with comma-separated values (e.g. '1,2,,y')."
             }
           },
           "required": ["action"]
         },
         "cli_mapping": {
-          "start": "guga --start-server --background --mode {mode} --server {port}",
+          "start": "guga --start-server --background --mode {mode} --server {port} --choices \"{choices}\"",
           "stop": "guga --stop-server --all",
-          "approve_all": "guga --approve --all"
+          "approve_all": "guga --approve --all --choices \"{choices}\""
         }
       }
     },
@@ -249,6 +253,34 @@
         "http_mapping": {
           "method": "GET",
           "url": "http://localhost:6769/api/devices"
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "guga_system_setup",
+        "description": "Run the GuGa system installer or uninstaller. Use this to set up the background service, man pages, and AI skills on the Linux machine.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": ["install", "uninstall", "reconfigure", "install_skills"],
+              "description": "The setup action to perform."
+            },
+            "choices": {
+              "type": "string",
+              "description": "Pre-fill interactive prompts with comma-separated values (e.g. '1,2,,y' for mode, notifications, etc.)."
+            }
+          },
+          "required": ["action"]
+        },
+        "cli_mapping": {
+          "install": "guga --install-service --choices \"{choices}\"",
+          "uninstall": "guga --uninstall --choices \"{choices}\"",
+          "reconfigure": "guga --install-service --reconfigure --choices \"{choices}\"",
+          "install_skills": "guga --install-skills"
         }
       }
     }

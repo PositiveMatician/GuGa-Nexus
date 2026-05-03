@@ -61,7 +61,23 @@ class GugaMcpServer:
                                 "enum": ["start", "stop", "approve_all"],
                                 "description": "Action to perform."
                             },
-                            "mode": {"type": "string", "enum": ["lan", "public"], "default": "lan"}
+                            "mode": {"type": "string", "enum": ["lan", "public"], "default": "lan"},
+                            "choices": {"type": "string", "description": "Pre-fill interactive prompts."}
+                        },
+                        "required": ["action"]
+                    }
+                ),
+                types.Tool(
+                    name="system_setup",
+                    description="Run GuGa system installer or uninstaller.",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "action": {
+                                "type": "string",
+                                "enum": ["install", "uninstall", "reconfigure", "install_skills"]
+                            },
+                            "choices": {"type": "string", "description": "Pre-fill interactive prompts."}
                         },
                         "required": ["action"]
                     }
@@ -86,6 +102,8 @@ class GugaMcpServer:
                 return await self._tool_list_devices()
             elif name == "server_control":
                 return await self._tool_server_control(arguments)
+            elif name == "system_setup":
+                return await self._tool_system_setup(arguments)
             else:
                 raise ValueError(f"Unknown tool: {name}")
 
@@ -177,6 +195,10 @@ class GugaMcpServer:
         elif action == "approve_all":
             cmd += ["--approve", "--all"]
         
+        choices = args.get("choices")
+        if choices:
+            cmd += ["--choices", choices]
+        
         try:
             loop = asyncio.get_event_loop()
             # Ensure PYTHONPATH is set so guga can be found
@@ -199,6 +221,38 @@ class GugaMcpServer:
         except Exception as e:
             return [types.TextContent(type="text", text=f"❌ Error: {str(e)}")]
 
+    async def _tool_system_setup(self, args: dict) -> List[types.TextContent]:
+        action = args["action"]
+        choices = args.get("choices")
+        
+        cmd = [sys.executable, "-m", "guga.cli"]
+        if action == "install": cmd += ["--install-service"]
+        elif action == "uninstall": cmd += ["--uninstall"]
+        elif action == "reconfigure": cmd += ["--install-service", "--reconfigure"]
+        elif action == "install_skills": cmd += ["--install-skills"]
+        
+        if choices:
+            cmd += ["--choices", choices]
+            
+        try:
+            loop = asyncio.get_event_loop()
+            env = os.environ.copy()
+            mcp_dir = os.path.dirname(os.path.abspath(__file__))
+            server_root = os.path.dirname(mcp_dir)
+            if server_root not in env.get("PYTHONPATH", ""):
+                env["PYTHONPATH"] = server_root + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
+
+            result = await loop.run_in_executor(
+                None,
+                lambda: subprocess.run(cmd, capture_output=True, text=True, timeout=120, env=env)
+            )
+            if result.returncode == 0:
+                return [types.TextContent(type="text", text=f"✅ {action} successful.\n{result.stdout}")]
+            else:
+                return [types.TextContent(type="text", text=f"❌ {action} failed.\n{result.stderr}")]
+        except Exception as e:
+            return [types.TextContent(type="text", text=f"❌ Error: {str(e)}")]
+
     async def run_stdio(self):
         """Run the server using stdio transport (for local tools)."""
         from mcp.server.stdio import stdio_server
@@ -208,7 +262,7 @@ class GugaMcpServer:
                 write_stream,
                 InitializationOptions(
                     server_name="guga-nexus",
-                    server_version="1.5.0",
+                    server_version="1.5.1",
                     capabilities=self.app.get_capabilities()
                 )
             )

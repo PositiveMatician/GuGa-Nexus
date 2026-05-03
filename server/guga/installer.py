@@ -1,6 +1,6 @@
 """
 GuGa Nexus — System Installer & Configurator
-Version: 1.5.0
+Version: 1.5.1
 
 This module handles the initial setup of the GuGa system on Linux,
 including dependency installation, systemd service generation,
@@ -37,7 +37,18 @@ def ok(msg):    print(f"  {GREEN}✓{RESET}  {msg}")
 def warn(msg):  print(f"  {YELLOW}⚠{RESET}  {msg}")
 def fail(msg):  print(f"\n  {RED}✗  ERROR:{RESET} {msg}\n"); sys.exit(1)
 def dim(msg):   print(f"  {DIM}{msg}{RESET}")
-def ask(msg):   return input(f"  {msg}").strip()
+PREFILLED_CHOICES = []
+_choice_idx = 0
+
+def ask(msg):
+    global _choice_idx
+    if _choice_idx < len(PREFILLED_CHOICES):
+        val = PREFILLED_CHOICES[_choice_idx]
+        _choice_idx += 1
+        print(f"  {msg}{BOLD}{val}{RESET} {DIM}(auto){RESET}")
+        return val
+    return input(f"  {msg}").strip()
+
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_DIR = os.environ.get("GUGA_CONFIG_DIR", os.path.expanduser("~/.guga"))

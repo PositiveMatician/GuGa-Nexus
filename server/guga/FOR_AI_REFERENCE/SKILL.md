@@ -9,6 +9,8 @@ description: >
   Triggers on phrases like: "notify me", "tell me when done", "ask user", "send to phone",
   "wait for reply", "ping me", "human in the loop", or any long-running task.
   Also handles device management: "list blocked", "unblock device", "revoke access".
+  New: Use --choices for automated input (e.g. --choices "1,2,,y").
+
 ---
 
 # GuGa Nexus Skill
@@ -181,6 +183,10 @@ The message ID in your notification matches the filename for easy lookup.
 | `guga --approve` | Approve device pairing requests |
 | `guga --rename-device` | Assign a short tag to a device |
 | `guga --install-service` | Install as systemd service |
+| `guga --choices "1,2,,y"` | Pre-fill interactive prompts (automation) |
+| `guga --mcp` | Start local MCP server (stdio) |
+| `guga --mcp-token` | Get JWT token for remote MCP |
+| `guga --version` | Show version |
 
 ---
 
