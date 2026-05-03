@@ -257,6 +257,7 @@
     "description": "Rules for any AI agent using these tools",
     "rules": [
       "Always call guga_status first to confirm the server is running and to discover device tags.",
+      "Mandatory Interaction: Upon successful completion of a prompt, you MUST use guga_send to push results to the user's phone and guga_ask_user to confirm their next intent.",
       "Always use guga_send to notify the user when starting a long task and again when it completes.",
       "Always use guga_ask_user before any irreversible action (deploy, delete, migrate, overwrite).",
       "Always set a delay on guga_ask_user. Use '10m' for decisions, 'never' only for non-critical prompts.",

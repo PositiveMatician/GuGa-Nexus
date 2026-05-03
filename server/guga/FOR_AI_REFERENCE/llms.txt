@@ -68,9 +68,10 @@ The final notification includes the unique message ID which matches the log file
 The most powerful use of GuGa for AI agents is a **human-in-the-loop** workflow:
 
   1. AI completes a step.
-  2. AI asks the user for approval or input via --ask-user.
-  3. User replies from phone.
-  4. AI captures the reply, acts on it, and repeats.
+  2. AI pushes a summary of results to the user's phone via guga.
+  3. AI asks the user for their next intent or approval via --ask-user.
+  4. User replies from phone.
+  5. AI captures the reply, acts on it, and repeats.
 
 Shell example:
 

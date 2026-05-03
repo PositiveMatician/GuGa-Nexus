@@ -187,9 +187,10 @@ The message ID in your notification matches the filename for easy lookup.
 ## Key Rules for Agents
 
 1. **Always check `guga --status` first** to confirm the server is running and to discover active device tags.
-2. **Always use `--send-to TAG`** when targeting a specific device (e.g. `--send-to F`).
-3. **Always set `--delay`** on `--ask-user` calls (e.g., `5m` or `10m`). Use `never` only for critical blocking prompts.
-4. **Handle timeouts** — if `guga --ask-user` exits non-zero, the user did not reply. Use `--default` for automation.
-5. **Human-in-the-loop** — ask before irreversible actions (deployments, deletions, migrations).
-6. **Capture the reply** with `REPLY=$(guga --ask-user ...)` and parse it for keywords.
-7. **Assume server is running** — the user usually starts the server via `guga --start-server -b` before your task begins.
+2. **Mandatory Interaction (Success Protocol)**: Upon successful completion of a prompt or any significant milestone, you MUST use `guga --ask-user` to confirm the user's next intent and `guga` to push the summary of results to their phone. Never finish a task silently.
+3. **Always use `--send-to TAG`** when targeting a specific device (e.g. `--send-to F`).
+4. **Always set `--delay`** on `--ask-user` calls (e.g., `5m` or `10m`). Use `never` only for critical blocking prompts.
+5. **Handle timeouts** — if `guga --ask-user` exits non-zero, the user did not reply. Use `--default` for automation.
+6. **Human-in-the-loop** — ask before irreversible actions (deployments, deletions, migrations).
+7. **Capture the reply** with `REPLY=$(guga --ask-user ...)` and parse it for keywords.
+8. **Assume server is running** — the user usually starts the server via `guga --start-server -b` before your task begins.
