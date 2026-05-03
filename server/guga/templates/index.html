@@ -430,19 +430,12 @@
         document.getElementById('replyBar').classList.add('active');
         document.getElementById('replyText').textContent = 'Replying to: ' + text;
         const input = document.getElementById('cmdInput');
-        if (!input.value.toLowerCase().startsWith('reply ')) {
-            input.value = 'reply ' + input.value;
-        }
         input.focus();
     }
 
     function cancelReply() {
         currentReplyId = null;
         document.getElementById('replyBar').classList.remove('active');
-        const input = document.getElementById('cmdInput');
-        if (input.value.toLowerCase().startsWith('reply ')) {
-            input.value = input.value.substring(6);
-        }
     }
 
     function onKey(e) { if (e.key === 'Enter') sendCommand(); }
@@ -591,7 +584,7 @@
         addBubble('usr', text);
         
         // Attach request_id if we are in reply mode
-        if (currentReplyId && payload.phrase.toLowerCase().startsWith('reply ')) {
+        if (currentReplyId) {
             payload.request_id = currentReplyId;
             cancelReply(); // Reset UI after sending
         }

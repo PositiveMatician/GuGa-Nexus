@@ -55,11 +55,15 @@ async def antigravity_run_command(text: str, request_id: str = None):
         # Prepare full payload
         full_payload = clean_text
         if context:
-            full_payload += f"\n\n--- CONTEXT ---\n{context}\n--- END ---\n"
+            full_payload += f"\n--- CONTEXT ---\n{context}\n--- END ---\n"
 
-        # Use asyncio.sleep instead of time.sleep to keep the event loop alive
+        # 0. Focus window/app (Windows + T -> type 'antigravity' -> Enter)
+        await asyncio.to_thread(pyautogui.hotkey, 'win', 't')
+        await asyncio.sleep(0.3)
+        await asyncio.to_thread(pyautogui.write, 'antigravity', interval=0.01)
+        await asyncio.to_thread(pyautogui.press, 'enter')
         await asyncio.sleep(0.5)
-        
+
         # 1. Open search (Ctrl+Shift+F)
         await asyncio.to_thread(pyautogui.hotkey, 'ctrl', 'shift', 'f')
         await asyncio.sleep(0.3)

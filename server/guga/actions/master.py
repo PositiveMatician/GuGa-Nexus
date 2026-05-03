@@ -26,16 +26,16 @@ async def run_command(command: str, client: str, request_id: str = None):
     cmd_lower = command.lower().strip()
 
     # 1. Check specific keyword handlers
-    if "antigravity" in cmd_lower:
+    if cmd_lower.startswith("antigravity"):
         if request_id:
             return await antigravity.antigravity_run_command(command , request_id=request_id)
         else:
             return await antigravity.antigravity_run_command(command)
 
-    elif "sendto" in cmd_lower:
+    elif cmd_lower.startswith("sendto"):
         return await sendto.sendto_run_command(command, sender=client)
 
-    elif "reply" in cmd_lower and request_id:
+    elif cmd_lower.startswith("reply") and request_id:
         return await sendto.sendto_run_command(command, sender=client, request_id=request_id)
     
     # 2. Check static command registry
