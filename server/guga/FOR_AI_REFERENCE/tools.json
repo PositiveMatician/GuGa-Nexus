@@ -159,6 +159,38 @@
     {
       "type": "function",
       "function": {
+        "name": "guga_server_control",
+        "description": "Control the GuGa backend server. Use this to start the server in the background, stop background servers, or approve pairing requests non-interactively.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": ["start", "stop", "approve_all"],
+              "description": "The action to perform: 'start' (background), 'stop' (kills all), 'approve_all' (approves all pending)."
+            },
+            "mode": {
+              "type": "string",
+              "enum": ["lan", "public"],
+              "description": "Server mode for 'start' action. Default: 'lan'."
+            },
+            "port": {
+              "type": "integer",
+              "description": "Override server port. Default: 6769."
+            }
+          },
+          "required": ["action"]
+        },
+        "cli_mapping": {
+          "start": "guga --start-server --background --mode {mode} --server {port}",
+          "stop": "guga --stop-server --all",
+          "approve_all": "guga --approve --all"
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
         "name": "guga_status",
         "description": "Query the GuGa server for its current status, including whether it is active, its address, and the list of connected devices with their IDs and tags. Use this to discover which device tags are available before calling guga_send or guga_ask_user.",
         "parameters": {

@@ -20,6 +20,19 @@ Devices can be given short tags via `guga --rename-device` (e.g. the tag `F`).
 
 ---
 
+## Preparation — Check Server Status
+
+Before sending notifications or asking questions, always verify that the GuGa server is running and discover the active public URL or connected devices.
+
+```bash
+guga --status
+```
+*Look for:*
+- **address**: The local or public URL (e.g. `https://...trycloudflare.com`). Use this if you need to provide a link to the user.
+- **connected devices**: Note the `Tag` (e.g., `F`) or `Device ID` to target specific devices.
+
+---
+
 ## Core Patterns
 
 ### Pattern 1 — Notify when done
@@ -156,6 +169,9 @@ The message ID in your notification matches the filename for easy lookup.
 | `guga -r --look-for "REGEX" CMD` | Notify on regex match in output |
 | `guga -r -i --send-to TAG CMD` | Run interactively, forward prompts |
 | `guga -r -i --expect "REGEX" CMD` | Custom regex for prompt detection |
+| `guga --start-server -b` | Start server in background |
+| `guga --stop-server -A` | Stop all background servers |
+| `guga --approve -A` | Approve all pending clients |
 | `guga --status` | Show server status & devices |
 | `guga --qr` | Show pairing QR code |
 | `guga --approve` | Approve device pairing requests |
@@ -166,10 +182,10 @@ The message ID in your notification matches the filename for easy lookup.
 
 ## Key Rules for Agents
 
-1. **Always use `--send-to TAG`** when targeting a specific device (e.g. `--send-to F`).
-2. **Always set `--delay`** on `--ask-user` calls. Use `5m` or `10m` for decisions; `never` for no timeout.
-3. **Always handle timeout** — if `guga --ask-user` exits non-zero, the user did not reply.
-4. **Notify before AND after** long tasks — once when starting, once when complete.
-5. **Ask before irreversible actions** — deployments, migrations, deletions.
+1. **Always check `guga --status` first** to confirm the server is running and to discover active device tags.
+2. **Always use `--send-to TAG`** when targeting a specific device (e.g. `--send-to F`).
+3. **Always set `--delay`** on `--ask-user` calls (e.g., `5m` or `10m`). Use `never` only for critical blocking prompts.
+4. **Handle timeouts** — if `guga --ask-user` exits non-zero, the user did not reply. Use `--default` for automation.
+5. **Human-in-the-loop** — ask before irreversible actions (deployments, deletions, migrations).
 6. **Capture the reply** with `REPLY=$(guga --ask-user ...)` and parse it for keywords.
-7. The GuGa server must be running (`guga --start-server` or as a systemd service).
+7. **Assume server is running** — the user usually starts the server via `guga --start-server -b` before your task begins.

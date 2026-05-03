@@ -125,9 +125,14 @@ Shell example:
   guga -r -i --expect REGEX COMMAND       # Use custom regex for prompt detection
 
 ### Setup & pairing
-  guga --start-server                      # Start the GuGa backend server
+  guga --start-server                      # Start the GuGa backend server (foreground)
+  guga --start-server --background         # Start server in the background (detached)
+  guga --start-server --mode public        # Start with internet access (Cloudflare Tunnel)
   guga --qr                                # Show pairing QR code for Android app
   guga --approve                           # Approve pending pairing requests
+  guga --approve --all                     # Approve all pending requests non-interactively
+  guga --stop-server                       # List and stop background servers
+  guga --stop-server --all                 # Stop all background servers non-interactively
   guga --status                            # Show server status and connected devices
   guga --rename-device                     # Assign a short tag to a device (e.g. "F")
   guga --install-service                   # Install as a systemd background service

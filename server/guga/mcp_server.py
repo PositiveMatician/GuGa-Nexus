@@ -8,6 +8,8 @@ from mcp.server import Server, NotificationOptions
 from mcp.server.models import InitializationOptions
 import mcp.types as types
 import requests
+import sys
+import subprocess
 
 # We'll use this to talk to the local GuGa server if running in stdio mode
 # or we'll define a way to inject the local logic if running in SSE mode.
@@ -49,6 +51,22 @@ class GugaMcpServer:
                     }
                 ),
                 types.Tool(
+                    name="server_control",
+                    description="Control the GuGa backend server (start background, stop all, or approve all clients).",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "action": {
+                                "type": "string",
+                                "enum": ["start", "stop", "approve_all"],
+                                "description": "Action to perform."
+                            },
+                            "mode": {"type": "string", "enum": ["lan", "public"], "default": "lan"}
+                        },
+                        "required": ["action"]
+                    }
+                ),
+                types.Tool(
                     name="list_devices",
                     description="List all connected and paired GuGa devices.",
                     inputSchema={
@@ -66,6 +84,8 @@ class GugaMcpServer:
                 return await self._tool_ask_user(arguments)
             elif name == "list_devices":
                 return await self._tool_list_devices()
+            elif name == "server_control":
+                return await self._tool_server_control(arguments)
             else:
                 raise ValueError(f"Unknown tool: {name}")
 
@@ -142,6 +162,40 @@ class GugaMcpServer:
                 return [types.TextContent(type="text", text=output)]
             else:
                 return [types.TextContent(type="text", text=f"❌ Failed to list devices: {response.text}")]
+        except Exception as e:
+            return [types.TextContent(type="text", text=f"❌ Error: {str(e)}")]
+
+    async def _tool_server_control(self, args: dict) -> List[types.TextContent]:
+        action = args["action"]
+        mode = args.get("mode", "lan")
+        
+        cmd = [sys.executable, "-m", "guga.cli"]
+        if action == "start":
+            cmd += ["--start-server", "--background", "--mode", mode]
+        elif action == "stop":
+            cmd += ["--stop-server", "--all"]
+        elif action == "approve_all":
+            cmd += ["--approve", "--all"]
+        
+        try:
+            loop = asyncio.get_event_loop()
+            # Ensure PYTHONPATH is set so guga can be found
+            env = os.environ.copy()
+            # The 'guga' package is inside the 'server' directory
+            # If mcp_server.py is in server/guga/mcp_server.py, then server/ is root
+            mcp_dir = os.path.dirname(os.path.abspath(__file__))
+            server_root = os.path.dirname(mcp_dir)
+            if server_root not in env.get("PYTHONPATH", ""):
+                env["PYTHONPATH"] = server_root + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
+
+            result = await loop.run_in_executor(
+                None,
+                lambda: subprocess.run(cmd, capture_output=True, text=True, timeout=40, env=env)
+            )
+            if result.returncode == 0:
+                return [types.TextContent(type="text", text=f"✅ {action} successful.\n{result.stdout}")]
+            else:
+                return [types.TextContent(type="text", text=f"❌ {action} failed.\n{result.stderr}")]
         except Exception as e:
             return [types.TextContent(type="text", text=f"❌ Error: {str(e)}")]
 

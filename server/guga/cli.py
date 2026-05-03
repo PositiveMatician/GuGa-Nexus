@@ -454,7 +454,7 @@ def run_command(cmd_args: List[str], port: int, silent: bool, title: str, target
     sys.exit(exit_code)
 
 
-def guga_approve(port: int, watch: bool = False):
+def guga_approve(port: int, watch: bool = False, approve_all: bool = False):
     """Interactive loop to approve pending pairings."""
     base_url = f"http://localhost:{port}/api"
     
@@ -466,6 +466,18 @@ def guga_approve(port: int, watch: bool = False):
         except Exception as e:
             print(f"  {RED}✗{RESET} Error reaching server: {e}")
             return []
+
+    if approve_all:
+        pending = get_pending()
+        if not pending:
+            print(f"  {DIM}No pending requests to approve.{RESET}")
+            return
+        for p in pending:
+            payload = json.dumps({"device_id": p['device_id'], "action": "approve"}).encode()
+            req = urllib.request.Request(f"{base_url}/approve", data=payload, headers={"Content-Type": "application/json"}, method="POST")
+            urllib.request.urlopen(req)
+        print(f"  {GREEN}✓ Approved {len(pending)} devices.{RESET}")
+        return
 
     def format_time(ts: float) -> str:
         diff = int(time.time() - ts)
@@ -610,6 +622,169 @@ def guga_rename_device(port: int):
     except ValueError:
         print(f"  {RED}Invalid input.{RESET}")
 
+def run_stop_server(stop_all: bool = False):
+    """Interactive manager or non-interactive terminator for background GuGa servers."""
+    registry_path = os.path.join(CONFIG_DIR, "active_servers.json")
+    if not os.path.exists(registry_path):
+        print(f"\n  {DIM}No background servers registered.{RESET}\n")
+        return
+
+    try:
+        with open(registry_path, "r") as f:
+            registry = json.load(f)
+    except Exception:
+        print(f"  {RED}Error reading server registry.{RESET}")
+        return
+
+    # Filter out dead processes
+    active = []
+    for s in registry:
+        pid = s.get("pid")
+        if pid:
+            try:
+                os.kill(pid, 0)
+                active.append(s)
+            except OSError:
+                pass
+    
+    if not active:
+        print(f"\n  {DIM}No active background servers found.{RESET}\n")
+        if os.path.exists(registry_path):
+            os.remove(registry_path)
+        return
+
+    if stop_all:
+        print(f"  {CYAN}⚙{RESET} Stopping all {len(active)} background servers...")
+        for s in active:
+            pid = s.get("pid")
+            port = s.get("port")
+            try:
+                os.kill(pid, 15)
+                print(f"  {GREEN}✓ Stopped server on port {port}{RESET}")
+            except: pass
+        if os.path.exists(registry_path):
+            os.remove(registry_path)
+        return
+
+    # Print list in --approve style
+    print(f"\n  {DIM}{'─' * 60}{RESET}")
+    print(f"   {BOLD}Active Background GuGa Servers{RESET}")
+    print(f"  {DIM}{'─' * 60}{RESET}")
+    for i, s in enumerate(active):
+        port = str(s.get("port")).ljust(6)
+        mode = s.get("mode", "lan").upper().ljust(8)
+        pid = str(s.get("pid")).ljust(6)
+        start_time = s.get("start_time", "Unknown")
+        print(f"  {i+1})  Port: {BOLD}{port}{RESET} Mode: {CYAN}{mode}{RESET} PID: {DIM}{pid}{RESET} Started: {start_time}")
+    print(f"  {DIM}{'─' * 60}{RESET}")
+
+    print(f"  {BOLD}[A] stop all   [1,2,...] choose   [Q] quit{RESET}")
+    choice = input(f"\n  Your choice: ").strip().lower()
+
+    if choice == 'q' or not choice:
+        return
+
+    to_stop = []
+    if choice == 'a':
+        to_stop = active
+    else:
+        try:
+            indices = [int(x.strip()) - 1 for x in choice.replace(',', ' ').split() if x.strip().isdigit()]
+            to_stop = [active[i] for i in indices if 0 <= i < len(active)]
+        except Exception:
+            print(f"  {RED}Invalid input.{RESET}")
+            return
+
+    for s in to_stop:
+        pid = s.get("pid")
+        port = s.get("port")
+        try:
+            print(f"  Stopping server on port {port} (PID {pid})...")
+            os.kill(pid, 15) # SIGTERM
+            active = [x for x in active if x["pid"] != pid]
+            print(f"  {GREEN}✓ Stopped{RESET}")
+        except Exception as e:
+            print(f"  {RED}✗ Failed to stop PID {pid}: {e}{RESET}")
+
+    # Update registry file
+    if active:
+        with open(registry_path, "w") as f:
+            json.dump(active, f)
+    else:
+        if os.path.exists(registry_path):
+            os.remove(registry_path)
+
+def spawn_background_server(port: int, mode: str):
+    """Spawns the GuGa server as a detached background process."""
+    log_dir = os.path.join(CONFIG_DIR, "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, f"server_{port}.log")
+    
+    # Use the same executable and module
+    cmd = [sys.executable, "-m", "guga.cli", "--start-server", "--server", str(port), "--mode", mode]
+    
+    # Ensure the environment includes the correct PYTHONPATH
+    env = os.environ.copy()
+    # The 'guga' package is inside the 'server' directory
+    # If cli.py is in server/guga/cli.py, then server/ is the package root
+    cli_dir = os.path.dirname(os.path.abspath(__file__)) # .../server/guga
+    server_root = os.path.dirname(cli_dir) # .../server
+    
+    if server_root not in env.get("PYTHONPATH", ""):
+        env["PYTHONPATH"] = server_root + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
+
+    print(f"  {CYAN}⚙{RESET} Spawning background server on port {port} ({mode})...")
+    
+    with open(log_file, "w") as f:
+        # On Linux, we use start_new_session=True to detach from the parent terminal
+        try:
+            p = subprocess.Popen(cmd, stdout=f, stderr=f, start_new_session=True, env=env)
+        except Exception as e:
+            print(f"  {RED}✗ Failed to spawn background process: {e}{RESET}")
+            return
+    
+    # Register it
+    registry_path = os.path.join(CONFIG_DIR, "active_servers.json")
+    registry = []
+    if os.path.exists(registry_path):
+        try:
+            with open(registry_path, "r") as f:
+                registry = json.load(f)
+        except: pass
+    
+    registry.append({
+        "pid": p.pid,
+        "port": port,
+        "mode": mode,
+        "start_time": time.strftime("%Y-%m-%d %H:%M:%S")
+    })
+    
+    with open(registry_path, "w") as f:
+        json.dump(registry, f)
+
+    # Tail the log until URL is found
+    print(f"  {DIM}Waiting for server to initialize...{RESET}")
+    found_url = False
+    start_wait = time.time()
+    while time.time() - start_wait < 30: # 30s timeout
+        if os.path.exists(log_file):
+            with open(log_file, "r") as f:
+                lines = f.readlines()
+                for line in reversed(lines):
+                    if "TUNNEL URL:" in line or "manual address" in line or "address   http" in line:
+                        print(f"\n  {GREEN}✓ Server is up!{RESET}")
+                        print(f"  {line.strip()}")
+                        found_url = True
+                        break
+        if found_url: break
+        time.sleep(1)
+    
+    if not found_url:
+        print(f"  {YELLOW}⚠{RESET} Server started but URL discovery timed out.")
+        print(f"    Check logs: {log_file}")
+    
+    print(f"  {DIM}Background server running (PID: {p.pid}). Use 'guga --stop-server' to stop it.{RESET}")
+
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
@@ -749,6 +924,11 @@ for more details:
         action="store_true",
         help="Reload (restart) the background GuGa service.",
     )
+    proxy_mode.add_argument(
+        "--stop-server",
+        action="store_true",
+        help="Stop one or more background GuGa servers.",
+    )
     parser.add_argument(
         "--watch",
         action="store_true",
@@ -769,6 +949,11 @@ for more details:
         "--start-server",
         action="store_true",
         help="Start the GuGa server in the foreground.",
+    )
+    parser.add_argument(
+        "-b", "--background",
+        action="store_true",
+        help="Run the server in the background (detached).",
     )
     parser.add_argument(
         "--mode",
@@ -826,6 +1011,11 @@ for more details:
         action="store_true",
         default=defaults["silent"],
         help="Suppress guga's own output.",
+    )
+    parser.add_argument(
+        "-A", "--all",
+        action="store_true",
+        help="Apply action to ALL (e.g. approve all clients or stop all servers) without asking.",
     )
     parser.add_argument(
         "-t", "-f", "--from", "--title",
@@ -911,13 +1101,16 @@ def main():
     args = parse_args()
     
     # ── Proxy modes ───────────────────────────────────────────────────────────
-    if args.install_service or args.qr or args.approve or args.rename_device or args.uninstall or args.status or args.url or args.start_server or args.reload_server or args.install_skills or args.mcp or args.mcp_token:
+    if args.install_service or args.qr or args.approve or args.rename_device or args.uninstall or args.status or args.url or args.start_server or args.reload_server or args.install_skills or args.mcp or args.mcp_token or args.stop_server:
         from guga.installer import run_system_installer, run_system_uninstaller, run_status, run_url, run_reload
         if args.uninstall:
             run_system_uninstaller()
             return
         if args.status:
             run_status()
+            return
+        if args.stop_server:
+            run_stop_server(stop_all=args.all)
             return
         if args.url:
             run_url()
@@ -926,12 +1119,15 @@ def main():
             run_reload()
             return
         if args.approve:
-            guga_approve(args.server, watch=args.watch)
+            guga_approve(args.server, watch=args.watch, approve_all=args.all)
             return
         if args.rename_device:
             guga_rename_device(args.server)
             return
         if args.start_server:
+            if args.background:
+                spawn_background_server(args.server, args.mode or "lan")
+                return
             try:
                 from guga.daemon import run_server
                 run_server(mode=args.mode, port=args.server)
