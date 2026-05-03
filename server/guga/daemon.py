@@ -1614,7 +1614,7 @@ def run_server(mode: Optional[str] = None, port: Optional[int] = None):
     print()
     
     final_url = tunnel_url if tunnel_url else f"http://{get_local_ip()}:{port}"
-    print(f"  {DIM}address{RESET}   {BOLD}{final_url}{RESET}")
+    print(f"  {DIM}address{RESET}   {BOLD}{final_url}{RESET}\033[8m[GUGA_URL] {final_url}\033[0m")
     print(f"  {DIM}mode{RESET}      {BOLD}{mode.upper()}{RESET}")
     os_status = f"{GREEN}enabled{RESET}" if os_notif_enabled else f"{DIM}disabled{RESET}"
     print(f"  {DIM}os notif{RESET}  {os_status}")
@@ -1630,6 +1630,15 @@ def run_server(mode: Optional[str] = None, port: Optional[int] = None):
 
     # ── QR code ───────────────────────────────────────────────────────────────
     generate_qr(final_url, inverted=QR_INVERTED, show_gui=QR_SHOW_GUI)
+
+    # Save current URL for standalone tools (like guga --qr) to find easily
+    url_file = os.path.join(CONFIG_DIR, "current_url")
+    try:
+        with open(url_file, "w") as f:
+            f.write(final_url)
+        atexit.register(lambda: (os.remove(url_file) if os.path.exists(url_file) else None))
+    except Exception:
+        pass
 
     print(f"  {DIM}manual address →{RESET}  {BOLD}{final_url}{RESET}")
     print(f"  {DIM}press Ctrl+C to stop{RESET}")

@@ -889,6 +889,12 @@ def spawn_background_server(port: int, mode: str):
             with open(log_file, "r") as f:
                 lines = f.readlines()
                 for line in reversed(lines):
+                    if "[GUGA_URL]" in line:
+                        url = line.split("[GUGA_URL]")[1].strip().split("\033")[0].strip()
+                        print(f"\n  {GREEN}✓ Server is up!{RESET}")
+                        print(f"  {DIM}address →{RESET}  {BOLD}{url}{RESET}")
+                        found_url = True
+                        break
                     if "TUNNEL URL:" in line or "manual address" in line or "address   http" in line:
                         print(f"\n  {GREEN}✓ Server is up!{RESET}")
                         print(f"  {line.strip()}")

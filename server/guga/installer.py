@@ -18,6 +18,11 @@ import json
 
 from .db_utils import Database
 from .lock_utils import FileLock
+from dotenv import load_dotenv
+
+env_path = os.path.join(os.environ.get("GUGA_CONFIG_DIR", os.path.expanduser("~/.guga")), ".env")
+if os.path.exists(env_path):
+    load_dotenv(env_path)
 
 db = Database()
 
@@ -156,7 +161,7 @@ def download_cloudflared():
 # ─────────────────────────────────────────────────────────────────────────────
 # 4. .env configuration
 # ─────────────────────────────────────────────────────────────────────────────
-def ensure_env_exists(mode: str, os_notif: str, force: bool = False):
+def ensure_env_exists(mode: str, os_notif: str, force: bool = False, use_journalctl: bool = True):
     step("Writing configuration…")
 
     env_file = os.path.join(CONFIG_DIR, ".env")
@@ -166,6 +171,7 @@ def ensure_env_exists(mode: str, os_notif: str, force: bool = False):
         "ENABLE_OS_NOTIFICATIONS": os_notif,
         "ALERTER_SERVER_URL":     "http://localhost:6769/send",
         "GUGA_VERBOSE":           "false",
+        "USE_JOURNALCTL":         "true" if use_journalctl else "false",
     }
 
     if not os.path.exists(env_file):
@@ -185,7 +191,7 @@ def ensure_env_exists(mode: str, os_notif: str, force: bool = False):
                 continue
                 
             k = line.split("=", 1)[0].strip()
-            if force and k in ["MODE", "ENABLE_OS_NOTIFICATIONS"]:
+            if force and k in ["MODE", "ENABLE_OS_NOTIFICATIONS", "USE_JOURNALCTL"]:
                 if line.strip() != f"{k}={defaults[k]}":
                     new_lines.append(f"{k}={defaults[k]}")
                     updated = True
@@ -323,30 +329,71 @@ def install_systemd_service():
 
 
 def get_cloudflare_url(timeout=15):
-    import subprocess, re, time
+    import subprocess, re, time, os, glob
     start = time.time()
-    url_pattern = re.compile(r"https://[-a-z0-9]+\.trycloudflare\.com", flags=re.IGNORECASE)
+    url_pattern = re.compile(r"https://(?!api)[-a-z0-9]+\.trycloudflare\.com", flags=re.IGNORECASE)
+    tag_pattern = re.compile(r"\[GUGA_URL\]\s*(https?://[^\s\033]+)")
     
-    while time.time() - start < timeout:
+    # 0. Check for the explicit current_url file first (fastest/most reliable)
+    url_file = os.path.join(CONFIG_DIR, "current_url")
+    if os.path.exists(url_file):
         try:
-            log = subprocess.check_output(
-                ["journalctl", "-u", "guga", "-n", "80", "--no-pager"],
-                text=True, 
-                stderr=subprocess.DEVNULL
-            )
-            
-            spawn_idx = log.rfind("spawning public tunnel")
-            if spawn_idx != -1:
-                matches = url_pattern.findall(log[spawn_idx:])
-                if matches:
-                    return matches[-1]
-            else:
-                matches = url_pattern.findall(log)
-                if matches:
-                    return matches[-1]
+            # Only use it if it's "fresh" (modified in the last 10 minutes)
+            if time.time() - os.path.getmtime(url_file) < 600:
+                with open(url_file, "r") as f:
+                    url = f.read().strip()
+                    if url: return url
         except Exception:
             pass
+
+    while time.time() - start < timeout:
+        # 1. Try journalctl (for background systemd service)
+        use_journalctl = os.getenv("USE_JOURNALCTL", "true").lower() == "true"
+        if use_journalctl and shutil.which("journalctl"):
+            try:
+                log = subprocess.check_output(
+                    ["journalctl", "-u", "guga", "-n", "80", "--no-pager"],
+                    text=True, 
+                    stderr=subprocess.DEVNULL
+                )
+                
+                # Try the new tag first
+                tag_match = tag_pattern.search(log)
+                if tag_match:
+                    return tag_match.group(1)
+
+                spawn_idx = log.rfind("spawning public tunnel")
+                if spawn_idx != -1:
+                    matches = url_pattern.findall(log[spawn_idx:])
+                    if matches:
+                        return matches[-1]
+                else:
+                    matches = url_pattern.findall(log)
+                    if matches:
+                        return matches[-1]
+            except Exception:
+                pass
             
+        # 2. Try scanning local log files (for foreground or Colab/Docker background servers)
+        log_dir = os.path.join(CONFIG_DIR, "logs")
+        if os.path.exists(log_dir):
+            # Sort by modification time, newest first
+            log_files = sorted(glob.glob(os.path.join(log_dir, "*.log")), key=os.path.getmtime, reverse=True)
+            for log_file in log_files[:3]: # Check last 3 logs
+                try:
+                    with open(log_file, "r") as f:
+                        content = f.read()
+                        # Tag search
+                        tag_match = tag_pattern.search(content)
+                        if tag_match:
+                            return tag_match.group(1)
+                        # Generic pattern search
+                        matches = url_pattern.findall(content)
+                        if matches:
+                            return matches[-1]
+                except Exception:
+                    pass
+
         time.sleep(1)
         
     return None
@@ -596,10 +643,11 @@ def run_system_installer(qr_only=False, setup_only=False, install_skills_flag=Fa
         print()
         adv_choice = ask("Your choice [1/2]: ")
         foreground_only = (adv_choice.strip() == "2")
+        use_journalctl = not foreground_only
 
         stages = [
             Stage("system_packages", "System Dependencies", True, install_linux_packages),
-            Stage("env_config", "Configuration", False, lambda: ensure_env_exists(mode, os_notif, force=reconfigure)),
+            Stage("env_config", "Configuration", False, lambda: ensure_env_exists(mode, os_notif, force=reconfigure, use_journalctl=use_journalctl)),
             Stage("man_page", "Manual Page", True, setup_man_page, check_man),
         ]
 
