@@ -4,3 +4,5 @@
 
 3. The browser client needs a setting section. Android now has a settings section, animations, sounds, and a hide input toggle. ✅ (Android part done)
 
+4. What happens when I send a command while replying to a non question message? does it include the previous message in the command? and is it sent to the same client?
+

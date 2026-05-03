@@ -163,6 +163,7 @@ if not MCP_JWT_SECRET:
 
 import jwt
 from .mcp_server import create_mcp_app
+from .actions import master
 from mcp.server.sse import SseServerTransport
 
 mcp_handler = create_mcp_app(f"http://localhost:{PORT}")
@@ -983,7 +984,7 @@ async def handle_command_api():
     if not command:
         return jsonify({"error": "No command"}), 400
     log_event("→", CYAN, "command (HTTP)", f"{device_id}: {command!r}")
-    response_msg = process_command(command)
+    response_msg = await master.run_command(command, client=device_id)
     for sid in get_sids_by_device(device_id):
         await send_private_message(sid, response_msg["message"], response_msg["title"])
     return jsonify({"ok": True}), 200
@@ -1412,19 +1413,13 @@ async def command_worker():
 
             # Process as normal command
             log_event("⚙", CYAN, "processing command", f"{device_id}: {command!r}")
-            response_msg = process_command(command)
+            response_msg = await master.run_command(command, client=device_id)
             await send_private_message(sid, response_msg["message"], response_msg["title"])
         except Exception as e:
             log_event("✗", RED, "worker error", str(e))
         finally:
             await asyncio.sleep(0) # Yield
 
-def process_command(command: str) -> dict:
-    """Take the command and return a temporary not found message."""
-    return {
-        "title": "System",
-        "message": f"Command '{command}' not found. Please wait for the admin to update the command list."
-    }
  
 def cache_message(device_id: str, message_data: dict, msg_id: str = None) -> str:
     """Assigns a unique ID, caches the message, and returns the message ID."""
