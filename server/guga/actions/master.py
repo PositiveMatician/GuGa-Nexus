@@ -52,5 +52,5 @@ async def run_command(command: str, client: str, request_id: str = None):
     # 4. Final fallback
     return {
         "title": "System",
-        "message": f"Command '{command}' not recognized. Type 'help' for available commands."
+        "message": f"Command '{command}'{request_id}{client} not recognized. Type 'help' for available commands."
     }

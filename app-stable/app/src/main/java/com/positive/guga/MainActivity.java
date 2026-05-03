@@ -918,8 +918,11 @@ public class MainActivity extends AppCompatActivity {
         
         if (isBypassActive) {
             intent.putExtra("request_id", "None");
-        } else if (pendingReplyRequestId != null) {
-            intent.putExtra("request_id", pendingReplyRequestId);
+        } else {
+            String rid = (pendingReplyRequestId != null) ? pendingReplyRequestId : pendingReplyMessageId;
+            if (rid != null) {
+                intent.putExtra("request_id", rid);
+            }
         }
         
         if (pendingReplyMessageId != null) {

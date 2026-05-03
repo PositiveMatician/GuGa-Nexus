@@ -238,28 +238,29 @@ public class GuGaService extends Service implements TextToSpeech.OnInitListener 
                 String message;
                 String title = null;
 
+                String messageId = null;
+                String requestId = null;
+                boolean isAsk = false;
+
                 if (currentToken != null && payload.has("iv") && payload.has("ciphertext")) {
                     String decryptedJson = CryptoUtils.decrypt(payload, currentToken);
                     JSONObject decryptedObj = new JSONObject(decryptedJson);
                     message = decryptedObj.getString("message");
-                    if (decryptedObj.has("title")) {
-                        title = decryptedObj.getString("title");
-                    }
+                    title = decryptedObj.optString("title", null);
+                    messageId = decryptedObj.optString("unique_message_id", null);
+                    requestId = decryptedObj.optString("request_id", null);
+                    isAsk = decryptedObj.optBoolean("is_ask", false);
                 } else {
                     message = payload.getString("message");
-                    if (payload.has("title")) {
-                        title = payload.getString("title");
-                    }
+                    title = payload.optString("title", null);
+                    messageId = payload.optString("unique_message_id", null);
+                    requestId = payload.optString("request_id", null);
+                    isAsk = payload.optBoolean("is_ask", false);
                 }
 
                 Intent intent = new Intent("com.positive.guga.GUGA_RESPONSE");
                 intent.putExtra("message", message);
                 if (title != null) intent.putExtra("title", title);
-
-                String messageId = payload.optString("unique_message_id", null);
-                String requestId = payload.optString("request_id", null);
-                boolean isAsk = payload.optBoolean("is_ask", false);
-
                 if (messageId != null) intent.putExtra("message_id", messageId);
                 if (requestId != null) intent.putExtra("request_id", requestId);
                 intent.putExtra("is_ask", isAsk);

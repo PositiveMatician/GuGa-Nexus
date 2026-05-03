@@ -496,9 +496,12 @@ async def handle_command_api():
         log_event("✗", RED, "decrypt failed", str(e))
         return jsonify({"error": f"Decryption failed: {str(e)}"}), 400
 
+    request_id = phrase_obj.get("request_id")
+    message_id = phrase_obj.get("message_id")
+    
     if not command:
         return jsonify({"error": "No command"}), 400
-    log_event("→", CYAN, "command (HTTP)", f"{device_id}: {command!r}")
+    log_event("→", CYAN, "command (HTTP)", f"{device_id} (req: {request_id}): {command!r}")
     response_msg = await master.run_command(command, client=device_id, request_id=request_id)
     for sid in get_sids_by_device(device_id):
         await send_private_message(sid, response_msg["message"], response_msg["title"])
@@ -849,7 +852,7 @@ async def handle_command(sid, data):
         await sio.emit("error", {"message": f"Processing error: {str(e)}"}, to=sid)
         return
 
-    log_event("→", CYAN, "command queued", f"{device_id}: {command!r}")
+    log_event("→", CYAN, "command queued", f"{device_id} (req: {request_id}): {command!r}")
     
     await command_queue.put({
         "device_id": device_id,
