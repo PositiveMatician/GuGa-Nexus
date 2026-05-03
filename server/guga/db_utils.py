@@ -131,7 +131,7 @@ class Database:
             # Update stages
             conn.execute("DELETE FROM installed_stages")
             for stage in data.get("installed_stages", []):
-                conn.execute("INSERT INTO installed_stages (stage_id) VALUES (?)", (stage,))
+                conn.execute("INSERT OR IGNORE INTO installed_stages (stage_id) VALUES (?)", (stage,))
             
             # Update capabilities
             conn.execute("DELETE FROM capabilities")

@@ -1547,15 +1547,15 @@ def stop_alerter():
 atexit.register(stop_alerter)
 
 # ── Global Initialization (Runs even under Gunicorn) ────────────────────────
-def initialize_system():
+def initialize_system(mode: Optional[str] = None, port: Optional[int] = None):
     global tunnel_url
     
     # 1. Start Alerter
     start_alerter()
 
     # 2. Check for Public Mode / Cloudflare Tunnel
-    mode = os.getenv("MODE", "lan").lower()
-    port = int(os.getenv("PORT", 6769))
+    mode = mode or os.getenv("MODE", "lan").lower()
+    port = port or int(os.getenv("PORT", 6769))
     
     if mode == "public":
         tunnel_url = start_cloudflare_tunnel(port)
@@ -1568,15 +1568,20 @@ def initialize_system():
         else:
             log_event("⚠", YELLOW, "tunnel failed", "falling back to LAN")
 
-# Only run initialization ONCE at module import time
-if not os.environ.get("GUGA_INITIALIZED"):
+# Only run initialization ONCE at module import time if not explicitly called by run_server
+if not os.environ.get("GUGA_INITIALIZED") and __name__ == "__main__":
     os.environ["GUGA_INITIALIZED"] = "true"
     initialize_system()
 
-def run_server():
+def run_server(mode: Optional[str] = None, port: Optional[int] = None):
+    # Ensure system is initialized with the correct parameters
+    if not os.environ.get("GUGA_INITIALIZED"):
+        os.environ["GUGA_INITIALIZED"] = "true"
+        initialize_system(mode=mode, port=port)
+    
     os_notif_enabled = os.getenv("ENABLE_OS_NOTIFICATIONS", "False").lower() == "true"
-    mode = os.getenv("MODE", "lan").lower()
-    port = int(os.getenv("PORT", 6769))
+    mode = mode or os.getenv("MODE", "lan").lower()
+    port = port or int(os.getenv("PORT", 6769))
 
     # ── Startup banner ────────────────────────────────────────────────────────
     width = 40

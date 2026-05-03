@@ -456,7 +456,8 @@ class Stage:
 
         try:
             self.action_fn()
-            state["installed_stages"].append(self.id)
+            if self.id not in state["installed_stages"]:
+                state["installed_stages"].append(self.id)
             if self.provides_capability:
                 state["capabilities"][self.provides_capability] = True
             ok(f"{self.name} completed")

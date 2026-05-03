@@ -770,6 +770,11 @@ for more details:
         action="store_true",
         help="Start the GuGa server in the foreground.",
     )
+    parser.add_argument(
+        "--mode",
+        choices=["lan", "public"],
+        help="Server mode: 'lan' for local network, 'public' for internet (Cloudflare Tunnel).",
+    )
     proxy_mode.add_argument(
         "--mcp",
         action="store_true",
@@ -929,7 +934,7 @@ def main():
         if args.start_server:
             try:
                 from guga.daemon import run_server
-                run_server()
+                run_server(mode=args.mode, port=args.server)
             except ImportError:
                 # Fallback if run_server isn't defined yet
                 import guga.daemon
