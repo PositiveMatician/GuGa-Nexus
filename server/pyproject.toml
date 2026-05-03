@@ -12,14 +12,18 @@ authors = [
 ]
 requires-python = ">=3.7"
 dependencies = [
-    "flask",
-    "flask-socketio",
-    "eventlet",
+    "quart",
+    "python-socketio",
+    "uvicorn",
     "gunicorn",
     "python-dotenv",
     "qrcode",
     "cryptography",
     "aiohttp",
+    "requests",
+    "pexpect",
+    "mcp",
+    "PyJWT",
     "argcomplete"
 ]
 
