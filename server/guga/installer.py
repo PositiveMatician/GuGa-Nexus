@@ -341,11 +341,42 @@ def install_systemd_service():
 
 def get_cloudflare_url(timeout=15):
     import subprocess, re, time, os, glob
+    import urllib.request as _urllib_req
     start = time.time()
     url_pattern = re.compile(r"https://(?!api)[-a-z0-9]+\.trycloudflare\.com", flags=re.IGNORECASE)
     tag_pattern = re.compile(r"\[GUGA_URL\]\s*(https?://[^\s\033]+)")
-    
-    # 0. Check for the explicit current_url file first (fastest/most reliable)
+
+    def _ping_url(url):
+        """Return True if the GuGa server at this URL is reachable."""
+        try:
+            with _urllib_req.urlopen(f"{url}/ping", timeout=3) as r:
+                return r.status == 200
+        except Exception:
+            return False
+
+    def _get_url_from_cloudflared_metrics():
+        """Query cloudflared's local metrics API for the live tunnel URL. Always accurate."""
+        # cloudflared listens on 20241 by default for the free tunnel daemon
+        for metrics_port in (20241, 2000):
+            try:
+                with _urllib_req.urlopen(f"http://localhost:{metrics_port}/metrics", timeout=2) as r:
+                    for line in r.read().decode().splitlines():
+                        if "userHostname" in line:
+                            m = url_pattern.search(line)
+                            if m:
+                                return m.group(0)
+            except Exception:
+                continue
+        return None
+
+    # 0a. Query the live cloudflared metrics API — most authoritative source.
+    # This is always current as long as cloudflared is running.
+    cf_url = _get_url_from_cloudflared_metrics()
+    if cf_url:
+        return cf_url
+
+    # 0b. Check for the explicit current_url file (fastest fallback when cloudflared metrics unavailable).
+    # Validate with /ping to reject stale entries from ungraceful shutdowns.
     url_file = os.path.join(CONFIG_DIR, "current_url")
     if os.path.exists(url_file):
         try:
@@ -353,7 +384,14 @@ def get_cloudflare_url(timeout=15):
             if time.time() - os.path.getmtime(url_file) < 600:
                 with open(url_file, "r") as f:
                     url = f.read().strip()
-                    if url: return url
+                if url and _ping_url(url):
+                    return url
+                elif url:
+                    # Stale — remove so future calls skip it
+                    try:
+                        os.remove(url_file)
+                    except Exception:
+                        pass
         except Exception:
             pass
 

@@ -180,7 +180,10 @@ def _wrap_asgi_capture(asgi_app):
                 return await send(message)
 
             scope["send"] = _send_with_headers
-        return await asgi_app(scope, receive, _send_with_headers if scope["type"] in ("http", "websocket") else send)
+        # Pass original `send` to asgi_app — normal Quart routes use it directly
+        # and must only receive one http.response.start call.
+        # The MCP SSE transport reads scope["send"] instead, getting the wrapper.
+        return await asgi_app(scope, receive, send)
     return _captured
 
 app_asgi = _wrap_asgi_capture(app_asgi)
