@@ -263,7 +263,10 @@ class GugaMcpServer:
                 InitializationOptions(
                     server_name="guga-nexus",
                     server_version="1.5.1",
-                    capabilities=self.app.get_capabilities()
+                    capabilities=self.app.get_capabilities(
+                        notification_options=NotificationOptions(),
+                        experimental_capabilities={}
+                    )
                 )
             )
 
@@ -271,3 +274,7 @@ class GugaMcpServer:
 def create_mcp_app(guga_server_url: str):
     mcp_handler = GugaMcpServer(guga_server_url)
     return mcp_handler
+
+if __name__ == "__main__":
+    server = GugaMcpServer()
+    asyncio.run(server.run_stdio())

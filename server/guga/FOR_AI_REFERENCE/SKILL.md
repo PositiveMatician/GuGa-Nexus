@@ -10,6 +10,7 @@ description: >
   "wait for reply", "ping me", "human in the loop", or any long-running task.
   Also handles device management: "list blocked", "unblock device", "revoke access".
   New: Use --choices for automated input (e.g. --choices "1,2,,y").
+  New: Use --install-mcp to register the MCP server in Antigravity's mcp_config.json.
 
 ---
 
@@ -186,6 +187,10 @@ The message ID in your notification matches the filename for easy lookup.
 | `guga --choices "1,2,,y"` | Pre-fill interactive prompts (automation) |
 | `guga --mcp` | Start local MCP server (stdio) |
 | `guga --mcp-token` | Get JWT token for remote MCP |
+| `guga --install-mcp` | Install MCP entry into Antigravity config (auto-detects venv) |
+| `guga --install-mcp --dry-run` | Preview MCP install without writing |
+| `guga --install-mcp --mcp-python PATH` | Install MCP entry using a specific Python |
+| `guga --uninstall-mcp` | Remove MCP entry from Antigravity config |
 | `guga --version` | Show version |
 
 ---

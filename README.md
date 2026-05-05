@@ -30,13 +30,14 @@
 Project: GuGa Nexus
 Type: Linux-to-Android notification bridge
 Language: Python (server), Java (Android)
-Key binary: server/guga_push.py — installed globally as `guga`
-Server: Flask + Socket.IO + gunicorn + eventlet, runs as a systemd daemon
+Key binary: server/guga/cli.py — installed globally as `guga`
+Server: Quart + python-socketio + uvicorn (ASGI), runs as a systemd daemon or background process
 Encryption: AES-256-GCM end-to-end between server and Android app
 Pairing: QR code + 8-digit PIN (Zero-Trust handshake)
 Internet: Cloudflare Tunnel (ephemeral, no domain required)
 Install: `pip install guga && guga --install-service` — fully automated, interactive
-Primary use case: terminal job completion notifications, OS notification forwarding
+MCP: Built-in stdio MCP server (`guga --mcp`). Install into Antigravity with `guga --install-mcp`.
+Primary use case: terminal job completion notifications, OS notification forwarding, AI agent human-in-the-loop
 AI_SUMMARY_END -->
 
 ## Jump to
@@ -73,6 +74,8 @@ GuGa Nexus is a minimalist, privacy-focused ecosystem that bridges your Linux ma
 | Zero-Trust QR + PIN pairing | ✅ Stable |
 | Internet access via Cloudflare Tunnel (no domain required) | ✅ Stable |
 | Remote command execution from phone | ✅ Stable |
+| MCP server (AI agent integration — stdio & SSE) | ✅ Stable |
+| Device management (block, unblock, revoke) | ✅ Stable |
 | Wake-word detection | 🔧 In development (beta) |
 | Urgency-based notification filtering | 🗓️ Planned |
 
@@ -262,6 +265,15 @@ guga --status                         # Show service status and connections
 guga --url                            # Show raw pairing URL (scriptable)
 guga --version                        # Show the current version
 guga --uninstall                      # Remove all GuGa system components
+guga --approve -A                     # Approve all pending pairing requests
+guga --blocked                        # List blocked devices
+guga --unblock [DEVICE_ID]            # Remove device from blocklist
+guga --revoke [DEVICE_ID]             # Revoke trusted device access
+guga --start-server -b                # Start server in background
+guga --stop-server -A                 # Stop all background servers
+guga --install-mcp                    # Install MCP entry into Antigravity (auto-detects venv)
+guga --install-mcp --dry-run          # Preview MCP install without writing
+guga --uninstall-mcp                  # Remove MCP entry from Antigravity config
 
 sudo systemctl start guga      # start the server
 sudo systemctl stop guga       # stop the server

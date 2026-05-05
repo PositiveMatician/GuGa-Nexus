@@ -122,6 +122,10 @@ If you need to view your pairing credentials or manage your background daemon af
 guga --qr                             # Show the pairing QR code
 guga --rename-device                  # Assign a custom tag to a device
 guga --approve                        # Interactively approve pairing requests
+guga --approve -A                     # Approve all pending requests non-interactively
+guga --blocked                        # List blocked devices
+guga --unblock [DEVICE_ID]            # Remove a device from the blocklist
+guga --revoke [DEVICE_ID]             # Revoke a trusted device's access
 guga --install-service --reconfigure  # Re-run the interactive setup
 guga --status                         # Show service status and connections
 guga --url                            # Show raw pairing URL (scriptable)
@@ -132,18 +136,38 @@ guga --uninstall                      # Remove all GuGa system components
 ### 🤖 AI Agent Integration (MCP)
 GuGa provides a built-in **Model Context Protocol (MCP)** server, allowing AI agents like Claude Desktop or Antigravity to send notifications and ask you questions directly on your phone.
 
-#### Local AI (Claude Desktop / Antigravity)
-Add this to your MCP configuration file (e.g., `claude_desktop_config.json`):
+#### Local AI (Antigravity / Claude Desktop) — Recommended Setup
+Run this once to automatically configure the MCP entry in `~/.gemini/antigravity/mcp_config.json`:
+```bash
+guga --install-mcp
+```
+This auto-detects the correct Python interpreter (prefers your active virtualenv), verifies all required packages are installed, and writes the entry. Preview without writing:
+```bash
+guga --install-mcp --dry-run
+```
+To remove the entry later:
+```bash
+guga --uninstall-mcp
+```
+
+If you prefer to configure manually, the entry uses **stdio transport** (not SSE/url):
 ```json
 {
   "mcpServers": {
     "guga": {
-      "command": "guga",
-      "args": ["--mcp"]
+      "command": "/path/to/venv/bin/python3",
+      "args": ["-m", "guga.mcp_server"],
+      "env": {
+        "PYTHONPATH": "/path/to/server"
+      }
     }
   }
 }
 ```
+> [!IMPORTANT]
+> Antigravity's MCP client only supports **stdio** (`command`/`args`) transport, not SSE (`url`). Always use the `command` form.
+
+After installing, click **Refresh** in the Antigravity MCP panel.
 
 #### Remote AI (Custom Tools / GPT Actions / SSE)
 For remote access (e.g., calling your GuGa tools from a Custom GPT or a remote server), use the **SSE Transport** with JWT security.

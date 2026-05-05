@@ -1,4 +1,4 @@
-.TH GUGA 1 "2026" "guga 1.5.0" "User Commands"
+.TH GUGA 1 "2026" "guga 1.5.1" "User Commands"
 .SH NAME
 guga \- send notifications to Android via the GuGa server
 .SH SYNOPSIS
@@ -41,7 +41,19 @@ Synchronous request-reply loop. Sends \fIPROMPT\fR to a device and waits for a r
 Target a specific device or custom tag (e.g. \fB--send-to F\fR).
 .TP
 .B \-\-delay \fIDURATION\fR
-Timeout for \fB--ask-user\fR replies (e.g. \fB120s\fR, \fB5m\fR, \fBnever\fR).
+Timeout for \fB--ask-user\fR replies (e.g. \fB120s\fR, \fB5m\fR, \fBnever\fR). Default: never.
+.TP
+.B \-\-default \fIVALUE\fR
+Fallback value returned by \fB--ask-user\fR when the timeout expires (exit code 0).
+.TP
+.B \-\-look\-for \fIREGEX\fR
+In run mode, send an immediate notification whenever this regex matches a line of output.
+.TP
+.B \-\-expect \fIREGEX\fR
+Custom regex for prompt detection in interactive mode. Default: \fB[:?>]\\s*$\fR
+.TP
+.B \-t, \-f, \-\-from, \-\-title \fILABEL\fR
+Set the notification title / sender label (e.g. \fB"GPU Server"\fR).
 .TP
 .B \-\-status
 Show the current service status and connected devices.
@@ -49,11 +61,75 @@ Show the current service status and connected devices.
 .B \-\-qr
 Show the pairing QR code and exit.
 .TP
-.B \-\-start\-server
-Start the GuGa ASGI server in the foreground.
+.B \-\-url
+Print the raw pairing URL (scriptable; no QR).
+.TP
+.B \-\-approve [\-A / \-\-all]
+Interactively approve pending pairing requests. \fB-A\fR approves all without prompting.
+.TP
+.B \-\-rename\-device
+Assign a custom short tag to a connected device.
+.TP
+.B \-\-blocked
+List all devices currently on the blocklist.
+.TP
+.B \-\-unblock [\fIDEVICE_ID\fR]
+Remove a device from the blocklist. Omit ID for interactive selection.
+.TP
+.B \-\-revoke [\fIDEVICE_ID\fR]
+Revoke trust for a previously paired device. Omit ID for interactive selection.
+.TP
+.B \-\-start\-server [\-b / \-\-background] [\-\-mode lan|public]
+Start the GuGa ASGI server. Use \fB-b\fR for a detached background process.
+\fB--mode public\fR enables internet access via Cloudflare Tunnel.
+.TP
+.B \-\-stop\-server [\-A / \-\-all]
+Stop background GuGa server(s). \fB-A\fR stops all without prompting.
+.TP
+.B \-\-reload\-server
+Restart the background GuGa service.
+.TP
+.B \-\-mcp
+Start the MCP server in stdio mode (for local AI tools such as Antigravity or Claude Desktop).
+.TP
+.B \-\-mcp\-token
+Generate a JWT access token for remote MCP access via Cloudflare Tunnel.
+.TP
+.B \-\-install\-mcp [\-\-mcp\-python \fIPATH\fR] [\-\-dry\-run]
+Write the GuGa stdio MCP server entry into the Antigravity config
+\fI~/.gemini/antigravity/mcp_config.json\fR. Auto-detects the correct Python
+interpreter (prefers active venv, then sibling venvs, then system python).
+Use \fB--mcp-python\fR to specify an interpreter explicitly.
+Use \fB--dry-run\fR to preview changes without writing any files.
+.TP
+.B \-\-uninstall\-mcp [\-\-dry\-run]
+Remove the 'guga' entry from the Antigravity MCP config. \fB--dry-run\fR previews.
+.TP
+.B \-\-install\-service [\-\-reconfigure]
+Install GuGa as a systemd background service. \fB--reconfigure\fR re-runs the
+interactive setup even if already installed.
+.TP
+.B \-\-install\-skills
+Copy the GuGa AI skill (SKILL.md, llms.txt, tools.json) to \fI.agents/skills/guga/\fR.
+.TP
+.B \-\-uninstall
+Remove all GuGa system components (service, man page, config directory).
+.TP
+.B \-\-choices \fIVALUES\fR
+Pre-fill interactive prompts with comma-separated values (e.g. \fB"1,2,,y"\fR).
+Empty tokens (\fB,,\fR) accept the default. Useful for non-interactive automation.
+.TP
+.B \-\-silent
+Suppress guga's own console output.
+.TP
+.B \-\-server \fIPORT\fR
+Override the GuGa server port (default: 6769).
+.TP
+.B \-A, \-\-all
+Apply current action to ALL items without asking (used with \fB--approve\fR, \fB--stop-server\fR).
 .TP
 .B \-\-version
-Show the current version (1.5.0) and exit.
+Show the current version (1.5.1) and exit.
 .SH EXAMPLES
 .SS Message mode
 .B guga "Build finished \[u2705]"
@@ -62,14 +138,52 @@ Show the current version (1.5.0) and exit.
 .SS Run mode
 .B guga python train.py
 .PP
+.B guga -r --look-for "ERROR|CRITICAL" ./long_script.sh
+.SS Interactive mode
 .B guga -r -i --send-to F ./deploy.sh
-(Interactive mode: forwards prompts to device F)
-.SS Interactive
-.B guga --ask-user "Continue?" --send-to F --delay 5m
+(Forwards terminal prompts to device F in real-time)
+.SS Ask user
+.B guga --ask-user "Deploy to production?" --send-to F --delay 10m --default no
+.SS MCP installation (one-time setup)
+.B guga --install-mcp
+.PP
+(Writes the guga entry to ~/.gemini/antigravity/mcp_config.json with the correct Python interpreter)
+.PP
+.B guga --install-mcp --dry-run
+.PP
+(Preview without writing)
+.PP
+.B guga --uninstall-mcp
+.PP
+(Remove the guga entry from the MCP config)
+.SS Device management
+.B guga --blocked
+.PP
+.B guga --unblock android-a3f9...
+.PP
+.B guga --revoke F
 .SH SERVER
-The server is now powered by an asynchronous ASGI architecture (\fBQuart\fR / \fBUvicorn\fR), 
-providing non-blocking concurrency for multiple interactive sessions.
+The server is powered by an asynchronous ASGI architecture (\fBQuart\fR / \fBUvicorn\fR),
+providing non-blocking concurrency for multiple simultaneous interactive sessions.
+.PP
+The MCP server runs in stdio mode and communicates with local AI tools via
+standard input/output. It wraps the HTTP API exposed by the running GuGa server.
 .SH EXIT STATUS
-Exits with the same code as the watched command in run mode, or 0 on success in message mode.
+Exits with the same code as the watched command in run mode, or 0 on success in
+message / ask-user mode. Non-zero exit from \fB--ask-user\fR indicates a timeout
+(unless \fB--default\fR was provided).
+.SH FILES
+.TP
+.I ~/.guga/.env
+Runtime configuration (PORT, MODE, ENABLE_OS_NOTIFICATIONS, etc.)
+.TP
+.I ~/.guga/logs/
+Per-invocation output logs (filename = unique message ID).
+.TP
+.I ~/.gemini/antigravity/mcp_config.json
+Antigravity MCP server configuration. Managed by \fB--install-mcp\fR.
+.TP
+.I ~/.config/guga/config
+Persistent CLI defaults (title, port, silent).
 .SH AUTHOR
 Written by the GuGa project contributors.

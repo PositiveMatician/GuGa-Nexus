@@ -1132,6 +1132,27 @@ for more details:
         action="store_true",
         help="Generate a JWT token for remote MCP access via Cloudflare tunnel.",
     )
+    proxy_mode.add_argument(
+        "--install-mcp",
+        action="store_true",
+        help="Install the GuGa stdio MCP server entry into Antigravity's mcp_config.json.",
+    )
+    proxy_mode.add_argument(
+        "--uninstall-mcp",
+        action="store_true",
+        help="Remove the 'guga' entry from Antigravity's mcp_config.json.",
+    )
+    parser.add_argument(
+        "--mcp-python",
+        metavar="PATH",
+        default=None,
+        help="Python interpreter to use for the MCP server entry (auto-detected if omitted).",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what --install-mcp / --uninstall-mcp would do without writing files.",
+    )
 
     # Explicit mode flags — mutually exclusive
     mode = parser.add_mutually_exclusive_group()
@@ -1263,7 +1284,7 @@ def main():
     args = parse_args()
     
     # ── Proxy modes ───────────────────────────────────────────────────────────
-    if args.install_service or args.qr or args.approve or args.rename_device or args.uninstall or args.status or args.url or args.start_server or args.reload_server or args.install_skills or args.mcp or args.mcp_token or args.stop_server or args.blocked or args.unblock or args.revoke:
+    if args.install_service or args.qr or args.approve or args.rename_device or args.uninstall or args.status or args.url or args.start_server or args.reload_server or args.install_skills or args.mcp or args.mcp_token or args.stop_server or args.blocked or args.unblock or args.revoke or args.install_mcp or args.uninstall_mcp:
         from guga.installer import run_system_installer, run_system_uninstaller, run_status, run_url, run_reload
         import guga.installer
         
@@ -1322,6 +1343,23 @@ def main():
                 asyncio.run(mcp_server.run_stdio())
             except KeyboardInterrupt:
                 pass
+            return
+
+        if args.install_mcp:
+            from guga.install_mcp import install_mcp as _install_mcp
+            _install_mcp(
+                config_path=os.path.join(os.path.expanduser("~"), ".gemini", "antigravity", "mcp_config.json"),
+                python_exe=args.mcp_python,
+                dry_run=args.dry_run,
+            )
+            return
+
+        if args.uninstall_mcp:
+            from guga.install_mcp import uninstall_mcp as _uninstall_mcp
+            _uninstall_mcp(
+                config_path=os.path.join(os.path.expanduser("~"), ".gemini", "antigravity", "mcp_config.json"),
+                dry_run=args.dry_run,
+            )
             return
             
         if args.mcp_token:

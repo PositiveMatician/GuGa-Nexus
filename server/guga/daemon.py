@@ -149,6 +149,17 @@ sio = socketio.AsyncServer(
 app = Quart(__name__)
 app_asgi = socketio.ASGIApp(sio, app)
 
+# ── ASGI Capture Hack for MCP SSE ─────────────────────────────────────────────
+# Quart doesn't expose 'receive' and 'send' on the request object, but 
+# SseServerTransport needs them. We wrap the ASGI app to inject them into the scope.
+original_asgi_app = app_asgi.__call__
+async def captured_asgi_app(scope, receive, send):
+    if scope["type"] in ("http", "websocket"):
+        scope["receive"] = receive
+        scope["send"] = send
+    return await original_asgi_app(scope, receive, send)
+app_asgi.__call__ = captured_asgi_app
+
 # ── MCP & JWT Configuration ──────────────────────────────────────────────────
 MCP_JWT_SECRET = os.getenv("MCP_JWT_SECRET")
 if not MCP_JWT_SECRET:
@@ -414,10 +425,12 @@ async def handle_mcp_sse():
             mcp_handler.app.create_initialization_options()
         )
 
-    # Note: SseServerTransport.connect_sse returns an async context manager
-    # that takes (scope, receive, send)
+    # Use the captured ASGI receive/send from scope
+    receive = request.scope.get("receive")
+    send = request.scope.get("send")
+    
     async with sse_transport.connect_sse(
-        request.scope, request.receive, request._send
+        request.scope, receive, send
     ) as (read_stream, write_stream):
         await sse_handler(read_stream, write_stream)
         
@@ -428,8 +441,10 @@ async def handle_mcp_sse():
 @mcp_token_required
 async def handle_mcp_messages():
     """Receives JSON-RPC messages from MCP clients."""
+    receive = request.scope.get("receive")
+    send = request.scope.get("send")
     await sse_transport.handle_post_message(
-        request.scope, request.receive, request._send
+        request.scope, receive, send
     )
     return "", 200
 

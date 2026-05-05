@@ -143,6 +143,13 @@ Shell example:
   guga --install-skills                    # Install the GuGa AI skill to .agents/skills/
   guga --uninstall                         # Remove all GuGa system components
 
+### MCP setup (Antigravity)
+  guga --install-mcp                       # Write MCP entry to Antigravity config (auto-detects Python)
+  guga --install-mcp --dry-run             # Preview without writing
+  guga --install-mcp --mcp-python PATH     # Specify Python interpreter explicitly
+  guga --uninstall-mcp                     # Remove the MCP entry from Antigravity config
+  python -m guga.install_mcp               # Run the standalone MCP installer directly
+
 ### Other flags
   --silent / -s                            # Suppress guga's own console output
   --server PORT                            # Override the server port (default: 6769)
@@ -190,18 +197,29 @@ Start the MCP server for local tools (e.g. Claude Desktop):
 - `run_command`: Execute a command with logging and `look_for` support.
 
 ### Configuration Tutorial (for Antigravity)
-Edit `~/.gemini/antigravity/mcp_config.json` and add:
-```json
-{
-  "mcpServers": {
-    "GuGa": {
-      "command": "python3",
-      "args": ["-m", "guga.cli", "--mcp"],
-      "env": { "GUGA_CONFIG_DIR": "/home/positive/.guga" }
+The recommended way to configure GuGa as an MCP server in Antigravity is the one-shot installer:
+
+  guga --install-mcp
+
+This auto-detects the correct Python interpreter (active venv > sibling venvs > system python),
+verifies that `jwt` and `mcp` packages are available, and writes the entry to
+~/.gemini/antigravity/mcp_config.json. Preview without writing: `guga --install-mcp --dry-run`.
+
+Alternatively, edit ~/.gemini/antigravity/mcp_config.json manually and add:
+
+  {
+    "mcpServers": {
+      "guga": {
+        "command": "/path/to/venv/bin/python3",
+        "args": ["-m", "guga.mcp_server"],
+        "env": { "PYTHONPATH": "/path/to/server" }
+      }
     }
   }
-}
-```
+
+IMPORTANT: The 'url' (SSE) transport is NOT supported by Antigravity's MCP client.
+Always use 'command' (stdio) transport for local tools.
+After editing, click Refresh in the Antigravity MCP panel.
 
 ---
 
