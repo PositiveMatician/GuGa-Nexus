@@ -194,6 +194,53 @@ For remote access (e.g., calling your GuGa tools from a Custom GPT or a remote s
 > [!SECURITY]
 > Your JWT secret is unique to your machine. Anyone with the token can send notifications or ask questions to your phone. Keep your Cloudflare URL and token secure.
 
+---
+
+## ⚠️ Known Issues
+
+### Cloudflare Free Tunnel — SSE Streaming Buffered
+
+**Affected:** Remote MCP SSE access via `trycloudflare.com` free tunnels.  
+**Symptom:** The MCP client (e.g. Claude.ai custom connector) gets a `200 OK` with `Content-Type: text/event-stream` but receives **no data** — the connection hangs and eventually times out.  
+**Not affected:** Local stdio MCP (`guga --mcp`), LAN access, Android app, browser dashboard — all work normally.
+
+#### Root Cause
+
+Cloudflare's free tunnel service (`trycloudflare.com`) buffers HTTP response bodies before forwarding them to the client. Server-Sent Events rely on a persistent, flushed stream — the first `event: endpoint` frame must arrive immediately. Cloudflare holds this frame until the connection closes, which breaks the MCP handshake.
+
+The standard nginx workaround (`X-Accel-Buffering: no`) and the Cloudflare-specific header (`CF-No-Buffer: true`) are both sent by GuGa, but **`CF-No-Buffer` only disables buffering on paid Cloudflare zones** — it has no effect on the free `trycloudflare.com` tunnel service.
+
+#### Workarounds
+
+**Option A — Use ngrok instead of Cloudflare (recommended for SSE)**
+
+ngrok's free tier streams SSE correctly. Replace the Cloudflare tunnel:
+```bash
+# Install ngrok: https://ngrok.com/download
+ngrok http 6769
+# Use the https://xxxx.ngrok-free.app URL as your MCP endpoint
+```
+Then connect your remote tool to:
+```
+https://xxxx.ngrok-free.app/mcp/sse?token=<your-jwt>
+```
+
+**Option B — Paid Cloudflare (if you own a zone)**
+
+If you have a Cloudflare account with a registered domain, assign it to the tunnel via `cloudflared tunnel route dns`. On a proper Cloudflare zone, `CF-No-Buffer: true` takes effect and SSE streams correctly.
+
+**Option C — Local stdio MCP only**
+
+For personal AI assistants running on the same machine (Antigravity, Claude Desktop), the **stdio transport** is both simpler and more reliable than SSE:
+```bash
+guga --install-mcp   # writes the correct stdio entry to mcp_config.json
+```
+No tunnel, no token, no buffering issues.
+
+**Option D — Future: Streamable HTTP transport (planned)**
+
+The MCP spec now supports a `streamable-http` transport that uses standard HTTP POST/response pairs instead of a persistent SSE stream. This is Cloudflare-compatible and will be added to GuGa in a future release as the preferred remote transport.
+
 To control the Linux backend server explicitly:
 ```bash
 sudo systemctl start guga       # Start the server daemon

@@ -74,7 +74,7 @@ GuGa Nexus is a minimalist, privacy-focused ecosystem that bridges your Linux ma
 | Zero-Trust QR + PIN pairing | ✅ Stable |
 | Internet access via Cloudflare Tunnel (no domain required) | ✅ Stable |
 | Remote command execution from phone | ✅ Stable |
-| MCP server (AI agent integration — stdio & SSE) | ✅ Stable |
+| MCP server (AI agent integration — stdio & SSE) | ✅ stdio stable · ⚠️ SSE remote (see [Known Issues](#known-issues)) |
 | Device management (block, unblock, revoke) | ✅ Stable |
 | Wake-word detection | 🔧 In development (beta) |
 | Urgency-based notification filtering | 🗓️ Planned |
@@ -252,6 +252,31 @@ If you enabled OS notifications during `guga --install-service`, GuGa listens to
 Choose internet mode during `guga --install-service` and GuGa sets up a Cloudflare Tunnel automatically — no domain, no port forwarding, no VPS. Your server becomes reachable from anywhere.
 
 The tunnel URL changes each time the service restarts. After a restart, run `guga --qr` to get the new URL and re-scan or re-enter it in your app or browser.
+
+---
+
+## ⚠️ Known Issues
+
+### Cloudflare Free Tunnel — MCP SSE Streaming Blocked
+
+**Affected:** Connecting remote AI tools (e.g. Claude.ai custom MCP connector) to GuGa via a `trycloudflare.com` free tunnel.  
+**Symptom:** The client receives `200 OK` with `Content-Type: text/event-stream` but no data arrives — the connection hangs and times out.  
+**Not affected:** Local stdio MCP, Android app, browser dashboard, LAN usage — all work normally.
+
+#### Root Cause
+
+Cloudflare's free tunnel (`trycloudflare.com`) buffers HTTP response bodies before forwarding them. SSE requires an immediate, persistent flush — Cloudflare holds the first frame until the connection drops, breaking the MCP handshake. The `CF-No-Buffer: true` header (which GuGa sends) **only works on paid Cloudflare zones**, not the free shared tunnel service.
+
+#### Workarounds
+
+| Option | Effort | SSE works? |
+|--------|--------|------------|
+| **ngrok free tier** — `ngrok http 6769` | Low | ✅ Yes |
+| **Paid Cloudflare** with your own domain | Costs money | ✅ Yes |
+| **Local stdio MCP** — `guga --install-mcp` | Lowest | N/A (no tunnel needed) |
+| **Streamable HTTP transport** (planned in GuGa) | Future | ✅ Yes |
+
+See the [server README](./server/README.md#%EF%B8%8F-known-issues) for full details and setup instructions for each option.
 
 ---
 

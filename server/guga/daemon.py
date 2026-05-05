@@ -149,16 +149,41 @@ sio = socketio.AsyncServer(
 app = Quart(__name__)
 app_asgi = socketio.ASGIApp(sio, app)
 
-# ── ASGI Capture Hack for MCP SSE ─────────────────────────────────────────────
-# Quart doesn't expose 'receive' and 'send' on the request object, but 
-# SseServerTransport needs them. We wrap the ASGI app to inject them into the scope.
-original_asgi_app = app_asgi.__call__
-async def captured_asgi_app(scope, receive, send):
-    if scope["type"] in ("http", "websocket"):
-        scope["receive"] = receive
-        scope["send"] = send
-    return await original_asgi_app(scope, receive, send)
-app_asgi.__call__ = captured_asgi_app
+# ── ASGI Capture Wrapper for MCP SSE ──────────────────────────────────────────
+# Quart doesn't expose 'receive' and 'send' on the request object, but
+# SseServerTransport needs them. We wrap the ASGI app callable to inject them
+# into the scope. Patching __call__ on an instance doesn't work since uvicorn
+# calls app(scope, receive, send) directly, bypassing __call__ dispatch.
+#
+# We also inject anti-buffering headers into http.response.start events so that
+# SSE streams correctly through Cloudflare tunnels (CF-No-Buffer: true) and
+# nginx reverse proxies (X-Accel-Buffering: no).
+def _wrap_asgi_capture(asgi_app):
+    _NO_BUFFER_HEADERS = [
+        (b"cf-no-buffer", b"true"),
+        (b"x-accel-buffering", b"no"),
+    ]
+    async def _captured(scope, receive, send):
+        if scope["type"] in ("http", "websocket"):
+            scope["receive"] = receive
+
+            async def _send_with_headers(message):
+                if message.get("type") == "http.response.start":
+                    # Inject anti-buffering headers if this is an SSE response
+                    existing = message.get("headers", [])
+                    ct = next((v for k, v in existing if k.lower() == b"content-type"), b"")
+                    if b"text/event-stream" in ct:
+                        # Strip any existing x-accel-buffering, then add ours
+                        filtered = [(k, v) for k, v in existing
+                                    if k.lower() not in (b"x-accel-buffering", b"cf-no-buffer")]
+                        message = {**message, "headers": filtered + _NO_BUFFER_HEADERS}
+                return await send(message)
+
+            scope["send"] = _send_with_headers
+        return await asgi_app(scope, receive, _send_with_headers if scope["type"] in ("http", "websocket") else send)
+    return _captured
+
+app_asgi = _wrap_asgi_capture(app_asgi)
 
 # ── MCP & JWT Configuration ──────────────────────────────────────────────────
 MCP_JWT_SECRET = os.getenv("MCP_JWT_SECRET")
