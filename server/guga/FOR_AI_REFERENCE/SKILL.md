@@ -1,160 +1,118 @@
 ---
 name: guga
 description: >
-  GuGa Nexus — Notification & Remote Interaction Skill.
-  Enables the agent to send notifications to the user's Android device,
-  monitor long-running terminal commands, and handle remote interactive prompts.
-  Use guga to keep the user informed and to ask for their input from their phone
-  while the agent continues working on the Linux machine.
-  Triggers on phrases like: "notify me", "tell me when done", "ask user", "send to phone",
-  "wait for reply", "ping me", "human in the loop", or any long-running task.
-  Also handles device management: "list blocked", "unblock device", "revoke access".
-  New: Use --choices for automated input (e.g. --choices "1,2,,y").
-  New: Use --install-mcp to register the MCP server in Antigravity's mcp_config.json.
-
+  GuGa Nexus — Android Notification & Remote Interaction Skill.
+  Use this skill whenever the user mentions: notifying their phone, sending a message
+  to their Android device, asking for user input during a long task, human-in-the-loop
+  workflows, watching or wrapping a command, pinging when done, remote interaction,
+  agentic approvals, or anything involving the `guga` CLI tool.
+  Trigger phrases: "notify me", "tell me when done", "ask user", "send to phone",
+  "wait for reply", "ping me", "human in the loop", "ask me on my phone",
+  "let me know when", "wrap this command", "interactive install", "--ask-user",
+  "guga send", "guga run", "guga status", "guga mcp", "--install-mcp",
+  "list blocked devices", "unblock device", "revoke device access".
+  Always use this skill if the user is orchestrating agentic tasks and wants
+  to receive results or approve steps from their Android phone.
 ---
 
 # GuGa Nexus Skill
 
-GuGa bridges the AI agent running on Linux with the user's Android device.
-Use it to send notifications, ask questions, and create human-in-the-loop workflows.
-
-The user pairs their Android phone (or browser) to the GuGa server.
-Devices can be given short tags via `guga --rename-device` (e.g. the tag `F`).
+GuGa Nexus bridges an AI agent on Linux with the user's Android device.
+It sends push notifications, blocks to ask questions, wraps long-running commands,
+and enables full human-in-the-loop agentic workflows.
 
 ---
 
-## Preparation — Check Server Status
-
-Before sending notifications or asking questions, always verify that the GuGa server is running and discover the active public URL or connected devices.
+## Step 0 — Always check server status first
 
 ```bash
 guga --status
 ```
-*Look for:*
-- **address**: The local or public URL (e.g. `https://...trycloudflare.com`). Use this if you need to provide a link to the user.
-- **connected devices**: Note the `Tag` (e.g., `F`) or `Device ID` to target specific devices.
+
+Look for:
+- **address**: local or public URL (e.g. `https://...trycloudflare.com`)
+- **connected devices**: note the `Tag` (e.g. `F`) for targeting
 
 ---
 
-## Core Patterns
+## The 8 Core Patterns
 
 ### Pattern 1 — Notify when done
-Use this after completing any long-running task to inform the user on their phone.
-
 ```bash
-# After finishing work:
-guga "Task complete: model training finished. Loss: 0.043" --send-to F
-```
-
-```bash
-# With a title label:
+guga "Task complete: model trained. Loss: 0.043" --send-to F
 guga --from "GPU Server" "Training complete. Accuracy: 94.2%"
-```
-
-```bash
-# Pipe stdout into a notification:
 python train.py 2>&1 | tail -1 | guga --send-to F
 ```
 
----
-
-### Pattern 2 — Ask user and wait for reply (MOST IMPORTANT PATTERN)
-This is the primary interaction loop. The agent pauses, sends a question to the
-user's phone, and the user replies from the Android app. The reply is captured
-in a shell variable for the agent to act on.
-
+### Pattern 2 — Ask user, wait for reply ⭐ (most important)
 ```bash
-REPLY=$(guga --ask-user "Should I deploy to production?" --send-to F --delay 5m)
-echo "User replied: $REPLY"
+REPLY=$(guga --ask-user "Deploy to production?" --send-to F --delay 5m)
+
+# With safe default on timeout:
+REPLY=$(guga --ask-user "Continue risky migration?" --send-to F --delay 10m --default "no")
 ```
-
-If the user does not reply within the delay, the command exits with code 1.
-Always handle this case in scripts.
-
+Always handle timeout (non-zero exit). Parse reply flexibly:
 ```bash
-REPLY=$(guga --ask-user "Continue with risky migration?" --send-to F --delay 10m --default "no")
-# If the user doesn't reply in 10m, $REPLY will be "no".
+if echo "$REPLY" | grep -qi "yes\|y\|go\|sure\|ok"; then ...
 ```
-
----
 
 ### Pattern 3 — Full agentic loop (notify + ask + act + repeat)
-This is the recommended pattern for multi-step agentic tasks that require
-user input at key decision points. Always notify the user of progress,
-then ask for decisions before irreversible actions.
+See `references/agentic-loop.md` for the canonical multi-step script template.
 
-```bash
-#!/bin/bash
-DEVICE="F"
-
-# Step 1: Inform start
-guga "Starting deployment pipeline. I'll check in at each stage." --send-to $DEVICE
-
-# Step 2: Do preparatory work
-./run_tests.sh
-TEST_EXIT=$?
-
-# Step 3: Notify result
-if [ $TEST_EXIT -ne 0 ]; then
-  guga "Tests failed. Deployment aborted." --send-to $DEVICE
-  exit 1
-fi
-guga "All tests passed." --send-to $DEVICE
-
-# Step 4: Ask before irreversible step
-REPLY=$(guga --ask-user "Tests passed. Deploy to production now?" --send-to $DEVICE --delay 10m) || {
-  guga "No reply received. Deployment cancelled for safety." --send-to $DEVICE
-  exit 1
-}
-
-# Step 5: Act on reply
-if echo "$REPLY" | grep -qi "yes\|y\|go\|sure\|ok\|deploy"; then
-  guga "Deploying..." --send-to $DEVICE
-  ./deploy.sh --env production
-  guga "Deployment complete. All systems nominal." --send-to $DEVICE
-else
-  guga "Deployment cancelled on your request." --send-to $DEVICE
-fi
-```
-
----
-
-### Pattern 4 — Watch a command, notify when done
-Wrap any command with `guga` to automatically send a notification to the phone
-when the command completes (success or failure).
-
+### Pattern 4 — Watch a command, notify on completion
 ```bash
 guga python train.py --epochs 100 --lr 0.001
-```
-
-```bash
 guga --from "Build Server" ./build.sh --release
 ```
 
----
-
-### Pattern 5 — Interactive remote execution
-For commands that interactively prompt for input, use `-r -i` to forward
-prompts to the user's phone and feed replies back to the process.
-Requires `--send-to` to designate which device handles the prompts.
-
+### Pattern 5 — Interactive remote execution (PTY mode)
+Forwards interactive prompts (e.g. setup wizards) to the phone in real time:
 ```bash
-guga -r -i --send-to F python3 interactive_script.py
+guga -r -i --send-to F python3 interactive_setup.py
+guga -r -i --expect "REGEX" --send-to F ansible-playbook deploy.yml
 ```
 
----
-
 ### Pattern 6 — Watch for specific output patterns
-Use `--look-for` to receive instant notifications when a specific pattern appears in a command's output.
-
 ```bash
 guga -r --look-for "ERROR|CRITICAL" ./long_script.sh
 ```
 
-### Pattern 7 — Output Logging
+### Pattern 7 — Automated / non-interactive mode (`--choices`)
+Pre-fill installer prompts to avoid blocking:
+```bash
+guga --start-server --background --choices "1,2,,y"
+guga --approve --all --choices "y"
+guga --install-service --choices "1,2,,y"
+```
+
+### Pattern 8 — Output Logging
 Every `guga -r` or `guga -i` execution is automatically logged to `~/.guga/logs/{unique_message_id}.log`. 
 The message ID in your notification matches the filename for easy lookup.
+
+---
+
+## MCP Integration (Antigravity)
+
+One-shot installer — auto-detects venv, writes to `~/.gemini/antigravity/mcp_config.json`:
+```bash
+guga --install-mcp           # Install
+guga --install-mcp --dry-run # Preview only
+guga --uninstall-mcp         # Remove
+```
+
+Local MCP server (stdio, for Claude Desktop):
+```bash
+guga --mcp
+```
+
+Remote MCP via Cloudflare Tunnel (SSE):
+```bash
+MODE=public guga --start-server
+guga --mcp-token             # Get JWT token
+# Connect to: https://<tunnel-url>/mcp/sse  with Authorization: Bearer <token>
+```
+
+**Important:** Antigravity only supports `command` (stdio) transport — not `url`/SSE.
 
 ---
 
@@ -162,46 +120,52 @@ The message ID in your notification matches the filename for easy lookup.
 
 | Command | Purpose |
 |---|---|
-| `guga "MSG"` | Send notification to all devices |
-| `guga "MSG" --send-to TAG` | Send to specific device/tag |
-| `guga --from "LABEL" "MSG"` | Send with a title label |
-| `echo "MSG" \| guga` | Send stdin as notification |
+| `guga "MSG"` | Notify all devices |
+| `guga "MSG" --send-to TAG` | Notify specific device |
+| `guga --from "LABEL" "MSG"` | Notify with title label |
+| `echo "MSG" \| guga` | Pipe stdin as notification |
 | `guga --ask-user "Q" --send-to TAG` | Ask user, block for reply |
-| `guga --ask-user "Q" --send-to TAG --delay 5m` | Ask with a 5-minute timeout |
-| `guga --ask-user "Q" --send-to TAG --default "X"` | Return "X" if timeout expires |
-| `guga CMD [ARGS]` | Run command, notify on completion |
+| `guga --ask-user "Q" --send-to TAG --delay 5m` | Ask, block with 5-minute timeout |
+| `guga --ask-user "Q" --send-to TAG --default "X"` | Ask with fallback on timeout |
+| `guga CMD [ARGS]` | Run command, notify on finish |
 | `guga -r --look-for "REGEX" CMD` | Notify on regex match in output |
-| `guga -r -i --send-to TAG CMD` | Run interactively, forward prompts |
+| `guga -r -i --send-to TAG CMD` | Interactive PTY, forward prompts |
 | `guga -r -i --expect "REGEX" CMD` | Custom regex for prompt detection |
 | `guga --start-server -b` | Start server in background |
 | `guga --stop-server -A` | Stop all background servers |
-| `guga --approve -A` | Approve all pending clients |
-| `guga --status` | Show server status & devices |
+| `guga --approve` | Approve device pairing requests |
+| `guga --approve -A` | Approve all pending pairings |
+| `guga --status` | Server status & device list |
 | `guga --blocked` | List blocked devices |
 | `guga --unblock [ID]` | Unblock a device |
 | `guga --revoke [ID]` | Revoke device access |
 | `guga --qr` | Show pairing QR code |
-| `guga --approve` | Approve device pairing requests |
-| `guga --rename-device` | Assign a short tag to a device |
+| `guga --rename-device` | Assign short tag to device |
 | `guga --install-service` | Install as systemd service |
-| `guga --choices "1,2,,y"` | Pre-fill interactive prompts (automation) |
-| `guga --mcp` | Start local MCP server (stdio) |
-| `guga --mcp-token` | Get JWT token for remote MCP |
-| `guga --install-mcp` | Install MCP entry into Antigravity config (auto-detects venv) |
+| `guga --install-mcp` | Register MCP in Antigravity |
 | `guga --install-mcp --dry-run` | Preview MCP install without writing |
-| `guga --install-mcp --mcp-python PATH` | Install MCP entry using a specific Python |
-| `guga --uninstall-mcp` | Remove MCP entry from Antigravity config |
+| `guga --install-mcp --mcp-python PATH` | Install MCP using a specific Python |
+| `guga --mcp` | Start local MCP server (stdio) |
+| `guga --mcp-token` | JWT token for remote MCP |
+| `guga --choices "1,2,,y"` | Pre-fill interactive prompts |
 | `guga --version` | Show version |
 
 ---
 
 ## Key Rules for Agents
 
-1. **Always check `guga --status` first** to confirm the server is running and to discover active device tags.
-2. **Mandatory Interaction (Success Protocol)**: Upon successful completion of a prompt or any significant milestone, you MUST use `guga --ask-user` to confirm the user's next intent and `guga` to push the summary of results to their phone. Never finish a task silently.
-3. **Always use `--send-to TAG`** when targeting a specific device (e.g. `--send-to F`).
-4. **Always set `--delay`** on `--ask-user` calls (e.g., `5m` or `10m`). Use `never` only for critical blocking prompts.
-5. **Handle timeouts** — if `guga --ask-user` exits non-zero, the user did not reply. Use `--default` for automation.
-6. **Human-in-the-loop** — ask before irreversible actions (deployments, deletions, migrations).
-7. **Capture the reply** with `REPLY=$(guga --ask-user ...)` and parse it for keywords.
-8. **Assume server is running** — the user usually starts the server via `guga --start-server -b` before your task begins.
+1. **Always `guga --status` first** — confirm server is up, get device tags.
+2. **Mandatory success protocol** — after any significant milestone, push results with `guga` AND ask for next intent with `--ask-user`. Never finish silently.
+3. **Always `--send-to TAG`** when targeting a specific device (e.g. `--send-to F`).
+4. **Always set `--delay`** on `--ask-user` (e.g. `5m` or `10m`). Use `never` only for must-block prompts.
+5. **Handle timeouts** — if `--ask-user` exits non-zero, abort and notify the user.
+6. **Human-in-the-loop** — always ask before irreversible actions (deploy, delete, migrate).
+7. **Parse replies flexibly** — use `grep -qi "yes\|y\|ok\|sure"`, not strict equality.
+8. **Batch notifications** — don't send multiple in rapid succession.
+
+---
+
+## Reference Files
+
+- `references/agentic-loop.md` — full multi-step agentic script template
+- `references/http-api.md` — HTTP API and MCP tool definitions for programmatic use
