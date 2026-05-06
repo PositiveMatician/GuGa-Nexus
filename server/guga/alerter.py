@@ -21,9 +21,10 @@ load_dotenv(dotenv_path=env_path)
 
 # Enforce Linux-only restriction
 if platform.system() != "Linux":
-    print("❌ ERROR: OS Notification monitoring only works on Linux (D-Bus required).")
-    print(f"Current OS: {platform.system()}")
-    sys.exit(1)
+    # This is a known limitation, not an error. Exit gracefully.
+    print(f"ℹ️  OS Notification monitoring is currently Linux-exclusive (requires D-Bus).")
+    print(f"   Skipping alerter startup on {platform.system()}.")
+    sys.exit(0)
 
 # ------------------------------------------------------------
 # Configuration

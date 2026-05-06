@@ -854,8 +854,11 @@ def run_system_installer(qr_only=False, setup_only=False, install_skills_flag=Fa
                 if line.startswith("MODE="):      mode     = line.split("=",1)[1].strip()
                 if line.startswith("ENABLE_OS_"): os_notif = line.split("=",1)[1].strip()
         else:
-            mode     = ask_mode()
-            os_notif = ask_os_notif()
+            mode = ask_mode()
+            if current_os == "Linux":
+                os_notif = ask_os_notif()
+            else:
+                os_notif = "False"
             ensure_env_exists(mode, os_notif, force=True)
 
         # Advanced Options
