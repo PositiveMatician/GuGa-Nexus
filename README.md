@@ -102,8 +102,9 @@ Step 4: enter PIN from guga --show-pin when prompted during pairing
 Reconfigure: guga --install-service (re-run)
 AI_INSTALL_END -->
 
-**Requirements:** Linux with systemd · Python 3.7+ · sudo access
+**Requirements:** Linux (systemd) / Windows (pywin32) · Python 3.7+ · Git · sudo/Admin access
 
+### Linux
 ```bash
 # 1. Install
 pip install guga
@@ -112,7 +113,17 @@ pip install guga
 guga --install-service
 ```
 
-`--install-service` asks two questions, then handles everything automatically — dependencies, the background daemon, and optional OS notification forwarding. You won't need to run it again; the service starts on boot and restarts itself if it crashes.
+### Windows (Beta)
+*Requires [Git for Windows](https://git-scm.com/download/win).*
+```powershell
+# 1. Install from the windows branch
+pip install git+https://github.com/PositiveMatician/GuGa-Nexus.git@windows#subdirectory=server
+
+# 2. Set up and start the background service (Run as Administrator)
+guga --install-service
+```
+
+`--install-service` handles everything automatically — dependencies, background daemon, and network configuration. Background services start on boot and restart on failure.
 
 ```bash
 # 3. Get your connection URL

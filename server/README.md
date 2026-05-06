@@ -30,16 +30,23 @@
 
 ---
 
-## Installation
+GuGa is distributed via PyPI for Linux and via Git for the Windows beta.
 
-GuGa is distributed strictly as a standard Python module via PyPI.
-
-1. **Install the package:**
-2. **Initialize the background daemon:**
+### Linux
 ```bash
+pip install guga
 guga --install-service
 ```
-*(This interactive setup will cleanly provision your systemd daemon and configure your network routing. Afterwards, your QR code will be generated).*
+
+### Windows (Beta)
+Requires [Git](https://git-scm.com/download/win).
+```powershell
+pip install git+https://github.com/PositiveMatician/GuGa-Nexus.git@windows#subdirectory=server
+# Run in Administrator terminal:
+guga --install-service
+```
+
+*(This interactive setup will cleanly provision your background service (systemd or Windows Service) and configure network routing).*
 
 3. **Reconfiguring:**
 If you ever need to change your connection mode or notification settings later, simply run:
