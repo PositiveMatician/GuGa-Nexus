@@ -12,6 +12,9 @@
 .externalNativeBuild/
 .cxx/
 local.properties
+captures/
+*.apk
+*.aab
 
 # --- Python / GuGa Server ---
 # Global Python artifacts
@@ -19,6 +22,10 @@ local.properties
 **/*.py[cod]
 **/*$py.class
 **/*.egg-info/
+**/*.egg
+.installed.cfg
+*.manifest
+*.spec
 
 # Virtual Environments
 venv/
@@ -31,6 +38,7 @@ test-env/
 # Server Secrets & Config
 /server/.env
 /server/trusted_devices.json
+.env
 
 # Server Logs & Runtime Data
 /server/log/
@@ -50,15 +58,32 @@ test-env/
 .idea/
 **/.idea/
 .vscode/
+**/.vscode/
 .obsidian/
 **/.obsidian/
 .DS_Store
+Thumbs.db
+*.bak
+*.swp
+*~
+*.patch
+*.diff
+
 # --- Testing ---
 .pytest_cache/
 .tox/
 .coverage
 htmlcov/
 **/.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# --- Databases ---
+*.db
+*.sqlite
+*.sqlite3
 
 # --- Artifacts & Distributions ---
 dist/
@@ -68,3 +93,4 @@ Guga/
 
 .agents/
 scratch/
+
