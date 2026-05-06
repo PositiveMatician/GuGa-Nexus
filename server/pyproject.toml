@@ -24,7 +24,8 @@ dependencies = [
     "pexpect",
     "mcp",
     "PyJWT",
-    "argcomplete"
+    "argcomplete",
+    "filelock>=3.12.0"
 ]
 
 [project.scripts]

@@ -91,6 +91,9 @@ import json
 # 1. Package manager detection
 # ─────────────────────────────────────────────────────────────────────────────
 def get_package_manager():
+    if os.getenv("OS") != "Linux":
+        return None, None
+
     managers = {
         "apt-get": ["apt-get", "install", "-y"],
         "dnf":     ["dnf",     "install", "-y"],
@@ -108,6 +111,9 @@ def get_package_manager():
 # 2. System packages (dbus-monitor)
 # ─────────────────────────────────────────────────────────────────────────────
 def install_linux_packages():
+    if os.getenv("OS") != "Linux":
+        return
+
     step("Checking system dependencies…")
 
     if shutil.which("dbus-monitor"):
@@ -141,29 +147,53 @@ def install_linux_packages():
 # 3. cloudflared
 # ─────────────────────────────────────────────────────────────────────────────
 def download_cloudflared():
+    current_os = os.getenv("OS", platform.system())
+    if current_os not in ("Linux", "Windows"):
+        warn("cloudflared automated download is only supported on Linux and Windows via this installer.")
+        return
+
     step("Checking for cloudflared…")
 
-    if shutil.which("cloudflared") and not os.path.exists(os.path.join(CONFIG_DIR, "cloudflared")):
+    exe_name = "cloudflared.exe" if current_os == "Windows" else "cloudflared"
+
+    if shutil.which("cloudflared") and not os.path.exists(os.path.join(CONFIG_DIR, exe_name)):
         ok("cloudflared already installed globally")
         return
 
-    dest = os.path.join(CONFIG_DIR, "cloudflared")
+    dest = os.path.join(CONFIG_DIR, exe_name)
     if os.path.exists(dest):
         ok("cloudflared already present in user guga directory")
         return
 
     arch = platform.machine().lower()
-    arch_map = {"x86_64": "amd64", "amd64": "amd64", "arm64": "arm64", "aarch64": "arm64", "armv7l": "arm"}
-    arch_suffix = arch_map.get(arch)
-    if not arch_suffix:
-        warn(f"Unsupported architecture '{arch}' — skipping cloudflared download")
-        return
+    
+    if current_os == "Linux":
+        arch_map = {"x86_64": "amd64", "amd64": "amd64", "arm64": "arm64", "aarch64": "arm64", "armv7l": "arm"}
+        arch_suffix = arch_map.get(arch)
+        if not arch_suffix:
+            warn(f"Unsupported architecture '{arch}' — skipping cloudflared download")
+            return
+        url = f"https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-{arch_suffix}"
+    else: # Windows
+        arch_map = {"x86_64": "amd64", "amd64": "amd64", "i386": "386", "x86": "386"}
+        arch_suffix = arch_map.get(arch)
+        if not arch_suffix:
+            warn(f"Unsupported architecture '{arch}' for Windows — skipping cloudflared download")
+            return
+        url = f"https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-{arch_suffix}.exe"
 
-    url = f"https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-{arch_suffix}"
     dim(f"Downloading cloudflared ({arch_suffix})…")
     try:
-        urllib.request.urlretrieve(url, dest)
-        os.chmod(dest, 0o755)
+        if current_os == "Windows":
+            if shutil.which("wget"):
+                subprocess.check_call(["wget", "-q", "-O", dest, url])
+            elif shutil.which("curl"):
+                subprocess.check_call(["curl", "-sL", "-o", dest, url])
+            else:
+                urllib.request.urlretrieve(url, dest)
+        else:
+            urllib.request.urlretrieve(url, dest)
+            os.chmod(dest, 0o755)
         ok("cloudflared downloaded")
     except Exception as e:
         warn(f"Download failed: {e}")
@@ -177,6 +207,7 @@ def ensure_env_exists(mode: str, os_notif: str, force: bool = False, use_journal
 
     env_file = os.path.join(CONFIG_DIR, ".env")
     defaults = {
+        "OS":                     os.getenv("OS", platform.system()),
         "MODE":                   mode,
         "PORT":                   "6769",
         "ENABLE_OS_NOTIFICATIONS": os_notif,
@@ -233,6 +264,9 @@ def ensure_env_exists(mode: str, os_notif: str, force: bool = False, use_journal
 # 5. Man page
 # ─────────────────────────────────────────────────────────────────────────────
 def setup_man_page():
+    if os.getenv("OS") != "Linux":
+        return
+
     step("Installing man page…")
 
     candidates = [
@@ -261,6 +295,9 @@ def setup_man_page():
 # 6. systemd service
 # ─────────────────────────────────────────────────────────────────────────────
 def install_systemd_service():
+    if os.getenv("OS") != "Linux":
+        return
+
     step("Installing systemd service…")
 
     if not shutil.which("systemctl"):
@@ -337,6 +374,142 @@ def install_systemd_service():
             warn("Server may not have started — check with: journalctl -u guga -n 30")
     except Exception:
         warn("Could not start service — check with: journalctl -u guga -n 30")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 6b. Windows service (pywin32)
+# ─────────────────────────────────────────────────────────────────────────────
+def is_windows_admin() -> bool:
+    """Return True if the current process has Windows Administrator privileges."""
+    try:
+        import ctypes
+        return ctypes.windll.shell32.IsUserAnAdmin() != 0
+    except Exception:
+        return False
+
+
+def install_windows_service():
+    """Install GuGa as a Windows service using pywin32."""
+    if os.getenv("OS") != "Windows":
+        return
+
+    step("Installing Windows service…")
+
+    if not is_windows_admin():
+        warn("Administrator privileges required to install a Windows service.")
+        dim("Re-run the installer from an Administrator command prompt.")
+        return
+
+    try:
+        import win32serviceutil  # noqa: F401 — existence check
+        import win32service
+        import win32con
+        import pywintypes
+    except ImportError:
+        warn("pywin32 not installed — cannot create Windows service.")
+        dim("Install it with: pip install pywin32")
+        return
+
+    gunicorn_path = shutil.which("gunicorn")
+    if not gunicorn_path:
+        gunicorn_path = f'"{sys.executable}" -m gunicorn'
+    else:
+        gunicorn_path = f'"{gunicorn_path}"'
+
+    daemon_module = "guga.daemon:app"
+    port = os.getenv("PORT", "6769")
+    bin_path = (
+        f'{gunicorn_path} --worker-class uvicorn.workers.UvicornWorker '
+        f'-w 1 {daemon_module} --bind 0.0.0.0:{port} --log-level error'
+    )
+
+    SERVICE_NAME = "GugaNexus"
+    SERVICE_DISPLAY = "GuGa Nexus Backend"
+    SERVICE_DESC = "GuGa Nexus notification & command bridge"
+
+    try:
+        scm = win32service.OpenSCManager(None, None, win32service.SC_MANAGER_ALL_ACCESS)
+    except pywintypes.error as e:
+        warn(f"Could not open Service Control Manager: {e}")
+        return
+
+    try:
+        # Try to open existing service
+        try:
+            svc = win32service.OpenService(scm, SERVICE_NAME, win32service.SERVICE_ALL_ACCESS)
+            win32service.ChangeServiceConfig(
+                svc,
+                win32service.SERVICE_NO_CHANGE,  # type
+                win32service.SERVICE_AUTO_START,  # start type
+                win32service.SERVICE_NO_CHANGE,  # error control
+                bin_path,
+                None, None, None, None, None,
+                SERVICE_DISPLAY,
+            )
+            ok("Windows service updated")
+        except pywintypes.error:
+            # Service doesn't exist — create it
+            svc = win32service.CreateService(
+                scm,
+                SERVICE_NAME,
+                SERVICE_DISPLAY,
+                win32service.SERVICE_ALL_ACCESS,
+                win32service.SERVICE_WIN32_OWN_PROCESS,
+                win32service.SERVICE_AUTO_START,
+                win32service.SERVICE_ERROR_NORMAL,
+                bin_path,
+                None,   # load order group
+                0,      # tag id
+                None,   # dependencies
+                None,   # service start name (LocalSystem)
+                None,   # password
+            )
+            ok("Windows service created")
+
+        # Set description
+        try:
+            win32service.ChangeServiceConfig2(
+                svc,
+                win32service.SERVICE_CONFIG_DESCRIPTION,
+                SERVICE_DESC,
+            )
+        except Exception:
+            pass  # non-fatal
+
+        # Configure failure actions: restart after 5 s on each of 3 failures
+        try:
+            actions = [
+                (win32con.SC_ACTION_RESTART, 5000),
+                (win32con.SC_ACTION_RESTART, 5000),
+                (win32con.SC_ACTION_RESTART, 5000),
+            ]
+            win32service.ChangeServiceConfig2(
+                svc,
+                win32service.SERVICE_CONFIG_FAILURE_ACTIONS,
+                {
+                    "ResetPeriod": 86400,
+                    "RebootMsg": "",
+                    "Command": "",
+                    "Actions": actions,
+                },
+            )
+            ok("Auto-restart on failure configured")
+        except Exception as e:
+            warn(f"Could not set failure actions: {e}")
+
+        # Start the service
+        try:
+            win32service.StartService(svc, None)
+            ok("Windows service started")
+        except pywintypes.error as e:
+            warn(f"Service start failed: {e} — start manually via services.msc")
+
+        win32service.CloseServiceHandle(svc)
+
+    except Exception as e:
+        warn(f"Windows service installation failed: {e}")
+    finally:
+        win32service.CloseServiceHandle(scm)
 
 
 def get_cloudflare_url(timeout=15):
@@ -640,9 +813,10 @@ def install_skills():
 
 def run_system_installer(qr_only=False, setup_only=False, install_skills_flag=False):
     # ── Linux guard ───────────────────────────────────────────────────────────────
-    if platform.system() != "Linux":
-        print("❌  This setup only runs on Linux.")
-        print(f"    Current OS: {platform.system()}")
+    current_os = os.getenv("OS", platform.system())
+    if current_os not in ("Linux", "Windows"):
+        print(f"❌  OS='{current_os}' not yet supported for automated setup.")
+        print("    Supported: Linux, Windows")
         sys.exit(1)
     
     with FileLock("install"):
@@ -697,14 +871,25 @@ def run_system_installer(qr_only=False, setup_only=False, install_skills_flag=Fa
         stages = [
             Stage("system_packages", "System Dependencies", True, install_linux_packages),
             Stage("env_config", "Configuration", False, lambda: ensure_env_exists(mode, os_notif, force=reconfigure, use_journalctl=use_journalctl)),
-            Stage("man_page", "Manual Page", True, setup_man_page, check_man),
         ]
+
+        if current_os == "Linux":
+            stages.append(Stage("man_page", "Manual Page", True, setup_man_page, check_man))
 
         if mode == "public":
             stages.insert(1, Stage("cloudflared", "Cloudflare Tunnel", False, download_cloudflared))
 
         if not foreground_only:
-            stages.append(Stage("systemd_service", "Systemd Service", True, install_systemd_service, check_systemd, "background_service"))
+            if current_os == "Windows":
+                stages.append(Stage(
+                    "windows_service", "Windows Service", False,
+                    install_windows_service, None, "background_service"
+                ))
+            else:
+                stages.append(Stage(
+                    "systemd_service", "Systemd Service", True,
+                    install_systemd_service, check_systemd, "background_service"
+                ))
         else:
             # Explicitly remove systemd capability if it was there
             state["capabilities"].pop("background_service", None)
@@ -743,42 +928,74 @@ def run_system_uninstaller():
         print(f"  {BOLD}{'─' * 40}{RESET}")
         print()
 
-        # 1. Stop and Disable Service
-        step("Stopping and disabling systemd service...")
-        try:
-            subprocess.run(["sudo", "systemctl", "stop", "guga"], stderr=subprocess.DEVNULL)
-            subprocess.run(["sudo", "systemctl", "disable", "guga"], stderr=subprocess.DEVNULL)
-            ok("Service stopped and disabled")
-        except Exception as e:
-            warn(f"Could not stop service: {e}")
+        current_os = os.getenv("OS", platform.system())
 
-        # 2. Remove Service File
-        step("Removing systemd unit file...")
-        service_path = "/etc/systemd/system/guga.service"
-        try:
-            # Check existence via sudo if necessary, but since we use sudo rm it's fine
-            subprocess.run(["sudo", "rm", "-f", service_path], check=True)
-            subprocess.run(["sudo", "systemctl", "daemon-reload"], check=True)
-            ok("Service file removed")
-        except Exception as e:
-            warn(f"Could not remove service file: {e}")
+        if current_os == "Windows":
+            # ── Windows: stop & delete GugaNexus service ─────────────────────
+            step("Stopping and removing Windows service…")
+            if not is_windows_admin():
+                warn("Administrator privileges required to remove Windows service.")
+                dim("Re-run from an Administrator command prompt.")
+            else:
+                try:
+                    import win32service
+                    import pywintypes
+                    SERVICE_NAME = "GugaNexus"
+                    scm = win32service.OpenSCManager(None, None, win32service.SC_MANAGER_ALL_ACCESS)
+                    try:
+                        svc = win32service.OpenService(scm, SERVICE_NAME, win32service.SERVICE_ALL_ACCESS)
+                        try:
+                            win32service.ControlService(svc, win32service.SERVICE_CONTROL_STOP)
+                        except Exception:
+                            pass  # already stopped
+                        win32service.DeleteService(svc)
+                        win32service.CloseServiceHandle(svc)
+                        ok("Windows service stopped and deleted")
+                    except pywintypes.error:
+                        warn(f"Service '{SERVICE_NAME}' not found — skipping")
+                    finally:
+                        win32service.CloseServiceHandle(scm)
+                except ImportError:
+                    warn("pywin32 not installed — cannot remove Windows service automatically.")
+                    dim("Remove 'GugaNexus' manually via services.msc or sc delete GugaNexus")
+                except Exception as e:
+                    warn(f"Could not remove Windows service: {e}")
 
-        # 3. Remove Man Page
-        step("Removing man page...")
-        man_path = "/usr/local/share/man/man1/guga.1"
-        try:
-            subprocess.run(["sudo", "rm", "-f", man_path], check=True)
-            if shutil.which("mandb"):
-                subprocess.run(["sudo", "mandb", "-q"], stderr=subprocess.DEVNULL)
-            ok("Man page removed")
-        except Exception as e:
-            warn(f"Could not remove man page: {e}")
+        else:
+            # ── Linux: stop & remove systemd service ─────────────────────────
+            step("Stopping and disabling systemd service…")
+            try:
+                subprocess.run(["sudo", "systemctl", "stop",    "guga"], stderr=subprocess.DEVNULL)
+                subprocess.run(["sudo", "systemctl", "disable", "guga"], stderr=subprocess.DEVNULL)
+                ok("Service stopped and disabled")
+            except Exception as e:
+                warn(f"Could not stop service: {e}")
 
-        # 4. Optional: Remove Config Directory
+            step("Removing systemd unit file…")
+            service_path = "/etc/systemd/system/guga.service"
+            try:
+                subprocess.run(["sudo", "rm", "-f", service_path], check=True)
+                subprocess.run(["sudo", "systemctl", "daemon-reload"],  check=True)
+                ok("Service file removed")
+            except Exception as e:
+                warn(f"Could not remove service file: {e}")
+
+            # Remove man page (Linux only)
+            step("Removing man page…")
+            man_path = "/usr/local/share/man/man1/guga.1"
+            try:
+                subprocess.run(["sudo", "rm", "-f", man_path], check=True)
+                if shutil.which("mandb"):
+                    subprocess.run(["sudo", "mandb", "-q"], stderr=subprocess.DEVNULL)
+                ok("Man page removed")
+            except Exception as e:
+                warn(f"Could not remove man page: {e}")
+
+        # ── Config directory (all platforms) ─────────────────────────────────
         print()
         choice = ask(f"  {BOLD}Remove all configuration and logs in {CONFIG_DIR}? [y/N]{RESET} ")
         if choice.lower() == "y":
-            step(f"Removing {CONFIG_DIR}...")
+            step(f"Removing {CONFIG_DIR}…")
             try:
                 shutil.rmtree(CONFIG_DIR)
                 ok("Configuration directory deleted")

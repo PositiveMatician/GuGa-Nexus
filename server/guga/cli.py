@@ -869,9 +869,16 @@ def spawn_background_server(port: int, mode: str):
     print(f"  {CYAN}⚙{RESET} Spawning background server on port {port} ({mode})...")
     
     with open(log_file, "w") as f:
-        # On Linux, we use start_new_session=True to detach from the parent terminal
+        # Use OS variable from .env to determine process creation flags
+        kwargs = {}
+        if os.getenv("OS") == "Windows":
+            # CREATE_NEW_PROCESS_GROUP (0x00000200)
+            kwargs["creationflags"] = 0x00000200
+        else:
+            kwargs["start_new_session"] = True
+            
         try:
-            p = subprocess.Popen(cmd, stdout=f, stderr=f, start_new_session=True, env=env)
+            p = subprocess.Popen(cmd, stdout=f, stderr=f, env=env, **kwargs)
         except Exception as e:
             print(f"  {RED}✗ Failed to spawn background process: {e}{RESET}")
             return
@@ -1277,7 +1284,10 @@ def show_help(error: Optional[str] = None) -> None:
     print('  --start-server                Start server in foreground', file=sys.stderr)
     print('  --reload-server               Restart background service', file=sys.stderr)
     
-    print("\nFor more detail, check 'man guga'.", file=sys.stderr)
+    if os.getenv("OS") == "Windows" or sys.platform == "win32":
+        print("\nFor more detail, check 'guga --help'.", file=sys.stderr)
+    else:
+        print("\nFor more detail, check 'man guga'.", file=sys.stderr)
 
 
 def main():
