@@ -4,9 +4,6 @@ on:
   release:
     types: [published]
   workflow_dispatch:
-  push:
-    branches:
-      - windows
 
 permissions:
   contents: read
@@ -14,7 +11,6 @@ permissions:
 jobs:
   build-and-publish-pypi:
     name: Build and publish Python 🐍 distribution 📦 to PyPI
-    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     permissions:
       contents: write  # Needed to push README back
@@ -89,12 +85,8 @@ jobs:
         run: mv app-stable/app/build/outputs/apk/debug/app-debug.apk app-stable/app/build/outputs/apk/debug/guga-stable.apk
         
       - name: Upload APK to GitHub Release
-        # Upload if it's a release, a manual trigger, or a push to the windows branch
-        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/windows')
+        # Only explicitly upload it to the release if a release triggered this run
+        if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          # Use the release tag if it exists, otherwise default to 'nightly'
-          tag_name: ${{ github.event_name == 'release' && github.event.release.tag_name || 'nightly' }}
           files: app-stable/app/build/outputs/apk/debug/guga-stable.apk
-          prerelease: true
-          generate_release_notes: true
