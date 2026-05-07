@@ -158,7 +158,7 @@ The browser session stays active as long as the tab is open. For phone use, the 
 
 Download and sideload the APK:
 
--   **[Stable (v1.0.1)](https://github.com/PositiveMatician/GuGa-Nexus/releases/latest/download/guga-stable.apk)** — recommended
+-   **[Stable (v1.5.0)](https://github.com/PositiveMatician/GuGa-Nexus/releases/latest/download/guga-stable.apk)** — recommended
 -   **[Nightly (beta)](https://github.com/PositiveMatician/GuGa-Nexus/releases/tag/nightly)** — experimental, wake-word in progress
 
 > ⚠️ Do not build from source unless you are contributing.
