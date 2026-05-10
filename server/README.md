@@ -201,6 +201,9 @@ For remote access (e.g., calling your GuGa tools from a Custom GPT or a remote s
 > [!SECURITY]
 > Your JWT secret is unique to your machine. Anyone with the token can send notifications or ask questions to your phone. Keep your Cloudflare URL and token secure.
 
+> [!NOTE]
+> **Browser client isolation:** Browser clients authenticate using a `device_id` + `token` pair stored in the browser's localStorage. Any tab (on the same origin or otherwise) that obtains these two values can connect as that device — there is no per-session or per-tab re-verification. This is an acceptable trade-off for a personal tool, but it means your token is the only secret protecting access. Do not share your server URL with untrusted parties, and use `guga --revoke` to rotate credentials if you suspect exposure.
+
 ---
 
 ## ⚠️ Known Issues

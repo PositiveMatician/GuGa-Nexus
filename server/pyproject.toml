@@ -15,7 +15,6 @@ dependencies = [
     "quart",
     "python-socketio",
     "uvicorn",
-    "gunicorn",
     "python-dotenv",
     "qrcode",
     "cryptography",

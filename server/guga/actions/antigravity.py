@@ -1,4 +1,3 @@
-import pyautogui
 import asyncio
 import sys
 import os
@@ -45,6 +44,11 @@ async def antigravity_run_command(text: str, request_id: str = None):
     Automates the 'antigravity' sequence: 
     Ctrl+Shift+F -> Ctrl+Shift+L -> Type text + Context -> Enter.
     """
+    try:
+        import pyautogui
+    except ImportError:
+        return {"title": "Error", "message": "pyautogui not installed. Run: pip install pyautogui"}
+
     try:
         context = await get_message_context(request_id)
         

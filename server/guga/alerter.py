@@ -1,6 +1,5 @@
 """
 GuGa Nexus — OS Notification Alerter
-Version: 1.5.0
 
 This module monitors D-Bus for system notifications and forwards
 them to the local GuGa server for delivery to Android devices.
@@ -11,6 +10,8 @@ import asyncio.subprocess
 import re
 import aiohttp
 import os
+import logging
+import logging.handlers
 import platform
 import sys
 from dotenv import load_dotenv
@@ -31,6 +32,13 @@ if platform.system() != "Linux":
 # ------------------------------------------------------------
 SERVER_URL = os.getenv("ALERTER_SERVER_URL", "http://localhost:6769/send")
 LOG_FILE = os.path.join(CONFIG_DIR, "alerter.log")
+
+# Rotating file logger (1 MB per file, 2 backups)
+_handler = logging.handlers.RotatingFileHandler(LOG_FILE, maxBytes=1_000_000, backupCount=2)
+_handler.setFormatter(logging.Formatter("%(message)s"))
+logger = logging.getLogger("alerter")
+logger.setLevel(logging.INFO)
+logger.addHandler(_handler)
 
 # ------------------------------------------------------------
 # Text Cleaning (Stripping Formatting)
@@ -71,23 +79,20 @@ async def forward_to_server(app_name: str, title: str, body: str):
     if not clean_title and not clean_body:
         return
 
-    log_entry = f"Forwarding: {payload_msg}\n"
-    print(log_entry.strip())
-    with open(LOG_FILE, "a") as f:
-        f.write(log_entry)
+    log_entry = f"Forwarding: {payload_msg}"
+    print(log_entry)
+    logger.info(log_entry)
     
     try:
         async with aiohttp.ClientSession() as session:
             async with session.post(SERVER_URL, json={"message": payload_msg , "title":app_name}) as resp:
-                status_msg = f"Server Response: {resp.status}\n"
-                print(status_msg.strip())
-                with open(LOG_FILE, "a") as f:
-                    f.write(status_msg)
+                status_msg = f"Server Response: {resp.status}"
+                print(status_msg)
+                logger.info(status_msg)
     except Exception as e:
-        err_msg = f"Error forwarding: {e}\n"
-        print(err_msg.strip())
-        with open(LOG_FILE, "a") as f:
-            f.write(err_msg)
+        err_msg = f"Error forwarding: {e}"
+        print(err_msg)
+        logger.info(err_msg)
 
 # ------------------------------------------------------------
 # D-Bus Monitor via Subprocess
@@ -164,15 +169,13 @@ async def monitor_notifications():
                 body = match.group(1)
                 # Done capturing this notification
                 print(f"\n[Intercepted] App: {app_name}")
-                with open(LOG_FILE, "a") as f:
-                    f.write(f"\n[Intercepted] App: {app_name}\nTitle: {summary}\nBody: {body}\n")
+                logger.info(f"\n[Intercepted] App: {app_name}\nTitle: {summary}\nBody: {body}")
                 asyncio.create_task(forward_to_server(app_name, summary, body))
                 state = "IDLE"
             elif "array [" in line:
                 # Body was empty, moving to actions
                 print(f"\n[Intercepted] App: {app_name} (No body)")
-                with open(LOG_FILE, "a") as f:
-                    f.write(f"\n[Intercepted] App: {app_name}\nTitle: {summary}\nBody: (empty)\n")
+                logger.info(f"\n[Intercepted] App: {app_name}\nTitle: {summary}\nBody: (empty)")
                 asyncio.create_task(forward_to_server(app_name, summary, ""))
                 state = "IDLE"
 

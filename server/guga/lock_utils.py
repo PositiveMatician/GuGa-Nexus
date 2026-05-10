@@ -1,6 +1,5 @@
 """
 GuGa Nexus — Locking Utilities
-Version: 1.6.0
 
 Cross-platform file locking using the `filelock` package.
 Works on Linux (fcntl), macOS, and Windows (msvcrt) transparently.

@@ -2,8 +2,11 @@ import json
 import urllib.request
 import urllib.error
 import asyncio
+import os
 import sys
 from ..db_utils import Database
+
+PORT = int(os.getenv("PORT", 6769))
 
 async def sendto_run_command(text: str, sender: str, request_id: str = None):
     """Handles the 'sendto' command: sendto <target> <message>"""
@@ -73,7 +76,7 @@ async def sendto_run_command(text: str, sender: str, request_id: str = None):
             break
 
     # 4. Make the HTTP request to the local server
-    url = f"http://localhost:6769/send/{target_device_id}"
+    url = f"http://localhost:{PORT}/send/{target_device_id}"
     payload = {
         "message": message,
         "title": f"From {sender_display}"

@@ -946,9 +946,11 @@ async def command_worker():
     """Background worker to process commands sequentially from the queue."""
     log_event("⚙", CYAN, "command worker started")
     while True:
-        log_event("⚙", CYAN, "worker waiting for item")
+        if VERBOSE:
+            log_event("⚙", CYAN, "worker waiting for item")
         item = await command_queue.get()
-        log_event("⚙", CYAN, "worker got item")
+        if VERBOSE:
+            log_event("⚙", CYAN, "worker got item")
         try:
             device_id = item["device_id"]
             sid = item["sid"]
@@ -1087,14 +1089,22 @@ def start_cloudflare_tunnel(port: int) -> str:
         atexit.register(lambda: proc.terminate())
         
         url_pattern = re.compile(r"https://[-a-z0-9]+\.trycloudflare\.com")
-        
-        # Read stderr to find the URL
-        for line in iter(proc.stderr.readline, ""):
-            match = url_pattern.search(line)
-            if match:
-                url = match.group(0)
-                return url
-        return ""
+
+        result = []
+        event = threading.Event()
+
+        def _read_url():
+            for line in iter(proc.stderr.readline, ""):
+                match = url_pattern.search(line)
+                if match:
+                    result.append(match.group(0))
+                    event.set()
+                    return
+
+        t = threading.Thread(target=_read_url, daemon=True)
+        t.start()
+        event.wait(timeout=30)
+        return result[0] if result else ""
 
 
 # ── Background Process Lifecycle ──────────────────────────────────────────
