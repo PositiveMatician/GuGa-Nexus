@@ -45,6 +45,7 @@ AI_SUMMARY_END -->
 | I want to… | Go to |
 |---|---|
 | Install everything and get running | [Setup](#setup) |
+| Use GuGa in Jupyter / Google Colab | [Jupyter & Colab Quickstart](#jupyter--colab-quickstart) |
 | Connect via browser | [Connecting via Browser](#connecting-via-browser) |
 | Connect via Android App | [Connecting via the Android App](#connecting-via-the-android-app) |
 | Just send a terminal notification | [Using guga](#using-guga) |
@@ -80,6 +81,22 @@ GuGa Nexus is a minimalist, privacy-focused ecosystem that bridges your Linux ma
 | Urgency-based notification filtering | 🗓️ Planned |
 
 > **Urgency filtering (planned):** Critical alerts will be delivered instantly. Low-priority notifications will be bundled into a 20-second digest — so your phone isn't buzzing for every minor system event.
+
+---
+
+## Jupyter & Colab Quickstart
+
+Running GuGa from a Jupyter notebook or Google Colab? The step-by-step notebook below covers everything — installation, starting the server in public mode, pairing your device, sending notifications, asking interactive questions, and Python-native usage.
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/11JC9mA72MZ4exfbl_OoIhDDTFiLReb4L?usp=sharing)
+
+> The notebook (`server/notebooks/Guga_Beautified.ipynb`) covers:
+> - 🚀 Installation & background server startup
+> - 📱 QR pairing & device approval
+> - 🔔 Push notifications from a cell
+> - ❓ Blocking `--ask-user` interactive prompts
+> - 🐍 Native Python API (`guga.cli`)
+> - 🛑 Stopping the server cleanly
 
 ---
 
