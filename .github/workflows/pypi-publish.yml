@@ -1,6 +1,11 @@
 name: Build and Publish GuGa (PyPI + Android)
 
 on:
+  push:
+    branches:
+      - latest
+    paths:
+      - 'server/**'
   release:
     types: [published]
   workflow_dispatch:
@@ -56,6 +61,7 @@ jobs:
 
   build-and-upload-android:
     name: Build Android APK 📱
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: write # IMPORTANT: Required to upload files to GitHub Releases!
