@@ -423,15 +423,17 @@
         addBubble('bot', message, msgId);
 
         // Show a native browser notification if permissions are granted and the tab is hidden
-        if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
-            const notif = new Notification(title || 'GuGa', {
-                body: message,
-                icon: 'https://raw.githubusercontent.com/PositiveMatician/GuGa-Nexus/latest/app-stable/app/src/main/assets/logo.png'
-            });
-            notif.onclick = () => {
-                window.focus();
-                notif.close();
-            };
+        if ('Notification' in window) {
+            if (Notification.permission === 'granted' && document.hidden) {
+                const notif = new Notification(title || 'GuGa', {
+                    body: message,
+                    icon: 'https://raw.githubusercontent.com/PositiveMatician/GuGa-Nexus/latest/app-stable/app/src/main/assets/logo.png'
+                });
+                notif.onclick = () => {
+                    window.focus();
+                    notif.close();
+                };
+            }
         }
     }
 
@@ -572,6 +574,10 @@
     }
 
     function sendCommand() {
+        // Request permissions here since it is triggered by user interaction
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
         const input = document.getElementById('cmdInput');
         let text = input.value.trim();
         if (!text || !socket) return;
