@@ -1,0 +1,20 @@
+# Changelog - Version 1.5.2
+
+This version focuses on enhancing the web-based client UI and notification capabilities.
+
+## 1. Web Client Favicon
+- Added a favicon to `index.html` pointing to the official repository logo to improve branding and browser tab aesthetics.
+
+## 2. Integrated Web Notifications API
+- Added real-time native browser notifications for incoming messages (`guga_response`) and interactive prompts (`guga_ask`).
+- Notifications only trigger when the browser tab is hidden (`document.hidden`) to prevent double-alerts while actively chatting.
+- Clicking a notification automatically focuses the browser window.
+- Respecting browser security guidelines, the permission request (`Notification.requestPermission()`) triggers directly in response to a user-generated event (when the user sends their first message).
+
+## 3. Typing Indicator Removal
+- Completely removed the 3-dot typing indicator bubble (`.typing-bubble`, `@keyframes bounce`) from the HTML, CSS, and JavaScript. This simplifies the interface and removes animation lag.
+
+## 4. Consolidated System Messages
+- Refactored the system messaging system to use a single, updating `<div id="sysMessage">` that remains permanently pinned to the bottom of the chat feed.
+- All subsequent bot/user chat bubbles are dynamically inserted *before* this system div, preventing old status alerts (like "connected", "disconnected", or PIN instructions) from cluttering the chat history.
+- Added `white-space: pre-wrap` to system bubbles and combined consecutive authentication messages to cleanly render multi-line PIN pairing instructions.
