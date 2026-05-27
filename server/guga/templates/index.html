@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>GuGa</title>
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/PositiveMatician/GuGa-Nexus/latest/app-stable/app/src/main/assets/logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
@@ -376,6 +377,11 @@
     let token = localStorage.getItem('guga_token');
     let socket = null;
 
+    // Request browser notification permissions
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+
     const feed      = document.getElementById('feed');
     const statusDot = document.getElementById('statusDot');
     const statusTxt = document.getElementById('statusText');
@@ -421,6 +427,18 @@
             addBubble('title', title);
         }
         addBubble('bot', message, msgId);
+
+        // Show a native browser notification if permissions are granted and the tab is hidden
+        if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
+            const notif = new Notification(title || 'GuGa', {
+                body: message,
+                icon: 'https://raw.githubusercontent.com/PositiveMatician/GuGa-Nexus/latest/app-stable/app/src/main/assets/logo.png'
+            });
+            notif.onclick = () => {
+                window.focus();
+                notif.close();
+            };
+        }
     }
 
     let currentReplyId = null;
